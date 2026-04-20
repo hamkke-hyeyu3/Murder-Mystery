@@ -37,6 +37,8 @@
 | **#2** 🟡 | 입문자의 진짜 허들이 "규칙"인가 "몰입 경험 부재"인가?            | 중간   |
 | **#1** 🟡 | 대면 아날로그 감각(촉감·눈빛·긴장감)을 BYOD가 충분히 보존하는가? | 중간   |
 
+**격상 추적 (2026-04-20):** [problem-statement-murder-mystery-2026-04-20.md](problem-statement-murder-mystery-2026-04-20.md) 작성으로 **가정 #2·#4·#6·#7의 파생 명제들이 단정적 진술로 격상**되어 대외 문서(PRD·투자자)에 사용됨. 원 가정들은 여전히 **검증 전**이며, Stage 1 결과에 따라 PS가 부분 수정 또는 전면 재작성될 수 있음. 상세 매핑과 재작성 트리거는 PS의 "검증 경계" 섹션 참조.
+
 ---
 
 ## Phase 2: Look Outward
@@ -118,3 +120,5 @@
 ### 현재 우선
 
 **PRD·투자자용 문서화** → `skills/problem-statement/SKILL.md`
+
+- ✅ **완료 (2026-04-20):** [problem-statement-murder-mystery-2026-04-20.md](problem-statement-murder-mystery-2026-04-20.md) — 페르소나 중심 1인칭 내러티브 + Final Problem Statement. PRD Executive Summary·투자자 "Problem" 슬라이드 원천 문서.

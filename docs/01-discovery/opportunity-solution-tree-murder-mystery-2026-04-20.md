@@ -2,6 +2,7 @@
 
 **Date:** 2026-04-20
 **Source:** [problem-framing-canvas-murder-mystery-2026-04-20.md](problem-framing-canvas-murder-mystery-2026-04-20.md)
+**Downstream:** [problem-statement-murder-mystery-2026-04-20.md](problem-statement-murder-mystery-2026-04-20.md) — 페르소나 중심 Problem Statement (PRD·투자자용)
 **Facilitator:** opportunity-solution-tree skill (Teresa Torres, _Continuous Discovery Habits_)
 
 ---
