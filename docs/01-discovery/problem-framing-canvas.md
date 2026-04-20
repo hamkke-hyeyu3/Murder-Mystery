@@ -105,6 +105,15 @@
 
 ## Next Steps (별도 대화에서 진행)
 
-1. 가정 #6 집중 검증 → `skills/discovery-interview-prep/SKILL.md`
-2. 솔루션 공간 탐색 → `skills/opportunity-solution-tree/SKILL.md`
+> **업데이트 (2026-04-20):** 제품 구현 시급성으로 **인터뷰 단계 생략.** 가정 #6은 출시 후 **웹앱 내장 텔레메트리**로 사후 검증:
+>
+> - Page Visibility API 기반 개인 활성 시간·열기 빈도
+> - 서버 권위 타임스탬프로 그룹 동시 메타 모먼트 집계
+> - 씬별 3초 몰입 펄스 탭 + 세션 종료 디브리프
+> - 초기 5–10 세션은 연구자가 방에 배석해 직접 관찰하고, 텔레메트리 수치와 실제 몰입도를 대조해 지표 해석 기준을 보정
+>
+> **리스크 수용:** 캔버스가 #6을 🔴 최상위로 평가한 이유는 "틀리면 제품 전체 재설계" 시나리오 때문. 이 리스크를 인지하고 **구현 속도 우선** 판단.
+
+1. ~~가정 #6 집중 검증 → `skills/discovery-interview-prep/SKILL.md`~~ — **생략** (위 업데이트 참조)
+2. **솔루션 공간 탐색** → `skills/opportunity-solution-tree/SKILL.md` ⬅ **현재 우선**
 3. PRD·투자자용 문서화 → `skills/problem-statement/SKILL.md`
