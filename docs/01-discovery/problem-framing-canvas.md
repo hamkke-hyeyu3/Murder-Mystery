@@ -109,16 +109,19 @@
 ## Next Steps
 
 > **검증 전략 (2026-04-20):** 인터뷰 단계 생략, 가정 #6은 출시 후 웹앱 텔레메트리 + 초기 5–10팀 연구자 방 배석 관찰로 사후 검증. **리스크 수용:** "틀리면 제품 전체 재설계" 시나리오를 인지하고 구현 속도 우선.
+>
+> **갱신 (2026-04-21):** OST `Stage 1: 컨시어지 테스트`도 현 주기에서 **미실행**. 가정 #2·#6 검증은 MVP 출시 후 배석 관찰로 단일화.
 
 ### 완료된 단계
 
 - **솔루션 공간 탐색** (2026-04-20) → [opportunity-solution-tree-murder-mystery-2026-04-20.md](opportunity-solution-tree-murder-mystery-2026-04-20.md)
   - POC: Opp 1(입문자 역할 몰입 미경험) × Solution 3(입문자 전용 "첫 사건" 시나리오)
-  - 실험: Stage 1 컨시어지 테스트(2–3주, 2–3팀) → Stage 2 소프트 런칭(30–50팀)
+  - 실험: Stage 1 컨시어지 테스트(2–3주, 2–3팀) → Stage 2 소프트 런칭(30–50팀) _(Stage 1은 2026-04-21 결정으로 현 주기 미실행)_
   - 대체 POC 후보: 2B(JIT 규칙 공개), 3A(QR 원터치 시작) — 병렬 실험 가능
 
 ### 현재 우선
 
-**PRD·투자자용 문서화** → `skills/problem-statement/SKILL.md`
+**PRD 초안 + 에픽 가설 착수 (2026-04-21 갱신)** → `skills/prd-development/SKILL.md` + `skills/epic-hypothesis/SKILL.md`
 
 - ✅ **완료 (2026-04-20):** [problem-statement-murder-mystery-2026-04-20.md](problem-statement-murder-mystery-2026-04-20.md) — 페르소나 중심 1인칭 내러티브 + Final Problem Statement. PRD Executive Summary·투자자 "Problem" 슬라이드 원천 문서.
+- 🟢 **다음 (2026-04-21):** PRD 초안 → MVP 스코프에 텔레메트리·배석 관찰을 비-협상 요구사항으로 명시. Stage 1 컨시어지는 현 주기 미실행.
