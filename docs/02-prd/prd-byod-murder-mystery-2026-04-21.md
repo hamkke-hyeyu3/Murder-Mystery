@@ -157,7 +157,7 @@ Game Flow Reference의 **선형 오프닝 + 조사 라운드 루프(N회) + 선�
 
 | 루프 내부 단계 | MVP에서 앱의 책임 |
 |----------------|-------------------|
-| L1. 알리바이·심문·변론 | **앱은 전면에 나서지 않음**. 타이머·**라운드별 프롬프트**·시간 경고만 보조 |
+| L1. 알리바이·심문·변론 | **앱은 전면에 나서지 않음**. 타이머·**라운드별 프롬프트**·시간 경고만 보조. **시나리오가 `allow_private_talk: true`로 선언된 경우에 한해**, 밀담 신청·수락·거절·종료 버튼과 "누가 누구와 밀담 중"임을 전체에 노출하는 상태 배너를 추가로 제공 ([game-flow-reference §2.5](../01-discovery/game-flow-reference-2026-04-21.md)). 밀담 **내용 채널(채팅·음성)은 제공하지 않음** — 대화는 대면으로 |
 | L2. 증거·단서 배포 | 조건·시간·라운드 번호에 따라 단서가 자동으로 풀려나옴. **이전 라운드에서 나온 단서는 사라지지 않고 그대로 남으며**, 새 라운드에서는 새 단서만 추가됨 |
 
 루프 종료 조건은 시나리오 메타가 선언 — MVP는 **고정 횟수(N=3 또는 N=6 등)**만 지원, 트리거·타이머 기반 종료는 후속.
@@ -242,6 +242,10 @@ Game Flow Reference의 **선형 오프닝 + 조사 라운드 루프(N회) + 선�
 - 시나리오 저자인 나는, **미션·추리 성공 각각에 점수 값을 테이블로 등록**해 엔진이 자동 합산하기를 바란다.
 - 시나리오 저자인 나는, **그룹 엔딩 후보 2–3개와 각각의 선택 조건식**을 선언해 엔진이 점수·미션 결과에 맞는 엔딩을 자동 재생하기를 바란다.
 - 시나리오 저자인 나는, **라운드 수(N)·루프 내부 단계 순서·라운드별 단서·라운드별 목표·종료 조건**을 시나리오 메타로 선언해 엔진을 건드리지 않고 새 시나리오를 태울 수 있기를 바란다.
+- 플레이어인 나는, L1 중에 특정 상대(들)에게 **밀담을 신청**해 **다른 플레이어 모두에게 "내가 누구와 밀담 중인지" 공개된 상태로** 따로 이야기하고 싶다.
+- 밀담 신청을 받은 플레이어인 나는, **수락 또는 거절**을 선택할 수 있기를 바란다 (거절 이유 입력 없음).
+- 밀담 참여자인 나는, 원하는 시점에 **'종료' 버튼**으로 밀담을 끝내거나 **라운드가 바뀌면 자동 종료**되기를 바란다.
+- 시나리오 저자인 나는, `allow_private_talk` 플래그로 이 시나리오에서 밀담 기능을 켤지 끌지 선언하고, 필요 시 `max_private_talks_per_round` 상한도 걸 수 있기를 바란다.
 
 **대표적 제약:**
 
@@ -251,6 +255,10 @@ Game Flow Reference의 **선형 오프닝 + 조사 라운드 루프(N회) + 선�
 - 타이밍 파라미터는 보수적 기본값 + 배석 관찰로 튜닝 ([opportunity-solution-tree-murder-mystery-2026-04-20.md §실험 설계 주의점](../01-discovery/opportunity-solution-tree-murder-mystery-2026-04-20.md))
 - **엔딩 후보 상한 MVP = 3개** (저자 공수·텔레메트리 복잡도 관리). 조건식은 **switch-case 스타일** — "점수합 ≥ X AND 범인 지목 성공" 같은 선언적 표현만. 위에서부터 첫 매치 엔딩 재생
 - **루프(조사 라운드)와 클로징(9-A~9-D)은 별개의 엔진 상태 기계**로 관리. 클로징은 선형
+- **밀담은 L1에서만 가능.** 오프닝·L2·클로징·디브리프에서는 신청 경로 UI 자체를 노출하지 않음 ([game-flow-reference §2.5](../01-discovery/game-flow-reference-2026-04-21.md))
+- 앱은 **밀담 내용 채널(비공개 채팅·음성)을 제공하지 않는다** — 대면 대화 가치 보존. 앱의 역할은 상태 공지와 흐름 관리까지
+- 밀담은 **배타적 참여** — 한 사람이 동시에 속할 수 있는 밀담은 1개
+- 밀담 시나리오 플래그 `allow_private_talk` 기본값은 **false** (입문자 친화 기본). 본 MVP "첫 사건" 입문자 시나리오는 off로 출시, 배석 관찰 결과에 따라 조정
 
 #### Epic 2 — 캐릭터 카드 UI + 말투 가이드
 
@@ -296,6 +304,8 @@ Game Flow Reference의 **선형 오프닝 + 조사 라운드 루프(N회) + 선�
 - `mission_self_check` — per player. 필드: `mission_id`, `completed`(bool), `session_id`, `player_id`
 - `score_tallied` — per session. 필드: 플레이어별 최종 점수, 우승자(복수 가능)
 - `ending_selected` — per session. 필드: `ending_id`, `trigger_condition_snapshot`(해당 엔딩을 유발한 조건식과 그 시점의 점수·미션 결과)
+- `private_talk_started` — per private talk. 필드: `private_talk_id`, `initiator_id`, `accepted_ids[]`, `declined_ids[]`, `round_index`, `started_at`
+- `private_talk_ended` — per private talk. 필드: `private_talk_id`, `ended_by`(`"participant"` | `"round_rollover"` | `"timeout"`), `round_index`, `duration_seconds`
 
 **대표적 제약:**
 
@@ -342,6 +352,8 @@ Game Flow Reference의 **선형 오프닝 + 조사 라운드 루프(N회) + 선�
 | 경험자 · GM 애호가 페르소나 최적화 | 본 POC 스코프 밖 | **별도 PRD**로 분리 예정 |
 | UGC 저작 도구 | 가정 #7·#8 미검증 — MVP 후 검증 | Stage 2+ |
 | 와이어프레임·픽셀 스펙 | 디자인 파트너 협업 여지 보존 | 디자인 스프린트 |
+| **아이템(단서) 1:1 교환·양도·개별 공개** | 게임 밸런스 파장 큼. 밀담 채널이 디지털 채팅을 갖지 않는다는 결정과 묶어 분리 처리 | Future — 밀담 모듈 성공 후 v1.x 검토 |
+| **앱 내 비공개 채팅·음성(밀담 내용 채널)** | 대면 대화 가치 훼손. 앱의 역할은 '밀담 중' 상태 공지까지로 한정 ([game-flow-reference §2.5.4](../01-discovery/game-flow-reference-2026-04-21.md)) | 원격 확장 재검토 시점에 같이 논의 |
 
 출처: [opportunity-solution-tree-murder-mystery-2026-04-20.md §이번 세션 중 합의된 스코프 결정](../01-discovery/opportunity-solution-tree-murder-mystery-2026-04-20.md)
 
@@ -397,6 +409,10 @@ Game Flow Reference의 **선형 오프닝 + 조사 라운드 루프(N회) + 선�
 16. **점수 테이블·엔딩 조건식 입력 포맷** — JSON/YAML 메타 파일? 시나리오 저자용 UI? MVP는 아키텍트 결정
 17. **엔딩 조건식 표현력 상한** — MVP는 "점수합 ≥ X + 범인 지목 성공 여부" 같은 단순 조건만 허용할지, 좀 더 풍부하게 허용할지 (후자는 저자 학습 부담 증가)
 18. **디브리프 설문 "엔딩이 오늘 플레이와 맞았나?" 문항 추가 여부** — §9.2 "자가 체크 조작으로 엔딩 괴리" 리스크의 간접 감지 수단
+19. **밀담 거절 사실의 공개 범위** — 수락자만 공지할지, 거절자 존재를 "N명 중 M명 수락"으로 노출할지, 신청자에게만 비공개 통지할지. 관례는 후자에 가까우나 추적 투명성은 전자. ([game-flow-reference §2.5.3](../01-discovery/game-flow-reference-2026-04-21.md))
+20. **밀담 최대 동시 세션 수** — 6명 방에서 "2+2" 병렬 밀담까지 허용할지, 1개만 허용할지. 밸런스·공지 UX 영향. MVP 기본은 병렬 허용(배타적 참여만 강제)이나 배석 관찰 결과에 따라 조정
+21. **밀담 지속시간 상한 기본값** — 시나리오 저자가 상한을 걸지 않은 경우의 앱 디폴트. 후보: L1 남은 시간의 50% / 5분 고정 / 무제한
+22. **입문자 시나리오 기본 off가 적절한가** — MVP 첫 사건 시나리오는 `allow_private_talk: false`로 출시. 배석 관찰에서 "따로 얘기하고 싶었는데 기능이 없었다"는 신호가 뜨면 on 전환 여부 재검토
 
 ---
 
@@ -424,6 +440,7 @@ Game Flow Reference의 **선형 오프닝 + 조사 라운드 루프(N회) + 선�
 | §7.2 Epic 1 (엔진, 점수·엔딩 조건식 포함) | game-flow-reference + OST | §2 표준 단계표 · §7 POC 매핑 + Opp 2 Solutions |
 | §7.2 Epic 2 (카드, 말투 가이드 · 미션 포함) | game-flow-reference | §3 카드 필드 |
 | §7.2 Epic 3 (텔레메트리 · 미션·엔딩 이벤트 포함) | game-flow-reference + OST | §7 POC 매핑 + Desired Outcome 4지표 |
+| §5.2 L1 밀담 보조 / §7.2 Epic 1·3 밀담 스토리·이벤트 / §8 Out of Scope 밀담 채널·아이템 / §10 Q19–Q22 | game-flow-reference §2.5 밀담 모듈 | §2.5 전체 |
 | §7.3 비-협상 | OST | Next Steps Track B |
 | §7.4 에지 케이스 | OST | 스코프 결정 |
 | §8 Out of Scope | OST | 스코프 결정 + Future Roadmap 배치 근거 |
@@ -449,6 +466,9 @@ Game Flow Reference의 **선형 오프닝 + 조사 라운드 루프(N회) + 선�
 - [ ] **엔딩 톤 재생 엔진 구현** (switch-case 조건식 매칭 → 해당 엔딩 내레이션 재생)
 - [ ] 디브리프 원인 귀속 5지선다 앱 적용 (필요 시 "엔딩이 오늘 플레이와 맞았나?" 문항 추가 — §10 Q18)
 - [ ] Go/No-Go 대시보드 구축 (첫 세션 도달률 · 완주율 · 몰입 · 재플레이 · 엔딩 분포)
+- [ ] **시나리오 메타 스키마에 `allow_private_talk` 플래그 + 선택적 `max_private_talks_per_round` 추가**
+- [ ] **밀담 상태 기계(대기→진행→종료) + L1 페이즈 조건부 UI 노출 + '밀담 중' 전체 공지 배너 구현** ([game-flow-reference §2.5](../01-discovery/game-flow-reference-2026-04-21.md))
+- [ ] **`private_talk_started`·`private_talk_ended` 이벤트 수집·저장**
 
 ### ⚪ MVP 출시 직전
 
