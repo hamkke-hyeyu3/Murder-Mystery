@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
 
 # preflight
 for cmd in docker java npm; do
@@ -10,11 +11,11 @@ done
 
 # db
 echo "[DB] starting postgres..."
-docker compose -f "$ROOT/docker-compose.yml" up -d postgres
+docker compose up -d postgres
 
 echo "[DB] waiting for ready..."
 for i in $(seq 1 30); do
-  if docker compose -f "$ROOT/docker-compose.yml" exec -T postgres \
+  if docker compose exec -T postgres \
        pg_isready -U murdermystery -d murdermystery >/dev/null 2>&1; then
     echo "[DB] ready"
     break
