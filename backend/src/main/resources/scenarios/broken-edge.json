@@ -1,0 +1,20 @@
+{
+  "id": "broken-edge",
+  "title": "Broken Edge (테스트용 — 카탈로그 미노출)",
+  "summary": "캐릭터 2명으로 의도적으로 깨진 픽스처. 부팅 시 WARN 로그 확인용.",
+  "estimated_minutes": 30,
+  "round_count": 2,
+  "allow_private_talk": false,
+  "true_culprit_character_id": "villain",
+  "characters": [
+    {"id": "hero", "name": "주인공"},
+    {"id": "villain", "name": "악당"}
+  ],
+  "locations": [
+    {"id": "room", "name": "방", "description": "유일한 장소."}
+  ],
+  "location_pool": ["room"],
+  "items": [
+    {"id": "knife", "title": "칼", "origin_location_id": "room"}
+  ]
+}

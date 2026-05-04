@@ -1,0 +1,28 @@
+{
+  "id": "toy-manor",
+  "title": "Toy Manor 살인 사건",
+  "icon": "🏚️",
+  "summary": "고요한 귀족 저택에서 하룻밤 사이 일어난 살인. 셋 중 범인은 누구인가?",
+  "estimated_minutes": 60,
+  "round_count": 3,
+  "allow_private_talk": true,
+  "true_culprit_character_id": "bob",
+  "characters": [
+    {"id": "alice", "name": "앨리스 · 가정부"},
+    {"id": "bob", "name": "밥 · 집사"},
+    {"id": "charlie", "name": "찰리 · 손님"}
+  ],
+  "locations": [
+    {"id": "library", "name": "도서관 서고", "icon": "📚", "description": "먼지가 쌓인 오래된 책들이 빽빽한 서고."},
+    {"id": "kitchen", "name": "주방", "icon": "🍳", "description": "저녁 식사 준비로 분주했던 공간."},
+    {"id": "garden", "name": "옥상 정원", "icon": "🌿", "description": "밤에는 아무도 올라오지 않는 고요한 옥상."},
+    {"id": "study", "name": "서재", "icon": "🖋️", "description": "주인이 업무를 보던 잠긴 방."}
+  ],
+  "location_pool": ["library", "kitchen", "garden", "study"],
+  "items": [
+    {"id": "torn-letter", "title": "찢어진 편지 조각", "origin_location_id": "library"},
+    {"id": "poison-vial", "title": "작은 유리병", "origin_location_id": "kitchen"},
+    {"id": "muddy-glove", "title": "진흙 묻은 장갑", "origin_location_id": "garden"},
+    {"id": "ledger", "title": "비밀 장부", "origin_location_id": "study"}
+  ]
+}

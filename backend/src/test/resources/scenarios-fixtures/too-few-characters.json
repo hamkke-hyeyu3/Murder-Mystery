@@ -1,0 +1,22 @@
+{
+  "id": "too-few-characters",
+  "title": "캐릭터 2명 — schema 실패",
+  "summary": "캐릭터 2명이라 하한선(≥3) 위반.",
+  "estimated_minutes": 30,
+  "round_count": 2,
+  "allow_private_talk": false,
+  "true_culprit_character_id": "b",
+  "characters": [
+    {"id": "a", "name": "A"},
+    {"id": "b", "name": "B"}
+  ],
+  "locations": [
+    {"id": "loc1", "name": "장소1"},
+    {"id": "loc2", "name": "장소2"}
+  ],
+  "location_pool": ["loc1", "loc2"],
+  "items": [
+    {"id": "i1", "title": "아이템1", "origin_location_id": "loc1"},
+    {"id": "i2", "title": "아이템2", "origin_location_id": "loc2"}
+  ]
+}
