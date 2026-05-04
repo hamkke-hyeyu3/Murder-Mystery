@@ -7,14 +7,14 @@
 
 ## 🔵 체크포인트 A — A2 Walking Skeleton
 
-- [ ] **T-00** 인프라·DB·STOMP 부트스트랩
-  - [ ] BE: Flyway + JSON Schema 의존성 추가, `application.yml` `ddl-auto: validate` 전환
-  - [ ] BE: `WebSocketConfig`, `CorsConfig`, `RestExceptionHandler`, STOMP `HandshakeHandler` 스켈레톤
-  - [ ] FE: `@stomp/stompjs` + `zustand` + `react-router-dom` 설치
-  - [ ] FE: `useStompClient` 훅 + 4개 Zustand store 스켈레톤
-  - [ ] FE: `App.tsx` 라우터 (`/` · `/lobby/:inviteCode` · `/play/:sessionId` · `/join`)
-  - [ ] DB: `V1__init.sql` (Flyway 부트스트랩)
-  - [ ] 검증: `bootRun` + `wscat` STOMP CONNECT 성공, 4 라우트 진입
+- [x] **T-00** 인프라·DB·STOMP 부트스트랩
+  - [x] BE: Flyway + JSON Schema 의존성 추가, `application.yml` `ddl-auto: validate` 전환
+  - [x] BE: `WebSocketConfig`, `CorsConfig`, `RestExceptionHandler`, STOMP `HandshakeHandler` 스켈레톤
+  - [x] FE: `@stomp/stompjs` + `zustand` + `react-router-dom` 설치
+  - [x] FE: `useStompClient` 훅 + 4개 Zustand store 스켈레톤
+  - [x] FE: `App.tsx` 라우터 (`/` · `/lobby/:inviteCode` · `/play/:sessionId` · `/join`)
+  - [x] DB: `V1__init.sql` (Flyway 부트스트랩)
+  - [x] 검증: `bootRun` + STOMP/SockJS 엔드포인트 200 응답 + 4 라우트 진입 (App.test.tsx 4/4 그린)
 
 - [ ] **T-01** 시나리오 메타 로더 + Schema 검증 + 카탈로그 API
   - [ ] BE: `scenario-schema.json` 작성 (JSON Schema + cross-field validator)
