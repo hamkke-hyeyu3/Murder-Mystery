@@ -16,14 +16,14 @@
   - [x] DB: `V1__init.sql` (Flyway 부트스트랩)
   - [x] 검증: `bootRun` + STOMP/SockJS 엔드포인트 200 응답 + 4 라우트 진입 (App.test.tsx 4/4 그린)
 
-- [ ] **T-01** 시나리오 메타 로더 + Schema 검증 + 카탈로그 API
-  - [ ] BE: `scenario-schema.json` 작성 (JSON Schema + cross-field validator)
-  - [ ] BE: `ScenarioLoader` 클래스패스 스캔, 검증 실패는 WARN 로그
-  - [ ] BE: `GET /api/scenarios` 컨트롤러
-  - [ ] BE: `toy-manor.json` placeholder (3 캐릭터·N=3·location_pool 4개·각 장소 1+ 아이템)
-  - [ ] BE: `broken-edge.json` fixture (캐릭터 2명, 의도적 실패)
-  - [ ] FE: `pages/Catalog.tsx` (단일 카드 + "세션 만들기" 버튼)
-  - [ ] 검증: `ScenarioLoaderTest` 4 실패 fixture + `Catalog.test.tsx`
+- [x] **T-01** 시나리오 메타 로더 + Schema 검증 + 카탈로그 API
+  - [x] BE: `scenario-schema.json` 작성 (JSON Schema + cross-field validator)
+  - [x] BE: `ScenarioLoader` 클래스패스 스캔, 검증 실패는 WARN 로그
+  - [x] BE: `GET /api/scenarios` 컨트롤러
+  - [x] BE: `toy-manor.json` placeholder (3 캐릭터·N=3·location_pool 4개·각 장소 1+ 아이템)
+  - [x] BE: `broken-edge.json` fixture (캐릭터 2명, 의도적 실패)
+  - [x] FE: `pages/Catalog.tsx` (단일 카드 + "세션 만들기" 버튼)
+  - [x] 검증: `ScenarioLoaderTest` 5 실패 fixture + `Catalog.test.tsx` 4 케이스
 
 - [ ] **T-02** 카탈로그 → 세션 만들기 → 초대 번호 + lobby
   - [ ] BE: `Session` 엔티티, `SessionService.createSession`
