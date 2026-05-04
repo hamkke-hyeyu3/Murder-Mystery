@@ -43,8 +43,9 @@ user-story-map §4.1 기준. 활동 순서 A2 → A3 → A4 → A5.
 | 빌드 | Vite | 8.0.10 |
 | UI 컴포넌트 | shadcn/ui | CLI v4 (`npx shadcn@latest`) |
 | 스타일 | Tailwind CSS | 4.2.4 |
-| Backend | Spring Boot | 4.0.x (start.spring.io 최신 GA) |
+| Backend | Spring Boot | 4.0.6 |
 | JDK | Java | 25 LTS |
+| 빌드 도구 | Gradle (Kotlin DSL) | — |
 | 실시간 통신 | WebSocket (STOMP over WebSocket) | Spring Boot built-in |
 | Database | PostgreSQL | 18.3 (Docker) |
 | 컨테이너 | Docker Compose | — |
@@ -71,7 +72,7 @@ murder-mystery/
 │   │       ├── session/       # 세션·플레이어 도메인
 │   │       ├── game/          # 라운드·아이템·밀담 도메인
 │   │       └── ws/            # WebSocket 설정·핸들러
-│   └── pom.xml
+│   └── build.gradle.kts
 ├── docker-compose.yml         # PostgreSQL 18.3
 └── SPEC.md
 ```
