@@ -1,5 +1,7 @@
 package com.murdermystery.web;
 
+import com.murdermystery.session.NicknameTakenException;
+import com.murdermystery.session.SessionNotJoinableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,20 @@ public class RestExceptionHandler {
             .collect(Collectors.joining(", "));
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         detail.setDetail(fields.isEmpty() ? "Validation failed" : fields);
+        return detail;
+    }
+
+    @ExceptionHandler(NicknameTakenException.class)
+    public ProblemDetail handleNicknameTaken(NicknameTakenException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        detail.setDetail("nickname already taken");
+        return detail;
+    }
+
+    @ExceptionHandler(SessionNotJoinableException.class)
+    public ProblemDetail handleSessionNotJoinable(SessionNotJoinableException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        detail.setDetail("session not in lobby");
         return detail;
     }
 

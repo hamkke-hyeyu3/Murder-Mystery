@@ -66,11 +66,17 @@ public class Session implements Persistable<UUID> {
         updatedAt = Instant.now();
     }
 
+    public void removePlayer(Player player) {
+        players.remove(player);
+        player.setSession(null);
+    }
+
     @Override
     public UUID getId() { return id; }
     public String getInviteCode() { return inviteCode; }
     public String getScenarioId() { return scenarioId; }
     public String getPhase() { return phase; }
+    public void setPhase(String phase) { this.phase = phase; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public List<Player> getPlayers() { return players; }

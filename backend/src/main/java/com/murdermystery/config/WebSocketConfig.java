@@ -27,7 +27,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setHandshakeHandler(handshakeHandler)
-                .setAllowedOriginPatterns("http://localhost:5173")
+                .setAllowedOriginPatterns("*")  // TODO(T-20): restrict to configured origin in prod
                 .withSockJS();
     }
 }

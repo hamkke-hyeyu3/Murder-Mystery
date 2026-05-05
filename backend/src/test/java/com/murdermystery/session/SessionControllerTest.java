@@ -8,6 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -19,12 +21,13 @@ class SessionControllerTest {
 
     private MockMvc mvc;
     private final SessionService service = mock(SessionService.class);
+    private final JoinService joinService = mock(JoinService.class);
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders
-            .standaloneSetup(new SessionController(service))
+            .standaloneSetup(new SessionController(service, joinService))
             .setControllerAdvice(new RestExceptionHandler())
             .build();
     }
@@ -77,6 +80,68 @@ class SessionControllerTest {
                 .content(mapper.writeValueAsString(new CreateSessionRequest("unknown", "alice"))))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.detail").value("unknown scenario"));
+    }
+
+    private JoinResponse sampleJoinResponse() {
+        return new JoinResponse(
+            "sess-uuid-1", "123456", "toy-manor", "lobby", "bob", "player-uuid-2",
+            List.of(new PlayerSummary("player-uuid-1", "alice", true),
+                    new PlayerSummary("player-uuid-2", "bob", false))
+        );
+    }
+
+    @Test
+    void post_join_happyPath_returns200WithBody() throws Exception {
+        when(joinService.join("123456", "bob")).thenReturn(sampleJoinResponse());
+
+        mvc.perform(post("/api/sessions/123456/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(new JoinRequest("bob"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.sessionId").value("sess-uuid-1"))
+            .andExpect(jsonPath("$.inviteCode").value("123456"))
+            .andExpect(jsonPath("$.nickname").value("bob"))
+            .andExpect(jsonPath("$.players").isArray());
+    }
+
+    @Test
+    void post_join_unknownInvite_returns400() throws Exception {
+        when(joinService.join(any(), any())).thenThrow(new InviteCodeNotFoundException("999999"));
+
+        mvc.perform(post("/api/sessions/999999/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(new JoinRequest("bob"))))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void post_join_takenNickname_returns409() throws Exception {
+        when(joinService.join(any(), any())).thenThrow(new NicknameTakenException("bob"));
+
+        mvc.perform(post("/api/sessions/123456/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(new JoinRequest("bob"))))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.detail").value("nickname already taken"));
+    }
+
+    @Test
+    void post_join_phaseInProgress_returns409() throws Exception {
+        when(joinService.join(any(), any())).thenThrow(new SessionNotJoinableException("in_progress"));
+
+        mvc.perform(post("/api/sessions/123456/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(new JoinRequest("bob"))))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.detail").value("session not in lobby"));
+    }
+
+    @Test
+    void post_join_blankNickname_returns400() throws Exception {
+        mvc.perform(post("/api/sessions/123456/join")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(new JoinRequest(""))))
+            .andExpect(status().isBadRequest());
     }
 
     @Test
