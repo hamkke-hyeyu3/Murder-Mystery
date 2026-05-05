@@ -62,7 +62,11 @@ export default function Catalog() {
         scenarioId: res.scenarioId,
         savedAt: Date.now(),
       }
-      localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(last))
+      try {
+        localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(last))
+      } catch {
+        // quota exceeded or storage disabled — store is still hydrated below
+      }
       setSession({
         sessionId: res.sessionId,
         inviteCode: res.inviteCode,
