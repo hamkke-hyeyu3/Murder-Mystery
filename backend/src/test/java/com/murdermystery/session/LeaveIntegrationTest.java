@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.HttpHeaders;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
@@ -20,6 +19,7 @@ import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import java.lang.reflect.Type;
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -90,15 +90,16 @@ class LeaveIntegrationTest {
         );
         Thread.sleep(300);
 
-        // Bob connects with auth headers and sends leave
-        WebSocketHttpHeaders bobWsHeaders = new WebSocketHttpHeaders();
-        bobWsHeaders.add("X-Invite-Code", host.inviteCode());
-        bobWsHeaders.add("X-Nickname", "bob");
-        bobWsHeaders.add("X-Player-Id", bob.playerId());
+        // Bob connects with auth as STOMP CONNECT frame headers (mirrors @stomp/stompjs connectHeaders)
+        StompHeaders bobConnectHeaders = new StompHeaders();
+        bobConnectHeaders.add("X-Invite-Code", host.inviteCode());
+        bobConnectHeaders.add("X-Nickname", "bob");
+        bobConnectHeaders.add("X-Player-Id", bob.playerId());
 
         WebSocketStompClient bobClient = buildStompClient();
         StompSession bobSession = bobClient
-            .connectAsync(wsUrl(), bobWsHeaders, new StompSessionHandlerAdapter() {})
+            .connectAsync(URI.create(wsUrl()), new WebSocketHttpHeaders(), bobConnectHeaders,
+                new StompSessionHandlerAdapter() {})
             .get(5, TimeUnit.SECONDS);
 
         Thread.sleep(100);
