@@ -25,13 +25,13 @@
   - [x] FE: `pages/Catalog.tsx` (단일 카드 + "세션 만들기" 버튼)
   - [x] 검증: `ScenarioLoaderTest` 5 실패 fixture + `Catalog.test.tsx` 4 케이스
 
-- [ ] **T-02** 카탈로그 → 세션 만들기 → 초대 번호 + lobby
-  - [ ] BE: `Session` 엔티티, `SessionService.createSession`
-  - [ ] BE: `POST /api/sessions {scenarioId, hostNickname}` 컨트롤러
-  - [ ] FE: 닉네임 인라인 입력 → POST → localStorage → `/lobby/:inviteCode`
-  - [ ] FE: `pages/Lobby.tsx` (6자리 코드 + 합류자 목록 placeholder + "게임 시작" 비활성)
-  - [ ] DB: `V2__session_player.sql` (`sessions`, `players`, unique `(session_id, nickname)`)
-  - [ ] 검증: `SessionServiceTest`
+- [x] **T-02** 카탈로그 → 세션 만들기 → 초대 번호 + lobby
+  - [x] BE: `Session` 엔티티, `SessionService.createSession`
+  - [x] BE: `POST /api/sessions {scenarioId, hostNickname}` 컨트롤러
+  - [x] FE: 닉네임 인라인 입력 → POST → localStorage → `/lobby/:inviteCode`
+  - [x] FE: `pages/Lobby.tsx` (6자리 코드 + 합류자 목록 placeholder + "게임 시작" 비활성)
+  - [x] DB: `V2__session_player.sql` (`sessions`, `players`, unique `(session_id, nickname)`)
+  - [x] 검증: `SessionServiceTest`
 
 - [ ] **T-03** 닉네임 합류 + 합류자 목록 양방향 동기 (STOMP)
   - [ ] BE: `JoinService.join`, `POST /api/sessions/{inviteCode}/join`
