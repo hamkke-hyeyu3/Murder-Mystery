@@ -6,4 +6,5 @@ import java.util.UUID;
 
 public interface PlayerRepository extends JpaRepository<Player, UUID> {
     boolean existsBySessionIdAndNickname(UUID sessionId, String nickname);
+    boolean existsByIdAndNicknameAndSession_InviteCode(UUID id, String nickname, String inviteCode);
 }

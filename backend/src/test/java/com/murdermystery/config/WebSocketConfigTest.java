@@ -1,5 +1,6 @@
 package com.murdermystery.config;
 
+import com.murdermystery.session.PlayerRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -11,7 +12,8 @@ import static org.mockito.Mockito.*;
 
 class WebSocketConfigTest {
 
-    private final WebSocketConfig config = new WebSocketConfig(new StompHandshakeHandler());
+    private final WebSocketConfig config = new WebSocketConfig(
+            new StompHandshakeHandler(mock(PlayerRepository.class)));
 
     @Test
     void configureMessageBroker_enablesSimpleBrokerOnTopicAndQueue() {
