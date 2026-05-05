@@ -23,3 +23,33 @@ export type LastSession = {
 }
 
 export const LAST_SESSION_KEY = 'mm:lastSession'
+
+export type PlayerSummaryDto = {
+  playerId: string
+  nickname: string
+  isHost: boolean
+}
+
+export type JoinSessionResponse = {
+  sessionId: string
+  inviteCode: string
+  scenarioId: string
+  phase: string
+  nickname: string
+  playerId: string
+  players: PlayerSummaryDto[]
+}
+
+export type SessionEvent =
+  | {
+      type: 'PLAYER_JOINED'
+      sessionId: string
+      occurredAt: string
+      payload: { playerId: string; nickname: string; isHost: boolean }
+    }
+  | {
+      type: 'PLAYER_LEFT'
+      sessionId: string
+      occurredAt: string
+      payload: { playerId: string; nickname: string }
+    }
