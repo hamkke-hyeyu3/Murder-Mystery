@@ -30,6 +30,26 @@ public class SessionService {
         this.transactionTemplate = transactionTemplate;
     }
 
+    public SessionViewResponse getSession(java.util.UUID sessionId) {
+        Session session = sessionRepository.findById(sessionId)
+            .orElseThrow(() -> new SessionNotFoundException(sessionId.toString()));
+        int required = scenarioRepository.findById(session.getScenarioId())
+            .orElseThrow(() -> new IllegalStateException("scenario not found: " + session.getScenarioId()))
+            .characters().size();
+        java.util.List<PlayerSummary> players = session.getPlayers().stream()
+            .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
+            .toList();
+        return new SessionViewResponse(
+            session.getId().toString(),
+            session.getInviteCode(),
+            session.getScenarioId(),
+            session.getPhase(),
+            required,
+            players.size(),
+            players
+        );
+    }
+
     public CreateSessionResponse createSession(String scenarioId, String hostNickname) {
         scenarioRepository.findById(scenarioId)
             .orElseThrow(() -> new IllegalArgumentException("unknown scenario: " + scenarioId));

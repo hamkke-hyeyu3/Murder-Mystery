@@ -1,11 +1,14 @@
 package com.murdermystery.session;
 
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/sessions")
@@ -22,6 +25,11 @@ public class SessionController {
     @PostMapping
     public CreateSessionResponse create(@RequestBody @Valid CreateSessionRequest req) {
         return sessionService.createSession(req.scenarioId(), req.hostNickname());
+    }
+
+    @GetMapping("/{sessionId}")
+    public SessionViewResponse get(@PathVariable String sessionId) {
+        return sessionService.getSession(UUID.fromString(sessionId));
     }
 
     @PostMapping("/{inviteCode}/join")

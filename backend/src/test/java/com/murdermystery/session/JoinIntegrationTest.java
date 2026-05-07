@@ -18,8 +18,11 @@ import org.springframework.web.socket.sockjs.client.SockJsClient;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -70,8 +73,9 @@ class JoinIntegrationTest {
         CreateSessionResponse host = createHostSession();
 
         WebSocketStompClient stompClient = buildStompClient();
-        CountDownLatch latch = new CountDownLatch(1);
-        AtomicReference<String> receivedPayload = new AtomicReference<>();
+        // join now emits PLAYER_JOINED + LOBBY_COUNT_CHANGED = 2 frames
+        CountDownLatch latch = new CountDownLatch(2);
+        BlockingQueue<String> receivedFrames = new LinkedBlockingQueue<>();
 
         StompSession stompSession = stompClient
             .connectAsync(wsUrl(), new StompSessionHandlerAdapter() {
@@ -92,7 +96,7 @@ class JoinIntegrationTest {
                 @Override
                 public void handleFrame(StompHeaders headers, Object payload) {
                     System.out.println("STOMP frame received: " + payload);
-                    receivedPayload.set(payload != null ? payload.toString() : null);
+                    receivedFrames.offer(payload != null ? payload.toString() : "");
                     latch.countDown();
                 }
             }
@@ -110,15 +114,82 @@ class JoinIntegrationTest {
         assertThat(joinRes.getStatusCode().is2xxSuccessful()).isTrue();
 
         assertThat(latch.await(5, TimeUnit.SECONDS))
-            .withFailMessage("Timed out waiting for PLAYER_JOINED event")
+            .withFailMessage("Timed out waiting for PLAYER_JOINED + LOBBY_COUNT_CHANGED events")
             .isTrue();
-        assertThat(receivedPayload.get())
-            .contains("PLAYER_JOINED")
-            .contains("bob")
-            .contains(host.sessionId());
+        List<String> frames = new ArrayList<>(receivedFrames);
+        assertThat(frames).anySatisfy(f -> assertThat(f)
+            .contains("PLAYER_JOINED").contains("bob").contains(host.sessionId()));
+        assertThat(frames).anySatisfy(f -> assertThat(f).contains("LOBBY_COUNT_CHANGED"));
 
         stompSession.disconnect();
         stompClient.stop();
+    }
+
+    @Test
+    void subscriberReceivesLobbyCountChangedAfterPlayerJoined() throws Exception {
+        CreateSessionResponse host = createHostSession();
+
+        WebSocketStompClient stompClient = buildStompClient();
+        CountDownLatch latch = new CountDownLatch(2);
+        BlockingQueue<String> receivedFrames = new LinkedBlockingQueue<>();
+
+        StompSession stompSession = stompClient
+            .connectAsync(wsUrl(), new StompSessionHandlerAdapter() {})
+            .get(5, TimeUnit.SECONDS);
+
+        stompSession.subscribe(
+            "/topic/session/" + host.sessionId() + "/event",
+            new StompFrameHandler() {
+                @Override
+                public Type getPayloadType(StompHeaders headers) { return JsonNode.class; }
+
+                @Override
+                public void handleFrame(StompHeaders headers, Object payload) {
+                    receivedFrames.offer(payload != null ? payload.toString() : "");
+                    latch.countDown();
+                }
+            }
+        );
+        Thread.sleep(200);
+
+        http.postForEntity(
+            baseUrl() + "/api/sessions/" + host.inviteCode() + "/join",
+            new JoinRequest("bob"),
+            JoinResponse.class
+        );
+
+        assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+        List<String> frames = new ArrayList<>(receivedFrames);
+        String countFrame = frames.stream()
+            .filter(f -> f.contains("LOBBY_COUNT_CHANGED"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("No LOBBY_COUNT_CHANGED frame received"));
+        assertThat(countFrame).contains("\"joined\":2").contains("\"required\":3");
+
+        stompSession.disconnect();
+        stompClient.stop();
+    }
+
+    @Test
+    void getSession_returnsCurrentJoinedAndRequiredCount() {
+        CreateSessionResponse host = createHostSession();
+
+        http.postForEntity(
+            baseUrl() + "/api/sessions/" + host.inviteCode() + "/join",
+            new JoinRequest("bob"),
+            JoinResponse.class
+        );
+
+        var res = http.getForEntity(
+            baseUrl() + "/api/sessions/" + host.sessionId(),
+            SessionViewResponse.class
+        );
+        assertThat(res.getStatusCode().is2xxSuccessful()).isTrue();
+        SessionViewResponse view = res.getBody();
+        assertThat(view).isNotNull();
+        assertThat(view.joinedCount()).isEqualTo(2);
+        assertThat(view.requiredCharacterCount()).isEqualTo(3);
+        assertThat(view.inviteCode()).isEqualTo(host.inviteCode());
     }
 
     @Test

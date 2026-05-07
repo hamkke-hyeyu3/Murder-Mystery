@@ -1,6 +1,7 @@
 package com.murdermystery.web;
 
 import com.murdermystery.session.NicknameTakenException;
+import com.murdermystery.session.SessionNotFoundException;
 import com.murdermystery.session.SessionNotJoinableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,13 @@ public class RestExceptionHandler {
     public ProblemDetail handleNicknameTaken(NicknameTakenException ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         detail.setDetail("nickname already taken");
+        return detail;
+    }
+
+    @ExceptionHandler(SessionNotFoundException.class)
+    public ProblemDetail handleSessionNotFound(SessionNotFoundException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        detail.setDetail("session not found");
         return detail;
     }
 

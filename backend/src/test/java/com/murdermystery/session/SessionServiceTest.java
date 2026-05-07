@@ -12,6 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -147,6 +148,43 @@ class SessionServiceTest {
         assertThatThrownBy(() -> service.createSession("toy-manor", "alice"))
             .isInstanceOf(IllegalStateException.class);
         verify(codeGen, times(5)).next();
+    }
+
+    @Test
+    void getSession_unknownId_throwsSessionNotFound() {
+        UUID unknownId = UUID.randomUUID();
+        when(sessionRepo.findById(unknownId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getSession(unknownId))
+            .isInstanceOf(SessionNotFoundException.class);
+    }
+
+    @Test
+    void getSession_happyPath_returnsViewWithRequiredCount() {
+        Scenario scenario = new Scenario(
+            "toy-manor", "Toy Manor", "summary", "🏚️", 60,
+            List.of(
+                new ScenarioCharacter("c1", "A"),
+                new ScenarioCharacter("c2", "B"),
+                new ScenarioCharacter("c3", "C")
+            ),
+            List.of(), List.of(), List.of(), "c1", false, 3
+        );
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        Session session = new Session("123456", "toy-manor");
+        Player alice = new Player("alice", true);
+        Player bob = new Player("bob", false);
+        session.addPlayer(alice);
+        session.addPlayer(bob);
+        when(sessionRepo.findById(session.getId())).thenReturn(Optional.of(session));
+
+        SessionViewResponse view = service.getSession(session.getId());
+
+        assertThat(view.inviteCode()).isEqualTo("123456");
+        assertThat(view.requiredCharacterCount()).isEqualTo(3);
+        assertThat(view.joinedCount()).isEqualTo(2);
+        assertThat(view.players()).hasSize(2);
     }
 
     @Test

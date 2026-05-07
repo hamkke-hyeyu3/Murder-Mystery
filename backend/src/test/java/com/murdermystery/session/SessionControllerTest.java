@@ -10,9 +10,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
+import java.util.UUID;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -141,6 +144,46 @@ class SessionControllerTest {
         mvc.perform(post("/api/sessions/123456/join")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(mapper.writeValueAsString(new JoinRequest(""))))
+            .andExpect(status().isBadRequest());
+    }
+
+    private SessionViewResponse sampleViewResponse(String sessionId) {
+        return new SessionViewResponse(
+            sessionId, "123456", "toy-manor", "lobby",
+            3, 2,
+            List.of(new PlayerSummary("p1", "alice", true),
+                    new PlayerSummary("p2", "bob", false))
+        );
+    }
+
+    @Test
+    void get_happyPath_returnsAllFieldsIncludingCounts() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        when(service.getSession(sessionId)).thenReturn(sampleViewResponse(sessionId.toString()));
+
+        mvc.perform(get("/api/sessions/" + sessionId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.sessionId").value(sessionId.toString()))
+            .andExpect(jsonPath("$.inviteCode").value("123456"))
+            .andExpect(jsonPath("$.requiredCharacterCount").value(3))
+            .andExpect(jsonPath("$.joinedCount").value(2))
+            .andExpect(jsonPath("$.players").isArray())
+            .andExpect(jsonPath("$.players.length()").value(2));
+    }
+
+    @Test
+    void get_unknownSessionId_returns404() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        when(service.getSession(sessionId)).thenThrow(new SessionNotFoundException(sessionId.toString()));
+
+        mvc.perform(get("/api/sessions/" + sessionId))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.detail").value("session not found"));
+    }
+
+    @Test
+    void get_invalidUuid_returns400() throws Exception {
+        mvc.perform(get("/api/sessions/not-a-uuid"))
             .andExpect(status().isBadRequest());
     }
 
