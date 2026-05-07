@@ -1,5 +1,7 @@
 package com.murdermystery.session;
 
+import com.murdermystery.scenario.ScenarioRepository;
+import com.murdermystery.ws.event.LobbyCountChangedPayload;
 import com.murdermystery.ws.event.PlayerJoinedPayload;
 import com.murdermystery.ws.event.SessionEventEnvelope;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -17,17 +19,20 @@ public class JoinService {
     private final PlayerRepository playerRepository;
     private final TransactionTemplate transactionTemplate;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ScenarioRepository scenarioRepository;
 
     public JoinService(
         SessionRepository sessionRepository,
         PlayerRepository playerRepository,
         TransactionTemplate transactionTemplate,
-        SimpMessagingTemplate messagingTemplate
+        SimpMessagingTemplate messagingTemplate,
+        ScenarioRepository scenarioRepository
     ) {
         this.sessionRepository = sessionRepository;
         this.playerRepository = playerRepository;
         this.transactionTemplate = transactionTemplate;
         this.messagingTemplate = messagingTemplate;
+        this.scenarioRepository = scenarioRepository;
     }
 
     public JoinResponse join(String inviteCode, String rawNickname) {
@@ -67,10 +72,20 @@ public class JoinService {
         });
 
         // Broadcast after transaction commits — never inside the lambda
-        var payload = new PlayerJoinedPayload(response.playerId(), response.nickname(), false);
+        var playerJoined = new PlayerJoinedPayload(response.playerId(), response.nickname(), false);
         messagingTemplate.convertAndSend(
             "/topic/session/" + response.sessionId() + "/event",
-            new SessionEventEnvelope<>("PLAYER_JOINED", Instant.now(), response.sessionId(), payload)
+            new SessionEventEnvelope<>("PLAYER_JOINED", Instant.now(), response.sessionId(), playerJoined)
+        );
+
+        int joined = response.players().size();
+        int required = scenarioRepository.findById(response.scenarioId())
+            .orElseThrow(() -> new IllegalStateException("scenario not found: " + response.scenarioId()))
+            .characters().size();
+        messagingTemplate.convertAndSend(
+            "/topic/session/" + response.sessionId() + "/event",
+            new SessionEventEnvelope<>("LOBBY_COUNT_CHANGED", Instant.now(), response.sessionId(),
+                new LobbyCountChangedPayload(joined, required))
         );
 
         return response;
