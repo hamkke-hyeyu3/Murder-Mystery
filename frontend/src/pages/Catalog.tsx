@@ -72,6 +72,7 @@ export default function Catalog() {
         inviteCode: res.inviteCode,
         nickname: res.hostNickname,
         isHost: true,
+        isHostConfirmed: false,
         playerId: res.playerId,
         phase: res.phase,
         requiredCharacterCount: null,

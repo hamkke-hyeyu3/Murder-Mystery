@@ -10,6 +10,7 @@ export interface SessionState {
   inviteCode: string | null
   nickname: string | null
   isHost: boolean
+  isHostConfirmed: boolean
   playerId: string | null
   phase: string | null
   players: PlayerSummary[]
@@ -27,6 +28,7 @@ const initialState: SessionState = {
   inviteCode: null,
   nickname: null,
   isHost: false,
+  isHostConfirmed: false,
   playerId: null,
   phase: null,
   players: [],

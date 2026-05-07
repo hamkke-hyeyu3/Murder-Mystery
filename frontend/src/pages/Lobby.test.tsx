@@ -178,7 +178,7 @@ describe('Lobby', () => {
     }
   )
 
-  it('mount 시 getSession을 호출해 requiredCharacterCount와 joinedCount를 채운다', async () => {
+  it('mount 시 getSession을 호출해 카운트와 합류자 목록을 채운다', async () => {
     const view: SessionViewResponse = {
       sessionId: 'sess-001',
       inviteCode: '012345',
@@ -189,12 +189,74 @@ describe('Lobby', () => {
       players: [{ playerId: 'p1', nickname: 'alice', isHost: true }],
     }
     server.use(http.get('/api/sessions/:id', () => HttpResponse.json(view)))
-    useSessionStore.getState().setSession({ sessionId: 'sess-001', isHost: true })
+    useSessionStore.getState().setSession({ sessionId: 'sess-001', playerId: 'p1' })
 
     renderLobby()
 
     await waitFor(() => {
       expect(screen.getByText('2명 더 필요')).toBeInTheDocument()
+      expect(screen.getByText('alice')).toBeInTheDocument()
+      expect(useSessionStore.getState().isHost).toBe(true)
+    })
+  })
+
+  it('mount 시 LOBBY_COUNT_CHANGED가 먼저 와도 GET 결과로 isHost를 확정한다', async () => {
+    const view: SessionViewResponse = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      scenarioId: 'toy-manor',
+      phase: 'lobby',
+      requiredCharacterCount: 3,
+      joinedCount: 2,
+      players: [
+        { playerId: 'p1', nickname: 'alice', isHost: true },
+        { playerId: 'p2', nickname: 'bob', isHost: false },
+      ],
+    }
+    server.use(http.get('/api/sessions/:id', () => HttpResponse.json(view)))
+    // STOMP 선도착 상태 + localStorage 스푸핑(isHost: true) 시뮬레이트
+    useSessionStore.getState().reset()
+    useSessionStore.getState().setSession({
+      sessionId: 'sess-001',
+      playerId: 'p2',
+      isHost: true,
+      isHostConfirmed: false,
+      requiredCharacterCount: 3,
+      joinedCount: 2,
+    })
+
+    renderLobby()
+
+    await waitFor(() => {
+      expect(useSessionStore.getState().isHost).toBe(false)
+      expect(useSessionStore.getState().isHostConfirmed).toBe(true)
+    })
+  })
+
+  it('mount 시 내 playerId가 view.players에 없으면 isHost를 false로 강제한다', async () => {
+    const view: SessionViewResponse = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      scenarioId: 'toy-manor',
+      phase: 'lobby',
+      requiredCharacterCount: 3,
+      joinedCount: 1,
+      players: [{ playerId: 'p1', nickname: 'alice', isHost: true }],
+    }
+    server.use(http.get('/api/sessions/:id', () => HttpResponse.json(view)))
+    useSessionStore.getState().reset()
+    useSessionStore.getState().setSession({
+      sessionId: 'sess-001',
+      playerId: 'phantom',
+      isHost: true,
+      isHostConfirmed: false,
+    })
+
+    renderLobby()
+
+    await waitFor(() => {
+      expect(useSessionStore.getState().isHost).toBe(false)
+      expect(useSessionStore.getState().isHostConfirmed).toBe(true)
     })
   })
 

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
 import { getSession } from '@/lib/sessionApi'
 import { useSessionStore } from '@/stores/sessionStore'
+import type { SessionState } from '@/stores/sessionStore'
 import { LAST_SESSION_KEY } from '@/types/session'
 import type { LastSession } from '@/types/session'
 
@@ -43,6 +44,7 @@ export default function Lobby() {
           inviteCode: last.inviteCode,
           nickname: last.nickname,
           isHost: last.isHost,
+          isHostConfirmed: false,
           playerId: last.playerId,
           phase: 'lobby',
           requiredCharacterCount: null,
@@ -55,17 +57,30 @@ export default function Lobby() {
   }, [inviteCode, storeInviteCode, setSession])
 
   useEffect(() => {
-    if (!sessionId || requiredCharacterCount !== null) return
+    if (!sessionId) return
     getSession(sessionId)
       .then((view) => {
-        if (useSessionStore.getState().requiredCharacterCount === null) {
-          setSession({ requiredCharacterCount: view.requiredCharacterCount, joinedCount: view.joinedCount })
+        const state = useSessionStore.getState()
+        const patch: Partial<SessionState> = {}
+
+        if (state.requiredCharacterCount === null) {
+          patch.requiredCharacterCount = view.requiredCharacterCount
+          patch.joinedCount = view.joinedCount
+          patch.players = view.players.map((p) => ({ nickname: p.nickname, isHost: p.isHost }))
         }
+
+        if (!state.isHostConfirmed) {
+          const me = view.players.find((p) => p.playerId === state.playerId)
+          patch.isHost = me?.isHost ?? false
+          patch.isHostConfirmed = true
+        }
+
+        if (Object.keys(patch).length > 0) setSession(patch)
       })
       .catch(() => {
         // LOBBY_COUNT_CHANGED via STOMP will populate counts when WS connects
       })
-  }, [sessionId, requiredCharacterCount, setSession])
+  }, [sessionId, setSession])
 
   const { publishLeave } = useSessionWebSocket({ sessionId, inviteCode: storeInviteCode, nickname, playerId })
 
