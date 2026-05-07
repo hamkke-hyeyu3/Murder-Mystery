@@ -13,6 +13,8 @@ export interface SessionState {
   playerId: string | null
   phase: string | null
   players: PlayerSummary[]
+  requiredCharacterCount: number | null
+  joinedCount: number | null
 }
 
 interface SessionActions {
@@ -28,6 +30,8 @@ const initialState: SessionState = {
   playerId: null,
   phase: null,
   players: [],
+  requiredCharacterCount: null,
+  joinedCount: null,
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({

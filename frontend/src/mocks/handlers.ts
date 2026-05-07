@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import type { ScenarioSummary } from '@/types/scenario'
-import type { CreateSessionResponse, JoinSessionResponse } from '@/types/session'
+import type { CreateSessionResponse, JoinSessionResponse, SessionViewResponse } from '@/types/session'
 
 export const defaultScenario: ScenarioSummary = {
   id: 'toy-manor',
@@ -33,8 +33,19 @@ export const defaultJoinResponse: JoinSessionResponse = {
   ],
 }
 
+export const defaultSessionViewResponse: SessionViewResponse = {
+  sessionId: 'sess-default',
+  inviteCode: '000001',
+  scenarioId: 'toy-manor',
+  phase: 'lobby',
+  requiredCharacterCount: 3,
+  joinedCount: 1,
+  players: [{ playerId: 'player-default', nickname: 'alice', isHost: true }],
+}
+
 export const handlers = [
   http.get('/api/scenarios', () => HttpResponse.json([defaultScenario])),
   http.post('/api/sessions', () => HttpResponse.json(defaultSessionResponse)),
   http.post('/api/sessions/:inviteCode/join', () => HttpResponse.json(defaultJoinResponse)),
+  http.get('/api/sessions/:sessionId', () => HttpResponse.json(defaultSessionViewResponse)),
 ]

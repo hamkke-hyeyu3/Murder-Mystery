@@ -40,6 +40,16 @@ export type JoinSessionResponse = {
   players: PlayerSummaryDto[]
 }
 
+export type SessionViewResponse = {
+  sessionId: string
+  inviteCode: string
+  scenarioId: string
+  phase: string
+  requiredCharacterCount: number
+  joinedCount: number
+  players: PlayerSummaryDto[]
+}
+
 export type SessionEvent =
   | {
       type: 'PLAYER_JOINED'
@@ -52,4 +62,10 @@ export type SessionEvent =
       sessionId: string
       occurredAt: string
       payload: { playerId: string; nickname: string }
+    }
+  | {
+      type: 'LOBBY_COUNT_CHANGED'
+      sessionId: string
+      occurredAt: string
+      payload: { joined: number; required: number }
     }

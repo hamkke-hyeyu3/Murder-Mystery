@@ -1,5 +1,9 @@
-import { apiPost } from '@/lib/api'
-import type { CreateSessionRequest, CreateSessionResponse, JoinSessionResponse } from '@/types/session'
+import { apiFetch, apiPost } from '@/lib/api'
+import type { CreateSessionRequest, CreateSessionResponse, JoinSessionResponse, SessionViewResponse } from '@/types/session'
+
+export function getSession(sessionId: string): Promise<SessionViewResponse> {
+  return apiFetch<SessionViewResponse>(`/api/sessions/${sessionId}`)
+}
 
 export function createSession(
   scenarioId: string,
