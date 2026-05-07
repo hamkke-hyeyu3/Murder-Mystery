@@ -1,8 +1,10 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { server } from '@/mocks/server'
 import { LAST_SESSION_KEY } from '@/types/session'
-import type { LastSession } from '@/types/session'
+import type { LastSession, SessionViewResponse } from '@/types/session'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
 import Lobby from './Lobby'
@@ -48,9 +50,19 @@ describe('Lobby', () => {
     expect(screen.getByText('아직 합류자 없음')).toBeInTheDocument()
   })
 
-  it('"게임 시작" 버튼이 비활성이다', () => {
+  it('호스트에게 "게임 시작" 버튼이 보이고 게스트에게는 보이지 않는다', () => {
+    useSessionStore.getState().setSession({
+      isHost: true,
+      requiredCharacterCount: 3,
+      joinedCount: 3,
+    })
     renderLobby()
-    expect(screen.getByRole('button', { name: '게임 시작' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '게임 시작' })).toBeInTheDocument()
+
+    useSessionStore.getState().reset()
+    useSessionStore.getState().setSession({ isHost: false })
+    renderLobby()
+    expect(screen.queryByRole('button', { name: '게임 시작' })).not.toBeInTheDocument()
   })
 
   it('localStorage mm:lastSession이 매칭 inviteCode면 store를 하이드레이트한다', () => {
@@ -126,6 +138,64 @@ describe('Lobby', () => {
     useSessionStore.getState().setSession({ isHost: true, nickname: 'alice' })
     renderLobby()
     expect(screen.queryByRole('button', { name: '나가기' })).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { role: 'host' as const, joined: 1, required: 3, label: '2명 더 필요', disabled: true },
+    { role: 'host' as const, joined: 2, required: 3, label: '1명 더 필요', disabled: true },
+    { role: 'host' as const, joined: 3, required: 3, label: null, disabled: false },
+    { role: 'host' as const, joined: 4, required: 3, label: '1명 초과 — 누군가 나가야 합니다', disabled: true },
+    { role: 'guest' as const, joined: 2, required: 3, label: null, disabled: null },
+    { role: 'guest' as const, joined: 4, required: 3, label: null, disabled: null },
+  ])(
+    '($role, joined=$joined, required=$required) → 사유 라벨: $label, 시작 버튼: disabled=$disabled',
+    ({ role, joined, required, label, disabled }) => {
+      useSessionStore.getState().setSession({
+        isHost: role === 'host',
+        joinedCount: joined,
+        requiredCharacterCount: required,
+      })
+      renderLobby()
+
+      if (label) {
+        expect(screen.getByText(label)).toBeInTheDocument()
+      } else {
+        expect(screen.queryByTestId('lobby-reason-short')).not.toBeInTheDocument()
+        expect(screen.queryByTestId('lobby-reason-excess')).not.toBeInTheDocument()
+      }
+
+      if (disabled === null) {
+        // guest: no start button
+        expect(screen.queryByRole('button', { name: '게임 시작' })).not.toBeInTheDocument()
+      } else {
+        const btn = screen.getByRole('button', { name: '게임 시작' })
+        if (disabled) {
+          expect(btn).toBeDisabled()
+        } else {
+          expect(btn).toBeEnabled()
+        }
+      }
+    }
+  )
+
+  it('mount 시 getSession을 호출해 requiredCharacterCount와 joinedCount를 채운다', async () => {
+    const view: SessionViewResponse = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      scenarioId: 'toy-manor',
+      phase: 'lobby',
+      requiredCharacterCount: 3,
+      joinedCount: 1,
+      players: [{ playerId: 'p1', nickname: 'alice', isHost: true }],
+    }
+    server.use(http.get('/api/sessions/:id', () => HttpResponse.json(view)))
+    useSessionStore.getState().setSession({ sessionId: 'sess-001', isHost: true })
+
+    renderLobby()
+
+    await waitFor(() => {
+      expect(screen.getByText('2명 더 필요')).toBeInTheDocument()
+    })
   })
 
   it('나가기 클릭 시 publishLeave 호출 후 localStorage 삭제 → store reset → /로 이동한다', async () => {

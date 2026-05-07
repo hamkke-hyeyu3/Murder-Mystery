@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
+import { getSession } from '@/lib/sessionApi'
 import { useSessionStore } from '@/stores/sessionStore'
 import { LAST_SESSION_KEY } from '@/types/session'
 import type { LastSession } from '@/types/session'
@@ -16,8 +17,12 @@ export default function Lobby() {
   const playerId = useSessionStore((s) => s.playerId)
   const isHost = useSessionStore((s) => s.isHost)
   const players = useSessionStore((s) => s.players)
+  const requiredCharacterCount = useSessionStore((s) => s.requiredCharacterCount)
+  const joinedCount = useSessionStore((s) => s.joinedCount)
   const setSession = useSessionStore((s) => s.setSession)
   const reset = useSessionStore((s) => s.reset)
+
+  const joined = joinedCount !== null ? joinedCount : players.length
 
   useEffect(() => {
     if (storeInviteCode === inviteCode) return
@@ -46,6 +51,19 @@ export default function Lobby() {
       // ignore malformed JSON
     }
   }, [inviteCode, storeInviteCode, setSession])
+
+  useEffect(() => {
+    if (!sessionId || requiredCharacterCount !== null) return
+    getSession(sessionId)
+      .then((view) => {
+        if (useSessionStore.getState().requiredCharacterCount === null) {
+          setSession({ requiredCharacterCount: view.requiredCharacterCount, joinedCount: view.joinedCount })
+        }
+      })
+      .catch(() => {
+        // LOBBY_COUNT_CHANGED via STOMP will populate counts when WS connects
+      })
+  }, [sessionId, requiredCharacterCount, setSession])
 
   const { publishLeave } = useSessionWebSocket({ sessionId, inviteCode: storeInviteCode, nickname, playerId })
 
@@ -79,7 +97,19 @@ export default function Lobby() {
           </ul>
         )}
       </section>
-      <Button disabled>게임 시작</Button>
+      {isHost && requiredCharacterCount !== null && joined < requiredCharacterCount && (
+        <p data-testid="lobby-reason-short">{requiredCharacterCount - joined}명 더 필요</p>
+      )}
+      {isHost && requiredCharacterCount !== null && joined > requiredCharacterCount && (
+        <p data-testid="lobby-reason-excess">
+          {joined - requiredCharacterCount}명 초과 — 누군가 나가야 합니다
+        </p>
+      )}
+      {isHost && (
+        <Button disabled={requiredCharacterCount === null || joined !== requiredCharacterCount}>
+          게임 시작
+        </Button>
+      )}
       {!isHost && (
         <Button variant="outline" onClick={handleLeave}>
           나가기
