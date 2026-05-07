@@ -32,11 +32,11 @@ class RestExceptionHandlerTest {
     }
 
     @Test
-    void handleGeneral_withMessage_includesMessage() {
+    void handleGeneral_withMessage_doesNotExposeExceptionMessage() {
         ProblemDetail result = handler.handleGeneral(new RuntimeException("unexpected failure"));
 
         assertThat(result.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        assertThat(result.getDetail()).isEqualTo("unexpected failure");
+        assertThat(result.getDetail()).isEqualTo("Internal server error");
     }
 
     @Test

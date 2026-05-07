@@ -15,6 +15,8 @@ import java.util.List;
 @Service
 public class JoinService {
 
+    private record JoinBroadcastBundle(JoinResponse response, LobbyCountChangedPayload count) {}
+
     private final SessionRepository sessionRepository;
     private final PlayerRepository playerRepository;
     private final TransactionTemplate transactionTemplate;
@@ -45,8 +47,8 @@ public class JoinService {
 
         String nickname = validateNickname(rawNickname);
 
-        // Execute in transaction; broadcast happens after commit returns
-        JoinResponse response = transactionTemplate.execute(status -> {
+        // Execute in transaction; both payloads computed here so broadcast is atomic after commit
+        JoinBroadcastBundle bundle = transactionTemplate.execute(status -> {
             Player player = new Player(nickname, false);
             session.addPlayer(player);
             try {
@@ -60,7 +62,7 @@ public class JoinService {
             List<PlayerSummary> players = session.getPlayers().stream()
                 .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
                 .toList();
-            return new JoinResponse(
+            JoinResponse response = new JoinResponse(
                 session.getId().toString(),
                 session.getInviteCode(),
                 session.getScenarioId(),
@@ -69,26 +71,25 @@ public class JoinService {
                 player.getId().toString(),
                 players
             );
+            int joined = players.size();
+            int required = scenarioRepository.findById(session.getScenarioId())
+                .orElseThrow(() -> new IllegalStateException("scenario not found: " + session.getScenarioId()))
+                .characters().size();
+            return new JoinBroadcastBundle(response, new LobbyCountChangedPayload(joined, required));
         });
 
         // Broadcast after transaction commits — never inside the lambda
-        var playerJoined = new PlayerJoinedPayload(response.playerId(), response.nickname(), false);
+        var playerJoined = new PlayerJoinedPayload(bundle.response().playerId(), bundle.response().nickname(), false);
         messagingTemplate.convertAndSend(
-            "/topic/session/" + response.sessionId() + "/event",
-            new SessionEventEnvelope<>("PLAYER_JOINED", Instant.now(), response.sessionId(), playerJoined)
+            "/topic/session/" + bundle.response().sessionId() + "/event",
+            new SessionEventEnvelope<>("PLAYER_JOINED", Instant.now(), bundle.response().sessionId(), playerJoined)
+        );
+        messagingTemplate.convertAndSend(
+            "/topic/session/" + bundle.response().sessionId() + "/event",
+            new SessionEventEnvelope<>("LOBBY_COUNT_CHANGED", Instant.now(), bundle.response().sessionId(), bundle.count())
         );
 
-        int joined = response.players().size();
-        int required = scenarioRepository.findById(response.scenarioId())
-            .orElseThrow(() -> new IllegalStateException("scenario not found: " + response.scenarioId()))
-            .characters().size();
-        messagingTemplate.convertAndSend(
-            "/topic/session/" + response.sessionId() + "/event",
-            new SessionEventEnvelope<>("LOBBY_COUNT_CHANGED", Instant.now(), response.sessionId(),
-                new LobbyCountChangedPayload(joined, required))
-        );
-
-        return response;
+        return bundle.response();
     }
 
     private static String validateNickname(String raw) {

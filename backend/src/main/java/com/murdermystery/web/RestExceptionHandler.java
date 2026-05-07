@@ -58,7 +58,7 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(IllegalStateException.class)
     public ProblemDetail handleIllegalState(IllegalStateException ex) {
-        log.error("Internal state error: {}", ex.getMessage());
+        log.error("Internal state error", ex);
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         detail.setDetail("잠시 후 다시 시도해주세요");
         return detail;
@@ -66,8 +66,9 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleGeneral(Exception ex) {
+        log.error("Unhandled exception", ex);
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        detail.setDetail(ex.getMessage() != null ? ex.getMessage() : "Internal server error");
+        detail.setDetail("Internal server error");
         return detail;
     }
 }
