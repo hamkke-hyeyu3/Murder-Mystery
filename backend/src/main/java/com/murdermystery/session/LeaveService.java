@@ -1,6 +1,8 @@
 package com.murdermystery.session;
 
 import com.murdermystery.config.StompPrincipal;
+import com.murdermystery.scenario.ScenarioRepository;
+import com.murdermystery.ws.event.LobbyCountChangedPayload;
 import com.murdermystery.ws.event.PlayerLeftPayload;
 import com.murdermystery.ws.event.SessionEventEnvelope;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -13,16 +15,21 @@ import java.time.Instant;
 @Service
 public class LeaveService {
 
+    private record LeaveBroadcastBundle(PlayerLeftPayload left, LobbyCountChangedPayload count) {}
+
     private final SessionRepository sessionRepository;
     private final TransactionTemplate transactionTemplate;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ScenarioRepository scenarioRepository;
 
     public LeaveService(SessionRepository sessionRepository,
                         TransactionTemplate transactionTemplate,
-                        SimpMessagingTemplate messagingTemplate) {
+                        SimpMessagingTemplate messagingTemplate,
+                        ScenarioRepository scenarioRepository) {
         this.sessionRepository = sessionRepository;
         this.transactionTemplate = transactionTemplate;
         this.messagingTemplate = messagingTemplate;
+        this.scenarioRepository = scenarioRepository;
     }
 
     public void leave(String sessionId, Principal principal) {
@@ -32,7 +39,7 @@ public class LeaveService {
         String playerId   = stomp.playerId();
         if (inviteCode == null || playerId == null) return;
 
-        PlayerLeftPayload broadcastPayload = transactionTemplate.execute(status -> {
+        LeaveBroadcastBundle bundle = transactionTemplate.execute(status -> {
             Session session = sessionRepository.findByInviteCode(inviteCode).orElse(null);
             if (session == null) return null;
             if (!session.getId().toString().equals(sessionId)) return null;
@@ -45,17 +52,26 @@ public class LeaveService {
             if (player == null) return null;
             if (player.isHost()) return null;
 
-            PlayerLeftPayload payload = new PlayerLeftPayload(player.getId().toString(), player.getNickname());
+            PlayerLeftPayload leftPayload = new PlayerLeftPayload(player.getId().toString(), player.getNickname());
             session.removePlayer(player);
             sessionRepository.saveAndFlush(session);
-            return payload;
+
+            int joined = session.getPlayers().size();
+            int required = scenarioRepository.findById(session.getScenarioId())
+                .orElseThrow(() -> new IllegalStateException("scenario not found: " + session.getScenarioId()))
+                .characters().size();
+            return new LeaveBroadcastBundle(leftPayload, new LobbyCountChangedPayload(joined, required));
         });
 
-        if (broadcastPayload == null) return;
+        if (bundle == null) return;
 
         messagingTemplate.convertAndSend(
             "/topic/session/" + sessionId + "/event",
-            new SessionEventEnvelope<>("PLAYER_LEFT", Instant.now(), sessionId, broadcastPayload)
+            new SessionEventEnvelope<>("PLAYER_LEFT", Instant.now(), sessionId, bundle.left())
+        );
+        messagingTemplate.convertAndSend(
+            "/topic/session/" + sessionId + "/event",
+            new SessionEventEnvelope<>("LOBBY_COUNT_CHANGED", Instant.now(), sessionId, bundle.count())
         );
     }
 }

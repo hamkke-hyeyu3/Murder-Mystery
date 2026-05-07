@@ -1,14 +1,20 @@
 package com.murdermystery.session;
 
 import com.murdermystery.config.StompPrincipal;
+import com.murdermystery.scenario.Scenario;
+import com.murdermystery.scenario.ScenarioCharacter;
+import com.murdermystery.scenario.ScenarioRepository;
+import com.murdermystery.ws.event.LobbyCountChangedPayload;
 import com.murdermystery.ws.event.SessionEventEnvelope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.security.Principal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,6 +28,7 @@ class LeaveServiceTest {
     private SessionRepository sessionRepo;
     private TransactionTemplate txTemplate;
     private SimpMessagingTemplate messaging;
+    private ScenarioRepository scenarioRepo;
     private LeaveService service;
 
     @BeforeEach
@@ -29,11 +36,17 @@ class LeaveServiceTest {
         sessionRepo = mock(SessionRepository.class);
         messaging = mock(SimpMessagingTemplate.class);
         txTemplate = mock(TransactionTemplate.class);
+        scenarioRepo = mock(ScenarioRepository.class);
         when(txTemplate.execute(any())).thenAnswer(inv -> {
             var cb = inv.getArgument(0, org.springframework.transaction.support.TransactionCallback.class);
             return cb.doInTransaction(null);
         });
-        service = new LeaveService(sessionRepo, txTemplate, messaging);
+        Scenario scenario = mock(Scenario.class);
+        when(scenario.characters()).thenReturn(List.of(
+            mock(ScenarioCharacter.class), mock(ScenarioCharacter.class), mock(ScenarioCharacter.class)
+        ));
+        when(scenarioRepo.findById(any())).thenReturn(Optional.of(scenario));
+        service = new LeaveService(sessionRepo, txTemplate, messaging, scenarioRepo);
     }
 
     @Test
@@ -48,8 +61,31 @@ class LeaveServiceTest {
 
         InOrder order = inOrder(sessionRepo, messaging);
         order.verify(sessionRepo).saveAndFlush(any());
-        order.verify(messaging).convertAndSend(contains("/event"), any(SessionEventEnvelope.class));
+        order.verify(messaging, times(2)).convertAndSend(contains("/event"), any(SessionEventEnvelope.class));
         assertThat(session.getPlayers()).doesNotContain(bob);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void leave_validPrincipal_lobbyCountReflectsRemainingPlayers() {
+        Session session = new Session("123456", "toy-manor");
+        Player alice = new Player("alice", true);
+        Player bob = new Player("bob", false);
+        session.addPlayer(alice);
+        session.addPlayer(bob);
+        when(sessionRepo.findByInviteCode("123456")).thenReturn(Optional.of(session));
+        when(sessionRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.leave(session.getId().toString(), new StompPrincipal("123456:" + bob.getId()));
+
+        ArgumentCaptor<SessionEventEnvelope> captor = ArgumentCaptor.forClass(SessionEventEnvelope.class);
+        verify(messaging, times(2)).convertAndSend(any(String.class), captor.capture());
+        List<SessionEventEnvelope> envelopes = captor.getAllValues();
+        assertThat(envelopes.get(0).type()).isEqualTo("PLAYER_LEFT");
+        assertThat(envelopes.get(1).type()).isEqualTo("LOBBY_COUNT_CHANGED");
+        LobbyCountChangedPayload count = (LobbyCountChangedPayload) envelopes.get(1).payload();
+        assertThat(count.joined()).isEqualTo(1); // only alice remains
+        assertThat(count.required()).isEqualTo(3); // mocked toy-manor
     }
 
     @Test
