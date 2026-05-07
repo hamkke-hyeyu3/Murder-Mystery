@@ -74,6 +74,8 @@ export default function Catalog() {
         isHost: true,
         playerId: res.playerId,
         phase: res.phase,
+        requiredCharacterCount: null,
+        joinedCount: null,
       })
       navigate(`/lobby/${res.inviteCode}`)
     } catch {

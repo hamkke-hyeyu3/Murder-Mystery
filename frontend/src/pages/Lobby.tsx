@@ -45,6 +45,8 @@ export default function Lobby() {
           isHost: last.isHost,
           playerId: last.playerId,
           phase: 'lobby',
+          requiredCharacterCount: null,
+          joinedCount: null,
         })
       }
     } catch {

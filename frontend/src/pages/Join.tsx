@@ -53,6 +53,8 @@ export default function Join() {
         playerId: res.playerId,
         phase: res.phase,
         players: res.players.map((p) => ({ nickname: p.nickname, isHost: p.isHost })),
+        requiredCharacterCount: null,
+        joinedCount: null,
       })
       navigate(`/lobby/${res.inviteCode}`)
     } catch (err) {
