@@ -95,6 +95,25 @@ describe('useSessionWebSocket', () => {
     expect(mockPublish).not.toHaveBeenCalled()
   })
 
+  it('LOBBY_COUNT_CHANGED 이벤트 수신 시 store의 joinedCount와 requiredCharacterCount를 갱신한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      capturedCallback!({
+        body: JSON.stringify({
+          type: 'LOBBY_COUNT_CHANGED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-06T00:00:00Z',
+          payload: { joined: 2, required: 3 },
+        }),
+      } as IMessage)
+    })
+
+    const state = useSessionStore.getState()
+    expect(state.joinedCount).toBe(2)
+    expect(state.requiredCharacterCount).toBe(3)
+  })
+
   it('publishLeave 호출 시 올바른 destination으로 send한다', () => {
     const { result } = renderHook(() => useSessionWebSocket(defaultOptions))
 

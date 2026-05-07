@@ -45,6 +45,11 @@ export function useSessionWebSocket({
           setSession({
             players: current.filter((p) => p.nickname !== envelope.payload.nickname),
           })
+        } else if (envelope.type === 'LOBBY_COUNT_CHANGED') {
+          setSession({
+            joinedCount: envelope.payload.joined,
+            requiredCharacterCount: envelope.payload.required,
+          })
         }
       }
     )
