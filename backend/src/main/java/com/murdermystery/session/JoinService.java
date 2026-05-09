@@ -73,19 +73,7 @@ public class JoinService {
 
                 Player player = new Player(nickname, false, deviceId);
                 session.addPlayer(player);
-                try {
-                    sessionRepository.saveAndFlush(session);
-                } catch (DataIntegrityViolationException ex) {
-                    if (playerRepository.existsBySessionIdAndNickname(session.getId(), nickname)) {
-                        // Same device won the race with the same nickname — let outer catch handle it
-                        if (deviceId != null &&
-                                playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId).isPresent()) {
-                            throw ex;
-                        }
-                        throw new NicknameTakenException(nickname);
-                    }
-                    throw ex;
-                }
+                sessionRepository.saveAndFlush(session);
                 List<PlayerSummary> players = session.getPlayers().stream()
                     .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
                     .toList();
@@ -105,8 +93,8 @@ public class JoinService {
                 return new JoinBroadcastBundle(response, new LobbyCountChangedPayload(joined, required));
             });
         } catch (DataIntegrityViolationException ex) {
-            // A concurrent request from the same device raced past the in-transaction idempotent check
-            // and won the (session_id, device_id) unique constraint. Re-read in a new transaction.
+            // Transaction rolled back. All re-queries run in fresh transactions (safe after abort).
+            // Priority 1: same device won the race → idempotent response, no broadcast.
             if (deviceId != null) {
                 Optional<Player> existing = playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId);
                 if (existing.isPresent()) {
@@ -122,6 +110,10 @@ public class JoinService {
                         p.getNickname(), p.getId().toString(), players
                     );
                 }
+            }
+            // Priority 2: different device took the same nickname → 409.
+            if (playerRepository.existsBySessionIdAndNickname(session.getId(), nickname)) {
+                throw new NicknameTakenException(nickname);
             }
             throw ex;
         }
