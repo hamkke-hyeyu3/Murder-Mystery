@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/mocks/server'
 import { defaultScenario } from '@/mocks/handlers'
-import type { CreateSessionResponse } from '@/types/session'
+import type { CreateSessionResponse, LastSession, SessionViewResponse } from '@/types/session'
 import { LAST_SESSION_KEY } from '@/types/session'
 import Catalog from './Catalog'
 
@@ -134,5 +134,36 @@ describe('Catalog', () => {
     fireEvent.click(screen.getByRole('button', { name: '확인' }))
 
     expect(await screen.findByRole('alert')).toBeInTheDocument()
+  })
+
+  it('by-device가 놓친 저장 세션은 검증 후 /lobby로 복원한다', async () => {
+    const last: LastSession = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      nickname: 'alice',
+      isHost: true,
+      playerId: 'player-001',
+      scenarioId: 'toy-manor',
+      savedAt: Date.now(),
+    }
+    const view: SessionViewResponse = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      scenarioId: 'toy-manor',
+      phase: 'lobby',
+      requiredCharacterCount: 3,
+      joinedCount: 1,
+      players: [{ playerId: 'player-001', nickname: 'alice', isHost: true }],
+    }
+
+    localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(last))
+    server.use(
+      http.get('/api/sessions/by-device', () => new HttpResponse(null, { status: 404 })),
+      http.get('/api/sessions/sess-001', () => HttpResponse.json(view)),
+    )
+
+    const { navigatedTo } = renderCatalog()
+
+    await waitFor(() => expect(navigatedTo).toContain('/lobby/012345'))
   })
 })
