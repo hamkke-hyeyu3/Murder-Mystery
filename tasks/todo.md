@@ -50,10 +50,10 @@
   - [x] FE: Playwright e2e `device-resume.spec.ts` (4 시나리오)
   - [x] 동시 join race 처리: aborted 트랜잭션 후 outer catch에서 idempotent 복구
 
-- [ ] **BUG-01** Lobby 합류자 목록 실시간 갱신 안 됨
-  - 증상: 게스트가 합류해도 호스트·다른 게스트 화면의 players 목록이 업데이트되지 않음
-  - 원인 추정: Lobby.tsx의 STOMP `PLAYER_JOINED` 이벤트 핸들러가 store를 갱신하지 않거나 구독이 끊어짐
-  - 검증: 두 브라우저(또는 시크릿 창)에서 한쪽이 합류 시 다른 쪽 목록 즉시 반영 확인
+- [x] **BUG-01** Lobby 합류자 목록 실시간 갱신 안 됨
+  - 원인: useStompClient가 raw WebSocket으로 연결 시도 → SockJS 전용 /ws 엔드포인트 거절 → STOMP 연결 불가
+  - 수정: sockjs-client 추가 + webSocketFactory로 전환, stale callback 가드 추가
+  - 검증: useStompClient unit test 5케이스 그린, e2e lobby-realtime-join.spec.ts로 통합 확인
 
 - [ ] **BUG-02** 로컬 다중 플레이어 테스트: 같은 브라우저 탭은 `mm:deviceId` 공유
   - 증상: 새 탭을 열면 `useResumeSession`이 기존 세션으로 redirect → 별도 플레이어 시뮬레이션 불가
