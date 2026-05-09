@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
 import { getDeviceId } from '@/lib/deviceId'
 
 interface UseStompClientOptions {
-  brokerURL: string
   inviteCode?: string
   nickname?: string
   playerId?: string
 }
 
-export function useStompClient({ brokerURL, inviteCode, nickname, playerId }: UseStompClientOptions) {
+export function useStompClient({ inviteCode, nickname, playerId }: UseStompClientOptions) {
   const clientRef = useRef<Client | null>(null)
   const [connected, setConnected] = useState(false)
 
@@ -21,14 +21,14 @@ export function useStompClient({ brokerURL, inviteCode, nickname, playerId }: Us
     if (playerId) headers['X-Player-Id'] = playerId
 
     const client = new Client({
-      brokerURL,
+      webSocketFactory: () => new SockJS('/ws'),
       connectHeaders: headers,
       reconnectDelay: 5000,
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
-      onConnect: () => setConnected(true),
-      onDisconnect: () => setConnected(false),
-      onWebSocketClose: () => setConnected(false),
+      onConnect: () => { if (clientRef.current === client) setConnected(true) },
+      onDisconnect: () => { if (clientRef.current === client) setConnected(false) },
+      onWebSocketClose: () => { if (clientRef.current === client) setConnected(false) },
     })
 
     clientRef.current = client
@@ -38,7 +38,7 @@ export function useStompClient({ brokerURL, inviteCode, nickname, playerId }: Us
       void client.deactivate()
       clientRef.current = null
     }
-  }, [brokerURL, inviteCode, nickname, playerId])
+  }, [inviteCode, nickname, playerId])
 
   return { client: clientRef, connected }
 }

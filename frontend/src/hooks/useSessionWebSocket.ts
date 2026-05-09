@@ -16,10 +16,7 @@ export function useSessionWebSocket({
   nickname,
   playerId,
 }: UseSessionWebSocketOptions) {
-  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  const wsUrl = `${proto}://${window.location.host}/ws`
   const { client, connected } = useStompClient({
-    brokerURL: wsUrl,
     inviteCode: inviteCode ?? undefined,
     nickname: nickname ?? undefined,
     playerId: playerId ?? undefined,
