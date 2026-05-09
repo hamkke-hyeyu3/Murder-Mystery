@@ -77,6 +77,11 @@ public class JoinService {
                     sessionRepository.saveAndFlush(session);
                 } catch (DataIntegrityViolationException ex) {
                     if (playerRepository.existsBySessionIdAndNickname(session.getId(), nickname)) {
+                        // Same device won the race with the same nickname — let outer catch handle it
+                        if (deviceId != null &&
+                                playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId).isPresent()) {
+                            throw ex;
+                        }
                         throw new NicknameTakenException(nickname);
                     }
                     throw ex;
