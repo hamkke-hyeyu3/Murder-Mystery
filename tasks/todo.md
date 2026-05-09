@@ -33,18 +33,33 @@
   - [x] DB: `V2__session_player.sql` (`sessions`, `players`, unique `(session_id, nickname)`)
   - [x] 검증: `SessionServiceTest`
 
-- [ ] **T-03** 닉네임 합류 + 합류자 목록 양방향 동기 (STOMP)
-  - [ ] BE: `JoinService.join`, `POST /api/sessions/{inviteCode}/join`
-  - [ ] BE: `PLAYER_JOINED` broadcast, `/app/session/{id}/leave` 핸들러
-  - [ ] FE: `pages/Join.tsx` + `useSessionWebSocket(sessionId)` 훅
-  - [ ] FE: `Lobby.tsx` players 상태 갱신 + 게스트 "나가기" 버튼
-  - [ ] 검증: `JoinServiceTest`, `JoinIntegrationTest`, `useSessionWebSocket.test.ts`, 수동 3 탭
+- [x] **T-03** 닉네임 합류 + 합류자 목록 양방향 동기 (STOMP)
+  - [x] BE: `JoinService.join`, `POST /api/sessions/{inviteCode}/join`
+  - [x] BE: `PLAYER_JOINED` broadcast, `/app/session/{id}/leave` 핸들러
+  - [x] FE: `pages/Join.tsx` + `useSessionWebSocket(sessionId)` 훅
+  - [x] FE: `Lobby.tsx` players 상태 갱신 + 게스트 "나가기" 버튼
+  - [x] 검증: `JoinServiceTest`, `useSessionWebSocket.test.ts`
 
-- [ ] **T-04** 인원 매칭 + "게임 시작" 게이트 + 사유 인라인
-  - [ ] BE: `GET /api/sessions/{sessionId}` 에 `requiredCharacterCount` + `joinedCount`
-  - [ ] BE: `LOBBY_COUNT_CHANGED` broadcast
-  - [ ] FE: `Lobby.tsx` 호스트 화면 — 사유 인라인 ("X명 더 필요"·"X명 초과"·활성)
-  - [ ] 검증: `Lobby.test.tsx` 6 케이스 매트릭스
+- [x] **T-04** 인원 매칭 + "게임 시작" 게이트 + 사유 인라인 + Device ID 정체성 추적
+  - [x] BE: `GET /api/sessions/{sessionId}` 에 `requiredCharacterCount` + `joinedCount`
+  - [x] BE: `LOBBY_COUNT_CHANGED` broadcast
+  - [x] FE: `Lobby.tsx` 호스트 화면 — 사유 인라인 ("X명 더 필요"·"X명 초과"·활성)
+  - [x] 검증: `Lobby.test.tsx` 6 케이스 매트릭스
+  - [x] BE: `mm:deviceId` 기반 `X-Device-Id` 헤더, V3/V4 migration, `ResumeService`
+  - [x] FE: `lib/deviceId.ts`, `useResumeSession` hook, Catalog/Join 자동 redirect
+  - [x] FE: Playwright e2e `device-resume.spec.ts` (4 시나리오)
+  - [x] 동시 join race 처리: aborted 트랜잭션 후 outer catch에서 idempotent 복구
+
+- [ ] **BUG-01** Lobby 합류자 목록 실시간 갱신 안 됨
+  - 증상: 게스트가 합류해도 호스트·다른 게스트 화면의 players 목록이 업데이트되지 않음
+  - 원인 추정: Lobby.tsx의 STOMP `PLAYER_JOINED` 이벤트 핸들러가 store를 갱신하지 않거나 구독이 끊어짐
+  - 검증: 두 브라우저(또는 시크릿 창)에서 한쪽이 합류 시 다른 쪽 목록 즉시 반영 확인
+
+- [ ] **BUG-02** 로컬 다중 플레이어 테스트: 같은 브라우저 탭은 `mm:deviceId` 공유
+  - 증상: 새 탭을 열면 `useResumeSession`이 기존 세션으로 redirect → 별도 플레이어 시뮬레이션 불가
+  - 원인: 같은 브라우저 origin의 탭은 localStorage 공유 (의도된 동작, 테스트 환경 문제)
+  - 로컬 테스트 방법: **Chrome 프로필 여러 개** 또는 **Safari + Chrome** 조합으로 각각 접속
+  - 해결 옵션 (선택): 개발 환경에서만 `?deviceId=override` 쿼리 파라미터로 deviceId 주입 허용
 
 **✅ 체크포인트 A 완료 조건:** 3 단말 lobby 데모 + `./gradlew test` + `npm run test` 그린
 
