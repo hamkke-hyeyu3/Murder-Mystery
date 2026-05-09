@@ -49,54 +49,77 @@ public class JoinService {
 
         String nickname = validateNickname(rawNickname);
 
-        // Idempotent check and new-join insert run in the same transaction to close the race window.
-        // The partial unique index on (session_id, device_id) is the DB-level safety net for
-        // truly concurrent requests that slip past the in-transaction check.
-        JoinBroadcastBundle bundle = transactionTemplate.execute(status -> {
+        JoinBroadcastBundle bundle;
+        try {
+            // Idempotent check and new-join insert run in the same transaction to close the
+            // sequential race window. The partial unique index on (session_id, device_id) guards
+            // against truly concurrent requests that slip past the in-transaction check.
+            bundle = transactionTemplate.execute(status -> {
+                if (deviceId != null) {
+                    Optional<Player> existing = playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId);
+                    if (existing.isPresent()) {
+                        Player p = existing.get();
+                        List<PlayerSummary> players = session.getPlayers().stream()
+                            .map(pl -> new PlayerSummary(pl.getId().toString(), pl.getNickname(), pl.isHost()))
+                            .toList();
+                        return new JoinBroadcastBundle(
+                            new JoinResponse(session.getId().toString(), session.getInviteCode(),
+                                session.getScenarioId(), session.getPhase(),
+                                p.getNickname(), p.getId().toString(), players),
+                            null  // null = idempotent, skip broadcast
+                        );
+                    }
+                }
+
+                Player player = new Player(nickname, false, deviceId);
+                session.addPlayer(player);
+                try {
+                    sessionRepository.saveAndFlush(session);
+                } catch (DataIntegrityViolationException ex) {
+                    if (playerRepository.existsBySessionIdAndNickname(session.getId(), nickname)) {
+                        throw new NicknameTakenException(nickname);
+                    }
+                    throw ex;
+                }
+                List<PlayerSummary> players = session.getPlayers().stream()
+                    .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
+                    .toList();
+                JoinResponse response = new JoinResponse(
+                    session.getId().toString(),
+                    session.getInviteCode(),
+                    session.getScenarioId(),
+                    session.getPhase(),
+                    player.getNickname(),
+                    player.getId().toString(),
+                    players
+                );
+                int joined = players.size();
+                int required = scenarioRepository.findById(session.getScenarioId())
+                    .orElseThrow(() -> new IllegalStateException("scenario not found: " + session.getScenarioId()))
+                    .characters().size();
+                return new JoinBroadcastBundle(response, new LobbyCountChangedPayload(joined, required));
+            });
+        } catch (DataIntegrityViolationException ex) {
+            // A concurrent request from the same device raced past the in-transaction idempotent check
+            // and won the (session_id, device_id) unique constraint. Re-read in a new transaction.
             if (deviceId != null) {
                 Optional<Player> existing = playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId);
                 if (existing.isPresent()) {
                     Player p = existing.get();
-                    List<PlayerSummary> players = session.getPlayers().stream()
-                        .map(pl -> new PlayerSummary(pl.getId().toString(), pl.getNickname(), pl.isHost()))
-                        .toList();
-                    return new JoinBroadcastBundle(
-                        new JoinResponse(session.getId().toString(), session.getInviteCode(),
-                            session.getScenarioId(), session.getPhase(),
-                            p.getNickname(), p.getId().toString(), players),
-                        null  // null = idempotent, skip broadcast
+                    List<PlayerSummary> players = sessionRepository.findById(session.getId())
+                        .map(s -> s.getPlayers().stream()
+                            .map(pl -> new PlayerSummary(pl.getId().toString(), pl.getNickname(), pl.isHost()))
+                            .toList())
+                        .orElse(List.of());
+                    return new JoinResponse(
+                        session.getId().toString(), session.getInviteCode(),
+                        session.getScenarioId(), session.getPhase(),
+                        p.getNickname(), p.getId().toString(), players
                     );
                 }
             }
-
-            Player player = new Player(nickname, false, deviceId);
-            session.addPlayer(player);
-            try {
-                sessionRepository.saveAndFlush(session);
-            } catch (DataIntegrityViolationException ex) {
-                if (playerRepository.existsBySessionIdAndNickname(session.getId(), nickname)) {
-                    throw new NicknameTakenException(nickname);
-                }
-                throw ex;
-            }
-            List<PlayerSummary> players = session.getPlayers().stream()
-                .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
-                .toList();
-            JoinResponse response = new JoinResponse(
-                session.getId().toString(),
-                session.getInviteCode(),
-                session.getScenarioId(),
-                session.getPhase(),
-                player.getNickname(),
-                player.getId().toString(),
-                players
-            );
-            int joined = players.size();
-            int required = scenarioRepository.findById(session.getScenarioId())
-                .orElseThrow(() -> new IllegalStateException("scenario not found: " + session.getScenarioId()))
-                .characters().size();
-            return new JoinBroadcastBundle(response, new LobbyCountChangedPayload(joined, required));
-        });
+            throw ex;
+        }
 
         // Broadcast after transaction commits — skipped for idempotent re-joins (count == null)
         if (bundle.count() != null) {
