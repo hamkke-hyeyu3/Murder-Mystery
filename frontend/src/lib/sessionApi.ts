@@ -1,5 +1,6 @@
 import { apiFetch, apiPost } from '@/lib/api'
-import type { CreateSessionRequest, CreateSessionResponse, JoinSessionResponse, SessionViewResponse } from '@/types/session'
+import { getDeviceId } from '@/lib/deviceId'
+import type { CreateSessionRequest, CreateSessionResponse, JoinSessionResponse, ResumeResponse, SessionViewResponse } from '@/types/session'
 
 export function getSession(sessionId: string): Promise<SessionViewResponse> {
   return apiFetch<SessionViewResponse>(`/api/sessions/${sessionId}`)
@@ -21,7 +22,7 @@ export async function joinSession(
 ): Promise<JoinSessionResponse> {
   const res = await fetch(`/api/sessions/${inviteCode}/join`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Device-Id': getDeviceId() },
     body: JSON.stringify({ nickname }),
   })
   if (!res.ok) {
@@ -34,4 +35,13 @@ export async function joinSession(
     throw Object.assign(new Error(`API error ${res.status}`), { status: res.status, detail })
   }
   return res.json() as Promise<JoinSessionResponse>
+}
+
+export async function getResumeSession(): Promise<ResumeResponse | null> {
+  const res = await fetch('/api/sessions/by-device', {
+    headers: { 'X-Device-Id': getDeviceId() },
+  })
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`API error ${res.status}`)
+  return res.json() as Promise<ResumeResponse>
 }

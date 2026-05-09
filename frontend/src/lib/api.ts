@@ -1,5 +1,9 @@
+import { getDeviceId } from './deviceId'
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, init)
+  const headers = new Headers(init?.headers)
+  headers.set('X-Device-Id', getDeviceId())
+  const res = await fetch(path, { ...init, headers })
   if (!res.ok) {
     throw new Error(`API error ${res.status} ${res.statusText}`)
   }

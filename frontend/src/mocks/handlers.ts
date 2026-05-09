@@ -47,5 +47,6 @@ export const handlers = [
   http.get('/api/scenarios', () => HttpResponse.json([defaultScenario])),
   http.post('/api/sessions', () => HttpResponse.json(defaultSessionResponse)),
   http.post('/api/sessions/:inviteCode/join', () => HttpResponse.json(defaultJoinResponse)),
+  http.get('/api/sessions/by-device', () => new HttpResponse(null, { status: 404 })),
   http.get('/api/sessions/:sessionId', () => HttpResponse.json(defaultSessionViewResponse)),
 ]

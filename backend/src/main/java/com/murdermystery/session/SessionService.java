@@ -50,7 +50,7 @@ public class SessionService {
         );
     }
 
-    public CreateSessionResponse createSession(String scenarioId, String hostNickname) {
+    public CreateSessionResponse createSession(String scenarioId, String hostNickname, java.util.UUID deviceId) {
         scenarioRepository.findById(scenarioId)
             .orElseThrow(() -> new IllegalArgumentException("unknown scenario: " + scenarioId));
 
@@ -61,7 +61,7 @@ public class SessionService {
             try {
                 return transactionTemplate.execute(status -> {
                     Session session = new Session(code, scenarioId);
-                    Player host = new Player(trimmed, true);
+                    Player host = new Player(trimmed, true, deviceId);
                     session.addPlayer(host);
                     sessionRepository.saveAndFlush(session);
                     return new CreateSessionResponse(

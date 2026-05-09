@@ -31,6 +31,9 @@ public class Player implements Persistable<UUID> {
     @Column(name = "is_host", nullable = false)
     private boolean isHost;
 
+    @Column(name = "device_id")
+    private UUID deviceId;
+
     @Column(name = "joined_at", nullable = false)
     private Instant joinedAt;
 
@@ -39,6 +42,13 @@ public class Player implements Persistable<UUID> {
     public Player(String nickname, boolean isHost) {
         this.nickname = nickname;
         this.isHost = isHost;
+        this.joinedAt = Instant.now();
+    }
+
+    public Player(String nickname, boolean isHost, UUID deviceId) {
+        this.nickname = nickname;
+        this.isHost = isHost;
+        this.deviceId = deviceId;
         this.joinedAt = Instant.now();
     }
 
@@ -55,6 +65,7 @@ public class Player implements Persistable<UUID> {
     public UUID getId() { return id; }
     public String getNickname() { return nickname; }
     public boolean isHost() { return isHost; }
+    public UUID getDeviceId() { return deviceId; }
     public Instant getJoinedAt() { return joinedAt; }
     public Session getSession() { return session; }
 }

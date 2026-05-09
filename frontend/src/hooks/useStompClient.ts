@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Client } from '@stomp/stompjs'
+import { getDeviceId } from '@/lib/deviceId'
 
 interface UseStompClientOptions {
   brokerURL: string
@@ -14,6 +15,7 @@ export function useStompClient({ brokerURL, inviteCode, nickname, playerId }: Us
 
   useEffect(() => {
     const headers: Record<string, string> = {}
+    headers['X-Device-Id'] = getDeviceId()
     if (inviteCode) headers['X-Invite-Code'] = inviteCode
     if (nickname) headers['X-Nickname'] = nickname
     if (playerId) headers['X-Player-Id'] = playerId

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -25,12 +26,13 @@ class SessionControllerTest {
     private MockMvc mvc;
     private final SessionService service = mock(SessionService.class);
     private final JoinService joinService = mock(JoinService.class);
+    private final ResumeService resumeService = mock(ResumeService.class);
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders
-            .standaloneSetup(new SessionController(service, joinService))
+            .standaloneSetup(new SessionController(service, joinService, resumeService))
             .setControllerAdvice(new RestExceptionHandler())
             .build();
     }
@@ -43,7 +45,7 @@ class SessionControllerTest {
 
     @Test
     void post_happyPath_returns200WithAllFields() throws Exception {
-        when(service.createSession("toy-manor", "alice")).thenReturn(sampleResponse());
+        when(service.createSession(eq("toy-manor"), eq("alice"), any())).thenReturn(sampleResponse());
 
         mvc.perform(post("/api/sessions")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -75,7 +77,7 @@ class SessionControllerTest {
 
     @Test
     void post_unknownScenario_returns400() throws Exception {
-        when(service.createSession(any(), any()))
+        when(service.createSession(any(), any(), any()))
             .thenThrow(new IllegalArgumentException("unknown scenario"));
 
         mvc.perform(post("/api/sessions")
@@ -95,7 +97,7 @@ class SessionControllerTest {
 
     @Test
     void post_join_happyPath_returns200WithBody() throws Exception {
-        when(joinService.join("123456", "bob")).thenReturn(sampleJoinResponse());
+        when(joinService.join(eq("123456"), eq("bob"), any())).thenReturn(sampleJoinResponse());
 
         mvc.perform(post("/api/sessions/123456/join")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -109,7 +111,7 @@ class SessionControllerTest {
 
     @Test
     void post_join_unknownInvite_returns400() throws Exception {
-        when(joinService.join(any(), any())).thenThrow(new InviteCodeNotFoundException("999999"));
+        when(joinService.join(any(), any(), any())).thenThrow(new InviteCodeNotFoundException("999999"));
 
         mvc.perform(post("/api/sessions/999999/join")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -119,7 +121,7 @@ class SessionControllerTest {
 
     @Test
     void post_join_takenNickname_returns409() throws Exception {
-        when(joinService.join(any(), any())).thenThrow(new NicknameTakenException("bob"));
+        when(joinService.join(any(), any(), any())).thenThrow(new NicknameTakenException("bob"));
 
         mvc.perform(post("/api/sessions/123456/join")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -130,7 +132,7 @@ class SessionControllerTest {
 
     @Test
     void post_join_phaseInProgress_returns409() throws Exception {
-        when(joinService.join(any(), any())).thenThrow(new SessionNotJoinableException("in_progress"));
+        when(joinService.join(any(), any(), any())).thenThrow(new SessionNotJoinableException("in_progress"));
 
         mvc.perform(post("/api/sessions/123456/join")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -189,7 +191,7 @@ class SessionControllerTest {
 
     @Test
     void post_codeExhaustion_returns500WithGenericMessage() throws Exception {
-        when(service.createSession(any(), any()))
+        when(service.createSession(any(), any(), any()))
             .thenThrow(new IllegalStateException("invite code exhausted"));
 
         mvc.perform(post("/api/sessions")

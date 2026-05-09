@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { joinSession } from '@/lib/sessionApi'
+import { useResumeSession } from '@/hooks/useResumeSession'
 import { useSessionStore } from '@/stores/sessionStore'
 import { LAST_SESSION_KEY } from '@/types/session'
 
@@ -14,6 +15,7 @@ type JoinState = {
 
 export default function Join() {
   const [searchParams] = useSearchParams()
+  useResumeSession({ skip: searchParams.get('invite') !== null })
   const [state, setState] = useState<JoinState>({
     inviteCode: searchParams.get('invite') ?? '',
     nickname: '',

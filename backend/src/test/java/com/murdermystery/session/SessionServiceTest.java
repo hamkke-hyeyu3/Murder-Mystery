@@ -62,7 +62,7 @@ class SessionServiceTest {
         when(codeGen.next()).thenReturn("123456");
         when(sessionRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CreateSessionResponse res = service.createSession("toy-manor", "alice");
+        CreateSessionResponse res = service.createSession("toy-manor", "alice", null);
 
         assertThat(res.inviteCode()).isEqualTo("123456");
         assertThat(res.hostNickname()).isEqualTo("alice");
@@ -82,7 +82,7 @@ class SessionServiceTest {
     void createSession_unknownScenario_throwsIllegalArgument() {
         when(scenarioRepo.findById("unknown")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.createSession("unknown", "alice"))
+        assertThatThrownBy(() -> service.createSession("unknown", "alice", null))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("unknown scenario");
     }
@@ -91,11 +91,11 @@ class SessionServiceTest {
     void createSession_blankNickname_throwsIllegalArgument() {
         when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toyManor()));
 
-        assertThatThrownBy(() -> service.createSession("toy-manor", ""))
+        assertThatThrownBy(() -> service.createSession("toy-manor", "", null))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.createSession("toy-manor", "   "))
+        assertThatThrownBy(() -> service.createSession("toy-manor", "   ", null))
             .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> service.createSession("toy-manor", null))
+        assertThatThrownBy(() -> service.createSession("toy-manor", null, null))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -104,7 +104,7 @@ class SessionServiceTest {
         when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toyManor()));
         String longNick = "a".repeat(21);
 
-        assertThatThrownBy(() -> service.createSession("toy-manor", longNick))
+        assertThatThrownBy(() -> service.createSession("toy-manor", longNick, null))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -112,7 +112,7 @@ class SessionServiceTest {
     void createSession_controlCharNickname_throwsIllegalArgument() {
         when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toyManor()));
 
-        assertThatThrownBy(() -> service.createSession("toy-manor", "ab"))
+        assertThatThrownBy(() -> service.createSession("toy-manor", "ab", null))
             .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -132,7 +132,7 @@ class SessionServiceTest {
         }).when(txTemplate).execute(any());
         when(sessionRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CreateSessionResponse res = service.createSession("toy-manor", "alice");
+        CreateSessionResponse res = service.createSession("toy-manor", "alice", null);
 
         assertThat(res.inviteCode()).isEqualTo("333333");
         verify(codeGen, times(3)).next();
@@ -145,7 +145,7 @@ class SessionServiceTest {
         // use doThrow to avoid triggering setUp's thenAnswer during stubbing
         doThrow(new DataIntegrityViolationException("dup")).when(txTemplate).execute(any());
 
-        assertThatThrownBy(() -> service.createSession("toy-manor", "alice"))
+        assertThatThrownBy(() -> service.createSession("toy-manor", "alice", null))
             .isInstanceOf(IllegalStateException.class);
         verify(codeGen, times(5)).next();
     }
@@ -193,7 +193,7 @@ class SessionServiceTest {
         when(codeGen.next()).thenReturn("123456");
         when(sessionRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        CreateSessionResponse res = service.createSession("toy-manor", "  alice  ");
+        CreateSessionResponse res = service.createSession("toy-manor", "  alice  ", null);
 
         assertThat(res.hostNickname()).isEqualTo("alice");
         var captor = org.mockito.ArgumentCaptor.forClass(Session.class);

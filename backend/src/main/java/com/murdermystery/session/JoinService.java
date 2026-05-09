@@ -11,6 +11,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class JoinService {
@@ -37,7 +39,7 @@ public class JoinService {
         this.scenarioRepository = scenarioRepository;
     }
 
-    public JoinResponse join(String inviteCode, String rawNickname) {
+    public JoinResponse join(String inviteCode, String rawNickname, UUID deviceId) {
         Session session = sessionRepository.findByInviteCode(inviteCode)
             .orElseThrow(() -> new InviteCodeNotFoundException(inviteCode));
 
@@ -47,9 +49,27 @@ public class JoinService {
 
         String nickname = validateNickname(rawNickname);
 
-        // Execute in transaction; both payloads computed here so broadcast is atomic after commit
+        // Idempotent check and new-join insert run in the same transaction to close the race window.
+        // The partial unique index on (session_id, device_id) is the DB-level safety net for
+        // truly concurrent requests that slip past the in-transaction check.
         JoinBroadcastBundle bundle = transactionTemplate.execute(status -> {
-            Player player = new Player(nickname, false);
+            if (deviceId != null) {
+                Optional<Player> existing = playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId);
+                if (existing.isPresent()) {
+                    Player p = existing.get();
+                    List<PlayerSummary> players = session.getPlayers().stream()
+                        .map(pl -> new PlayerSummary(pl.getId().toString(), pl.getNickname(), pl.isHost()))
+                        .toList();
+                    return new JoinBroadcastBundle(
+                        new JoinResponse(session.getId().toString(), session.getInviteCode(),
+                            session.getScenarioId(), session.getPhase(),
+                            p.getNickname(), p.getId().toString(), players),
+                        null  // null = idempotent, skip broadcast
+                    );
+                }
+            }
+
+            Player player = new Player(nickname, false, deviceId);
             session.addPlayer(player);
             try {
                 sessionRepository.saveAndFlush(session);
@@ -78,16 +98,18 @@ public class JoinService {
             return new JoinBroadcastBundle(response, new LobbyCountChangedPayload(joined, required));
         });
 
-        // Broadcast after transaction commits — never inside the lambda
-        var playerJoined = new PlayerJoinedPayload(bundle.response().playerId(), bundle.response().nickname(), false);
-        messagingTemplate.convertAndSend(
-            "/topic/session/" + bundle.response().sessionId() + "/event",
-            new SessionEventEnvelope<>("PLAYER_JOINED", Instant.now(), bundle.response().sessionId(), playerJoined)
-        );
-        messagingTemplate.convertAndSend(
-            "/topic/session/" + bundle.response().sessionId() + "/event",
-            new SessionEventEnvelope<>("LOBBY_COUNT_CHANGED", Instant.now(), bundle.response().sessionId(), bundle.count())
-        );
+        // Broadcast after transaction commits — skipped for idempotent re-joins (count == null)
+        if (bundle.count() != null) {
+            var playerJoined = new PlayerJoinedPayload(bundle.response().playerId(), bundle.response().nickname(), false);
+            messagingTemplate.convertAndSend(
+                "/topic/session/" + bundle.response().sessionId() + "/event",
+                new SessionEventEnvelope<>("PLAYER_JOINED", Instant.now(), bundle.response().sessionId(), playerJoined)
+            );
+            messagingTemplate.convertAndSend(
+                "/topic/session/" + bundle.response().sessionId() + "/event",
+                new SessionEventEnvelope<>("LOBBY_COUNT_CHANGED", Instant.now(), bundle.response().sessionId(), bundle.count())
+            );
+        }
 
         return bundle.response();
     }

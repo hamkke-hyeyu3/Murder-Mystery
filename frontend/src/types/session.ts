@@ -50,6 +50,17 @@ export type SessionViewResponse = {
   players: PlayerSummaryDto[]
 }
 
+export type ResumeResponse = {
+  sessionId: string
+  inviteCode: string
+  scenarioId: string
+  phase: string
+  nickname: string
+  playerId: string
+  isHost: boolean
+  players: PlayerSummaryDto[]
+}
+
 export type SessionEvent =
   | {
       type: 'PLAYER_JOINED'

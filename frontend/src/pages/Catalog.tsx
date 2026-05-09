@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { apiFetch } from '@/lib/api'
 import { createSession } from '@/lib/sessionApi'
+import { useResumeSession } from '@/hooks/useResumeSession'
 import { useSessionStore } from '@/stores/sessionStore'
 import { LAST_SESSION_KEY } from '@/types/session'
 import type { ScenarioSummary } from '@/types/scenario'
@@ -27,6 +28,7 @@ const initialCreate: CreateState = {
 }
 
 export default function Catalog() {
+  useResumeSession()
   const [catalog, setCatalog] = useState<CatalogState>({ status: 'loading' })
   const [creating, setCreating] = useState<CreateState>(initialCreate)
   const navigate = useNavigate()

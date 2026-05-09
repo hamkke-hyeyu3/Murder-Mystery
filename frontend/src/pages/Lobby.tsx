@@ -108,6 +108,7 @@ export default function Lobby() {
             {players.map((p) => (
               <li key={p.nickname} className="text-sm">
                 {p.nickname}
+                {p.nickname === nickname && <span className="ml-1 text-primary">(나)</span>}
                 {p.isHost && <span className="ml-1 text-muted-foreground">(호스트)</span>}
               </li>
             ))}
