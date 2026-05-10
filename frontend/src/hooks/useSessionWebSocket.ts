@@ -44,9 +44,10 @@ export function useSessionWebSocket({
             })
           }
         } else if (envelope.type === 'PLAYER_LEFT') {
-          const current = useSessionStore.getState().players
+          const current = useSessionStore.getState()
           setSession({
-            players: current.filter((p) => p.playerId !== envelope.payload.playerId),
+            players: current.players.filter((p) => p.playerId !== envelope.payload.playerId),
+            leftPlayerIds: [...current.leftPlayerIds, envelope.payload.playerId],
           })
         } else if (envelope.type === 'LOBBY_COUNT_CHANGED') {
           setSession({

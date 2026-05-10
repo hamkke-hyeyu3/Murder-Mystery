@@ -178,6 +178,93 @@ describe('Lobby', () => {
     }
   )
 
+  it('tombstone 제거된 플레이어를 REST joinedCount가 되살려 시작 버튼을 활성화하지 않는다', async () => {
+    const view: SessionViewResponse = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      scenarioId: 'toy-manor',
+      phase: 'lobby',
+      requiredCharacterCount: 2,
+      joinedCount: 2, // stale — charlie 포함
+      players: [
+        { playerId: 'p1', nickname: 'alice', isHost: true },
+        { playerId: 'p-charlie', nickname: 'charlie', isHost: false },
+      ],
+    }
+    server.use(http.get('/api/sessions/:id', () => HttpResponse.json(view)))
+    useSessionStore.getState().setSession({
+      sessionId: 'sess-001',
+      playerId: 'p1',
+      isHost: true,
+      players: [{ playerId: 'p1', nickname: 'alice', isHost: true }],
+      leftPlayerIds: ['p-charlie'],
+    })
+
+    renderLobby()
+
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+    // stale joinedCount=2 가 반영되면 버튼이 활성화되는 버그
+    expect(screen.getByRole('button', { name: '게임 시작' })).toBeDisabled()
+  })
+
+  it('getSession 응답이 늦게 도착해도 WS로 이미 떠난 플레이어를 되살리지 않는다', async () => {
+    const view: SessionViewResponse = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      scenarioId: 'toy-manor',
+      phase: 'lobby',
+      requiredCharacterCount: 2,
+      joinedCount: 1,
+      players: [
+        { playerId: 'p1', nickname: 'alice', isHost: true },
+        { playerId: 'p-charlie', nickname: 'charlie', isHost: false },
+      ],
+    }
+    server.use(http.get('/api/sessions/:id', () => HttpResponse.json(view)))
+    // charlie가 PLAYER_LEFT로 이미 제거된 상태 (leftPlayerIds에 기록됨)
+    useSessionStore.getState().setSession({
+      sessionId: 'sess-001',
+      playerId: 'p1',
+      players: [{ playerId: 'p1', nickname: 'alice', isHost: true }],
+      leftPlayerIds: ['p-charlie'],
+    })
+
+    renderLobby()
+
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+    expect(screen.queryByText('charlie')).not.toBeInTheDocument()
+  })
+
+  it('LOBBY_COUNT_CHANGED가 getSession보다 먼저 도착해도 host가 players에 포함된다', async () => {
+    const view: SessionViewResponse = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      scenarioId: 'toy-manor',
+      phase: 'lobby',
+      requiredCharacterCount: 3,
+      joinedCount: 1,
+      players: [{ playerId: 'p1', nickname: 'alice', isHost: true }],
+    }
+    server.use(http.get('/api/sessions/:id', () => HttpResponse.json(view)))
+    // LOBBY_COUNT_CHANGED가 선도착해 requiredCharacterCount가 이미 설정된 상태
+    useSessionStore.getState().setSession({
+      sessionId: 'sess-001',
+      playerId: 'p1',
+      requiredCharacterCount: 3,
+      joinedCount: 1,
+    })
+
+    renderLobby()
+
+    await waitFor(() => {
+      expect(screen.getByText('alice')).toBeInTheDocument()
+    })
+  })
+
   it('mount 시 getSession을 호출해 카운트와 합류자 목록을 채운다', async () => {
     const view: SessionViewResponse = {
       sessionId: 'sess-001',

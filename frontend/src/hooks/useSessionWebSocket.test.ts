@@ -92,6 +92,23 @@ describe('useSessionWebSocket', () => {
     expect(useSessionStore.getState().players).toHaveLength(1)
   })
 
+  it('PLAYER_LEFT 이벤트 수신 시 leftPlayerIds에 추가한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'PLAYER_LEFT',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-06T00:00:00Z',
+          payload: { playerId: 'player-bob', nickname: 'bob' },
+        }),
+      } as IMessage)
+    })
+
+    expect(useSessionStore.getState().leftPlayerIds).toContain('player-bob')
+  })
+
   it('PLAYER_LEFT 이벤트 수신 시 players에서 제거한다', () => {
     useSessionStore.getState().setSession({
       players: [

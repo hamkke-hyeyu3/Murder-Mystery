@@ -87,6 +87,13 @@
   - 수정: sockjs-client 추가 + webSocketFactory로 전환, stale callback 가드 추가
   - 검증: useStompClient unit test 5케이스 그린, e2e lobby-realtime-join.spec.ts로 통합 확인
 
+- [x] **BUG-03** Lobby "(호스트)" 라벨 wrong player 버그 — REST/WS 레이스 3종 수정
+  - 원인 1: `PLAYER_JOINED` WS 핸들러가 playerId 중복 체크 없이 append → REST + WS 동시 도착 시 같은 플레이어가 두 번 삽입되고 React `key={nickname}` 충돌로 잘못된 props 적용
+  - 원인 2: `getSession()` players 업데이트가 `requiredCharacterCount === null` guard 안에 묶여 있어, `LOBBY_COUNT_CHANGED`가 먼저 도착하면 host가 players[]에 영구 누락 (host는 `PLAYER_JOINED` WS 없음)
+  - 원인 3: REST `joinedCount`가 tombstone 필터와 불일치 — PLAYER_LEFT 후 stale 스냅샷이 떠난 플레이어를 되살리고 count가 맞지 않아 시작 버튼이 잘못 활성화
+  - 수정: `PlayerSummary`에 `playerId` 추가 + PLAYER_JOINED upsert by playerId + `key={p.playerId}` / players 업데이트를 guard 바깥으로 분리 + `leftPlayerIds` tombstone 도입 + REST `joinedCount` 제거
+  - 검증: `useSessionWebSocket.test.ts` 2 케이스 추가, `Lobby.test.tsx` 3 케이스 추가 (100 FE 테스트 그린)
+
 - [x] **BUG-02** 로컬 다중 플레이어 테스트: 같은 브라우저 탭은 `mm:deviceId` 공유
   - 증상: 새 탭을 열면 `useResumeSession`이 기존 세션으로 redirect → 별도 플레이어 시뮬레이션 불가
   - 원인: 같은 브라우저 origin의 탭은 localStorage 공유 (의도된 동작, 테스트 환경 문제)

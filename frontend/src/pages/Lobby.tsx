@@ -67,10 +67,16 @@ export default function Lobby() {
         const state = useSessionStore.getState()
         const patch: Partial<SessionState> = {}
 
+        const restPlayers = view.players
+          .filter((p) => !state.leftPlayerIds.includes(p.playerId))
+          .map((p) => ({ playerId: p.playerId, nickname: p.nickname, isHost: p.isHost }))
+        const wsOnly = state.players.filter(
+          (cp) => !restPlayers.some((rp) => rp.playerId === cp.playerId)
+        )
+        patch.players = [...restPlayers, ...wsOnly]
+
         if (state.requiredCharacterCount === null) {
           patch.requiredCharacterCount = view.requiredCharacterCount
-          patch.joinedCount = view.joinedCount
-          patch.players = view.players.map((p) => ({ playerId: p.playerId, nickname: p.nickname, isHost: p.isHost }))
         }
 
         if (!state.isHostConfirmed) {

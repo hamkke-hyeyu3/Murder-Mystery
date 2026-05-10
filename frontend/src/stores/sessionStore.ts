@@ -17,6 +17,7 @@ export interface SessionState {
   state: string | null
   turnOrder: string[] | null
   players: PlayerSummary[]
+  leftPlayerIds: string[]
   requiredCharacterCount: number | null
   joinedCount: number | null
   tutorialAckedCount: number | null
@@ -43,6 +44,7 @@ const initialState: SessionState = {
   state: null,
   turnOrder: null,
   players: [],
+  leftPlayerIds: [],
   requiredCharacterCount: null,
   joinedCount: null,
   tutorialAckedCount: null,
