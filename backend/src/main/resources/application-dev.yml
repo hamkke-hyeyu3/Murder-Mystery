@@ -3,4 +3,4 @@ server:
 
 app:
   scenarios:
-    patterns: "classpath:scenarios/*.json,classpath:scenarios-dev/*.json"
+    dev-patterns: "classpath:scenarios-dev/*.json"

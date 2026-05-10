@@ -42,7 +42,7 @@ class ScenarioLoaderTest {
 
     @Test
     void dev_classpath_loads_dev_duo() throws IOException {
-        var loader = new ScenarioLoader("classpath:scenarios-dev/*.json");
+        var loader = new ScenarioLoader("classpath:scenarios-dev/*.json", "scenario-schema-dev.json");
         List<Scenario> loaded = loader.loadAll();
 
         assertThat(loaded).hasSize(1);

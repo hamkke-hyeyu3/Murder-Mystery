@@ -13,10 +13,14 @@ import java.util.Optional;
 public class ScenarioRepository {
 
     private final List<String> patterns;
+    private final List<String> devPatterns;
     private List<Scenario> scenarios = List.of();
 
-    public ScenarioRepository(@Value("${app.scenarios.patterns}") List<String> patterns) {
+    public ScenarioRepository(
+            @Value("${app.scenarios.patterns}") List<String> patterns,
+            @Value("${app.scenarios.dev-patterns:}") List<String> devPatterns) {
         this.patterns = patterns;
+        this.devPatterns = devPatterns;
     }
 
     @PostConstruct
@@ -24,6 +28,9 @@ public class ScenarioRepository {
         List<Scenario> all = new ArrayList<>();
         for (String pattern : patterns) {
             all.addAll(new ScenarioLoader(pattern.strip()).loadAll());
+        }
+        for (String pattern : devPatterns) {
+            all.addAll(new ScenarioLoader(pattern.strip(), "scenario-schema-dev.json").loadAll());
         }
         this.scenarios = List.copyOf(all);
     }

@@ -27,11 +27,15 @@ public class ScenarioLoader {
     private final String locationPattern;
 
     public ScenarioLoader(String locationPattern) throws IOException {
+        this(locationPattern, "scenario-schema.json");
+    }
+
+    public ScenarioLoader(String locationPattern, String schemaResourceName) throws IOException {
         this.locationPattern = locationPattern;
         try (InputStream schemaStream = getClass().getClassLoader()
-                .getResourceAsStream("scenario-schema.json")) {
+                .getResourceAsStream(schemaResourceName)) {
             if (schemaStream == null) {
-                throw new IOException("scenario-schema.json not found on classpath");
+                throw new IOException(schemaResourceName + " not found on classpath");
             }
             this.jsonSchema = JsonSchemaFactory
                 .getInstance(SpecVersion.VersionFlag.V7)
