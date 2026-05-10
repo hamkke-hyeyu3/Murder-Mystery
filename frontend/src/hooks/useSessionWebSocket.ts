@@ -34,21 +34,19 @@ export function useSessionWebSocket({
       (msg) => {
         const envelope = JSON.parse(msg.body) as SessionEvent
         if (envelope.type === 'PLAYER_JOINED') {
-          const current = useSessionStore.getState().players
-          if (!current.some((p) => p.playerId === envelope.payload.playerId)) {
-            setSession({
-              players: [
-                ...current,
-                { playerId: envelope.payload.playerId, nickname: envelope.payload.nickname, isHost: envelope.payload.isHost },
-              ],
-            })
-          }
-        } else if (envelope.type === 'PLAYER_LEFT') {
-          const current = useSessionStore.getState()
-          setSession({
-            players: current.players.filter((p) => p.playerId !== envelope.payload.playerId),
-            leftPlayerIds: [...current.leftPlayerIds, envelope.payload.playerId],
+          const { playerId: joinedId, nickname: joinedNickname, isHost: joinedIsHost } = envelope.payload
+          useSessionStore.setState((state) => {
+            if (state.players.some((p) => p.playerId === joinedId)) return state
+            return { ...state, players: [...state.players, { playerId: joinedId, nickname: joinedNickname, isHost: joinedIsHost }] }
           })
+        } else if (envelope.type === 'PLAYER_LEFT') {
+          const leftId = envelope.payload.playerId
+          if (!leftId) return
+          useSessionStore.setState((state) => ({
+            ...state,
+            players: state.players.filter((p) => p.playerId !== leftId),
+            leftPlayerIds: [...state.leftPlayerIds, leftId],
+          }))
         } else if (envelope.type === 'LOBBY_COUNT_CHANGED') {
           setSession({
             joinedCount: envelope.payload.joined,
