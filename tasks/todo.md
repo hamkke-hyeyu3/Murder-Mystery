@@ -11,13 +11,13 @@
   - `scripts/dev.sh` `cleanup()` 내 `docker compose down --volumes` → `docker compose stop postgres`
   - 변경 시점: 시드 데이터 또는 지속 테스트 데이터가 필요해지는 시점
 
-- [ ] **INFRA-02** 통합 테스트를 Testcontainers PostgreSQL로 전환 (블로킹: 체크포인트 B 진입 전)
+- [x] **INFRA-02** 통합 테스트를 Testcontainers PostgreSQL로 전환 (블로킹: 체크포인트 B 진입 전)
   - 문제: `application-test.yml`이 H2 + `ddl-auto: create-drop` + `flyway: disabled` → V4의 `CREATE UNIQUE INDEX ... WHERE device_id IS NOT NULL` (PG partial index)가 검증 안 됨
   - 영향: `JoinService` outer-catch race 회복 코드(`JoinService.java:95-119`)가 보호하려는 무결성 위반이 운영에서만 트리거될 수 있음
   - 작업: `JoinIntegrationTest`만이라도 Testcontainers PG로 이전, Flyway 활성, V1~V4 적용
   - 출처: 체크포인트 A 리뷰
 
-- [ ] **INFRA-03** prod profile에서 STOMP/CORS origin 좁히기 (블로킹: 운영 노출 전)
+- [x] **INFRA-03** prod profile에서 STOMP/CORS origin 좁히기 (블로킹: 운영 노출 전)
   - 문제: `WebSocketConfig.java:39` `setAllowedOriginPatterns("*")` + `CorsConfig` `allowCredentials(true)` 조합 그대로 운영 시 invite-code만 알면 누구나 STOMP CONNECT 가능
   - 작업: `app.cors.allowed-origins`를 `setAllowedOriginPatterns(...)`에 주입, 기존 `application-prod.yml`에 `app.cors.allowed-origins` 운영 도메인 추가
   - 출처: 체크포인트 A 리뷰

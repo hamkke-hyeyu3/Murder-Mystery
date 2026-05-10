@@ -1,5 +1,6 @@
 package com.murdermystery.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -13,11 +14,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final StompHandshakeHandler handshakeHandler;
     private final StompAuthInterceptor stompAuthInterceptor;
+    private final String allowedOrigins;
 
     public WebSocketConfig(StompHandshakeHandler handshakeHandler,
-                           StompAuthInterceptor stompAuthInterceptor) {
+                           StompAuthInterceptor stompAuthInterceptor,
+                           @Value("${app.cors.allowed-origins}") String allowedOrigins) {
         this.handshakeHandler = handshakeHandler;
         this.stompAuthInterceptor = stompAuthInterceptor;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Override
@@ -36,7 +40,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
                 .setHandshakeHandler(handshakeHandler)
-                .setAllowedOriginPatterns("*")  // TODO(T-20): restrict to configured origin in prod
+                .setAllowedOriginPatterns(allowedOrigins)
                 .withSockJS();
     }
 }

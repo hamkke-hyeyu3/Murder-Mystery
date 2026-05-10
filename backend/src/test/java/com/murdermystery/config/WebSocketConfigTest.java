@@ -16,7 +16,7 @@ class WebSocketConfigTest {
     private final StompAuthInterceptor authInterceptor =
         new StompAuthInterceptor(mock(PlayerRepository.class));
     private final WebSocketConfig config =
-        new WebSocketConfig(new StompHandshakeHandler(), authInterceptor);
+        new WebSocketConfig(new StompHandshakeHandler(), authInterceptor, "http://localhost:5173");
 
     @Test
     void configureMessageBroker_enablesSimpleBrokerOnTopicAndQueue() {

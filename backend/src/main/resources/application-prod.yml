@@ -4,3 +4,7 @@ server:
 spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
+
+app:
+  cors:
+    allowed-origins: ${MM_ALLOWED_ORIGINS}
