@@ -44,7 +44,8 @@ class ScenarioCrossFieldValidatorTest {
                 new ScenarioItem("i1", "I1", "loc1"),
                 new ScenarioItem("i2", "I2", "loc2"),
                 new ScenarioItem("i3", "I3", "loc3")),
-            "c", false, 2, null
+            "c", false, 2,
+            List.of(new Round(null, null, 60), new Round("두 번째 라운드.", null, 60))
         );
     }
 
@@ -116,13 +117,13 @@ class ScenarioCrossFieldValidatorTest {
     }
 
     @Test
-    void rounds_null_passes_without_validation() {
-        // rounds=null is optional — existing scenarios without rounds still load
+    void rounds_null_fails() {
+        // rounds=null means the scenario can't be played — load-time rejection prevents runtime crash
         var s = new Scenario(
             "id", "title", "summary", null, 30, CHARS_3, LOCS_3, POOL_3, ITEMS_3,
             "c", false, 2, null
         );
-        assertThat(validator.validate(s)).isEmpty();
+        assertThat(validator.validate(s)).isPresent();
     }
 
     @Test

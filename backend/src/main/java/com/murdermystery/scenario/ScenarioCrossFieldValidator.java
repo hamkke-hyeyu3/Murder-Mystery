@@ -42,18 +42,19 @@ public class ScenarioCrossFieldValidator {
             );
         }
 
-        if (scenario.rounds() != null) {
-            if (scenario.rounds().size() != scenario.roundCount()) {
-                return Optional.of(
-                    "rounds.size()=" + scenario.rounds().size()
-                    + " != round_count=" + scenario.roundCount()
-                );
-            }
-            for (int i = 1; i < scenario.rounds().size(); i++) {
-                Round r = scenario.rounds().get(i);
-                if (r.prompt() == null || r.prompt().isBlank()) {
-                    return Optional.of("rounds[" + i + "] (round " + (i + 1) + ") has blank prompt — required for k>=2");
-                }
+        if (scenario.rounds() == null) {
+            return Optional.of("rounds is required — scenario has round_count=" + scenario.roundCount() + " but no rounds defined");
+        }
+        if (scenario.rounds().size() != scenario.roundCount()) {
+            return Optional.of(
+                "rounds.size()=" + scenario.rounds().size()
+                + " != round_count=" + scenario.roundCount()
+            );
+        }
+        for (int i = 1; i < scenario.rounds().size(); i++) {
+            Round r = scenario.rounds().get(i);
+            if (r.prompt() == null || r.prompt().isBlank()) {
+                return Optional.of("rounds[" + i + "] (round " + (i + 1) + ") has blank prompt — required for k>=2");
             }
         }
 
