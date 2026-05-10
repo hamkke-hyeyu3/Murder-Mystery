@@ -11,6 +11,17 @@
   - `scripts/dev.sh` `cleanup()` 내 `docker compose down --volumes` → `docker compose stop postgres`
   - 변경 시점: 시드 데이터 또는 지속 테스트 데이터가 필요해지는 시점
 
+- [ ] **INFRA-02** 통합 테스트를 Testcontainers PostgreSQL로 전환 (블로킹: 체크포인트 B 진입 전)
+  - 문제: `application-test.yml`이 H2 + `ddl-auto: create-drop` + `flyway: disabled` → V4의 `CREATE UNIQUE INDEX ... WHERE device_id IS NOT NULL` (PG partial index)가 검증 안 됨
+  - 영향: `JoinService` outer-catch race 회복 코드(`JoinService.java:95-119`)가 보호하려는 무결성 위반이 운영에서만 트리거될 수 있음
+  - 작업: `JoinIntegrationTest`만이라도 Testcontainers PG로 이전, Flyway 활성, V1~V4 적용
+  - 출처: 체크포인트 A 리뷰
+
+- [ ] **INFRA-03** prod profile에서 STOMP/CORS origin 좁히기 (블로킹: 운영 노출 전)
+  - 문제: `WebSocketConfig.java:39` `setAllowedOriginPatterns("*")` + `CorsConfig` `allowCredentials(true)` 조합 그대로 운영 시 invite-code만 알면 누구나 STOMP CONNECT 가능
+  - 작업: `app.cors.allowed-origins`를 `setAllowedOriginPatterns(...)`에 주입, 기존 `application-prod.yml`에 `app.cors.allowed-origins` 운영 도메인 추가
+  - 출처: 체크포인트 A 리뷰
+
 ---
 
 ## 🔵 체크포인트 A — A2 Walking Skeleton
@@ -69,6 +80,11 @@
   - 원인: 같은 브라우저 origin의 탭은 localStorage 공유 (의도된 동작, 테스트 환경 문제)
   - 로컬 테스트 방법: **Chrome 프로필 여러 개** 또는 **Safari + Chrome** 조합으로 각각 접속
   - 해결 옵션 (선택): 개발 환경에서만 `?deviceId=override` 쿼리 파라미터로 deviceId 주입 허용
+
+**📝 리뷰 메모 (B 작업 중 동선상 함께 처리):**
+- `JoinService.join` 100줄 분해 + `JoinBroadcastBundle` null sentinel을 `Optional<...>`로 (`JoinService.java:42-135`)
+- `validateNickname` 중복 제거 (Session/Join 양쪽) + `SessionEventPublisher` 추상화 검토
+- `useResumeSession.test.ts` setup의 store/localStorage `beforeEach` reset 점검 (`frontend/src/test/setup.ts`)
 
 **✅ 체크포인트 A 완료 조건:** 3 단말 lobby 데모 + `./gradlew test` + `npm run test` 그린
 
