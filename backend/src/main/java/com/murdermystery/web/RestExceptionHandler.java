@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -68,6 +69,13 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(SessionAlreadyStartedException.class)
     public ProblemDetail handleSessionAlreadyStarted(SessionAlreadyStartedException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        detail.setDetail("session already started");
+        return detail;
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ProblemDetail handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         detail.setDetail("session already started");
         return detail;

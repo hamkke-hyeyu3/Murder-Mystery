@@ -25,6 +25,9 @@ public class Session implements Persistable<UUID> {
     @Column(name = "scenario_id", length = 64, nullable = false)
     private String scenarioId;
 
+    @Version
+    private long version;
+
     @Column(length = 16, nullable = false)
     private String phase = "lobby";
 

@@ -12,6 +12,8 @@ import java.util.List;
 
 import java.util.UUID;
 
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -188,6 +190,71 @@ class SessionControllerTest {
     void get_invalidUuid_returns400() throws Exception {
         mvc.perform(get("/api/sessions/not-a-uuid"))
             .andExpect(status().isBadRequest());
+    }
+
+    private StartGameResponse sampleStartResponse(UUID sessionId) {
+        return new StartGameResponse(sessionId, "in_progress", "intro", List.of("char-a", "char-b", "char-c"));
+    }
+
+    @Test
+    void post_start_happyPath_returns200() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID deviceId = UUID.randomUUID();
+        when(startGameService.start(eq(sessionId), eq(deviceId))).thenReturn(sampleStartResponse(sessionId));
+
+        mvc.perform(post("/api/sessions/" + sessionId + "/start")
+                .header("X-Device-Id", deviceId.toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.phase").value("in_progress"))
+            .andExpect(jsonPath("$.state").value("intro"));
+    }
+
+    @Test
+    void post_start_missingDeviceId_returns400() throws Exception {
+        mvc.perform(post("/api/sessions/" + UUID.randomUUID() + "/start"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void post_start_notHost_returns403() throws Exception {
+        when(startGameService.start(any(), any())).thenThrow(new NotHostException());
+
+        mvc.perform(post("/api/sessions/" + UUID.randomUUID() + "/start")
+                .header("X-Device-Id", UUID.randomUUID().toString()))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.detail").value("host only"));
+    }
+
+    @Test
+    void post_start_alreadyStarted_returns409() throws Exception {
+        when(startGameService.start(any(), any())).thenThrow(new SessionAlreadyStartedException());
+
+        mvc.perform(post("/api/sessions/" + UUID.randomUUID() + "/start")
+                .header("X-Device-Id", UUID.randomUUID().toString()))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.detail").value("session already started"));
+    }
+
+    @Test
+    void post_start_concurrentStart_returns409() throws Exception {
+        when(startGameService.start(any(), any()))
+            .thenThrow(new ObjectOptimisticLockingFailureException(Session.class, "sess-id"));
+
+        mvc.perform(post("/api/sessions/" + UUID.randomUUID() + "/start")
+                .header("X-Device-Id", UUID.randomUUID().toString()))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.detail").value("session already started"));
+    }
+
+    @Test
+    void post_start_countMismatch_returns409() throws Exception {
+        when(startGameService.start(any(), any())).thenThrow(new LobbyCountMismatchException(2, 3));
+
+        mvc.perform(post("/api/sessions/" + UUID.randomUUID() + "/start")
+                .header("X-Device-Id", UUID.randomUUID().toString()))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.joined").value(2))
+            .andExpect(jsonPath("$.required").value(3));
     }
 
     @Test

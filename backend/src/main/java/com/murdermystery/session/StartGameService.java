@@ -16,10 +16,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class StartGameService {
@@ -44,7 +47,7 @@ public class StartGameService {
         @Value("${app.start.character-assignment-delay-ms:5000}") long characterAssignmentDelayMs
     ) {
         this(sessionRepository, scenarioRepository, transactionTemplate, eventPublisher,
-            gameScheduler, new Random(), characterAssignmentDelayMs);
+            gameScheduler, null, characterAssignmentDelayMs);
     }
 
     StartGameService(
@@ -93,7 +96,7 @@ public class StartGameService {
             }
 
             List<ScenarioCharacter> shuffled = new ArrayList<>(scenario.characters());
-            Collections.shuffle(shuffled, random);
+            Collections.shuffle(shuffled, random != null ? random : ThreadLocalRandom.current());
 
             List<Player> sortedPlayers = session.getPlayers().stream()
                 .sorted(Comparator.comparing(Player::getJoinedAt))
@@ -140,6 +143,10 @@ public class StartGameService {
             sessionRepository.saveAndFlush(session);
 
             List<String> turnOrder = session.getTurnOrder();
+            if (turnOrder == null) {
+                log.error("turnOrder is null for session {} in intro state — skipping card delivery", sessionId);
+                return null;
+            }
             return session.getPlayers().stream()
                 .sorted(Comparator.comparing(Player::getJoinedAt))
                 .map(p -> {
@@ -160,22 +167,23 @@ public class StartGameService {
             new SessionStateChangedPayload("character_assignment", null)
         );
 
-        // Fetch character names outside the transaction using in-memory repository
-        for (PlayerCard card : cards) {
-            String name = scenarioRepository.findAll().stream()
-                .flatMap(s -> s.characters().stream())
-                .filter(c -> c.id().equals(card.characterId()))
-                .map(ScenarioCharacter::name)
-                .findFirst()
-                .orElse(card.characterId());
+        Map<String, String> charNames = scenarioRepository.findAll().stream()
+            .flatMap(s -> s.characters().stream())
+            .collect(Collectors.toMap(ScenarioCharacter::id, ScenarioCharacter::name));
 
-            eventPublisher.publishToPlayer(
-                inviteCode,
-                card.playerId(),
-                sessionId.toString(),
-                "CHARACTER_CARD_DEALT",
-                new CharacterCardDealtPayload(card.characterId(), name, card.turnOrderIndex())
-            );
+        for (PlayerCard card : cards) {
+            String name = charNames.getOrDefault(card.characterId(), card.characterId());
+            try {
+                eventPublisher.publishToPlayer(
+                    inviteCode,
+                    card.playerId(),
+                    sessionId.toString(),
+                    "CHARACTER_CARD_DEALT",
+                    new CharacterCardDealtPayload(card.characterId(), name, card.turnOrderIndex())
+                );
+            } catch (Exception e) {
+                log.error("CHARACTER_CARD_DEALT delivery failed for player {} in session {}", card.playerId(), sessionId, e);
+            }
         }
     }
 
