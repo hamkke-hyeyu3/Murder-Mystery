@@ -27,10 +27,15 @@ dependencies {
 	implementation("com.networknt:json-schema-validator:1.5.6")
 	runtimeOnly("org.postgresql:postgresql")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testRuntimeOnly("com.h2database:h2")
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
+	testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.5"))
+	testImplementation("org.testcontainers:testcontainers-postgresql")
+	testImplementation("org.testcontainers:testcontainers-junit-jupiter")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// OrbStack 환경 대응: Gradle 데몬이 쉘의 docker context를 상속받지 못하는 경우 폴백 주입.
+	environment("DOCKER_HOST", System.getenv("DOCKER_HOST") ?: "unix:///Users/yuwon-u/.orbstack/run/docker.sock")
 }

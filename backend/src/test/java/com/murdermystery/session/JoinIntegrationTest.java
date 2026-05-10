@@ -1,10 +1,12 @@
 package com.murdermystery.session;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.murdermystery.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,6 +28,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -34,6 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
+@Import(TestcontainersConfiguration.class)
 class JoinIntegrationTest {
 
     @LocalServerPort
@@ -267,5 +272,50 @@ class JoinIntegrationTest {
 
         stompSession.disconnect();
         stompClient.stop();
+    }
+
+    @Test
+    void concurrentJoin_sameDeviceId_bothSucceedWithSamePlayerId() throws Exception {
+        // Validates the PG partial unique index (V4__player_device_unique.sql):
+        //   CREATE UNIQUE INDEX ... ON players(session_id, device_id) WHERE device_id IS NOT NULL
+        // When two threads race with the same deviceId, one hits the constraint and falls into
+        // the outer-catch idempotent recovery path — both must return the same playerId.
+        // This test cannot pass on H2 because H2 does not enforce partial unique indexes.
+        CreateSessionResponse host = createHostSession();
+        UUID deviceId = UUID.randomUUID();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Device-Id", deviceId.toString());
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        var req = new HttpEntity<>(new JoinRequest("concurrent"), headers);
+
+        AtomicReference<String> playerId1 = new AtomicReference<>();
+        AtomicReference<String> playerId2 = new AtomicReference<>();
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        pool.submit(() -> {
+            ready.countDown();
+            try { start.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            var res = http.postForEntity(baseUrl() + "/api/sessions/" + host.inviteCode() + "/join", req, JoinResponse.class);
+            assertThat(res.getStatusCode().is2xxSuccessful()).isTrue();
+            playerId1.set(res.getBody().playerId());
+        });
+        pool.submit(() -> {
+            ready.countDown();
+            try { start.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            var res = http.postForEntity(baseUrl() + "/api/sessions/" + host.inviteCode() + "/join", req, JoinResponse.class);
+            assertThat(res.getStatusCode().is2xxSuccessful()).isTrue();
+            playerId2.set(res.getBody().playerId());
+        });
+
+        ready.await(5, TimeUnit.SECONDS);
+        start.countDown();
+        pool.shutdown();
+        assertThat(pool.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+
+        assertThat(playerId1.get()).isNotNull();
+        assertThat(playerId1.get()).isEqualTo(playerId2.get());
     }
 }

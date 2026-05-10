@@ -1,19 +1,23 @@
 package com.murdermystery.session;
 
+import com.murdermystery.TestcontainersConfiguration;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-// Boots full context with H2 + ddl-auto=create-drop (application-test.yml).
-// Validates: entity-to-table mapping, cascade, UNIQUE constraint at JPA level.
-// DDL ↔ Flyway column-type matching is verified manually via bootRun.
+// Boots full context with Testcontainers PostgreSQL + Flyway (application-test.yml).
+// Validates: entity-to-table mapping, cascade, UNIQUE constraint against real PG DDL.
 @SpringBootTest
+@ActiveProfiles("test")
+@Import(TestcontainersConfiguration.class)
 @Transactional
 class SessionPersistenceTest {
 
