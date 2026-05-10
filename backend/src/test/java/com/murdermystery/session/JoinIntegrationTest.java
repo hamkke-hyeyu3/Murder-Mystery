@@ -5,6 +5,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
@@ -20,6 +23,7 @@ import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -190,6 +194,34 @@ class JoinIntegrationTest {
         assertThat(view.joinedCount()).isEqualTo(2);
         assertThat(view.requiredCharacterCount()).isEqualTo(3);
         assertThat(view.inviteCode()).isEqualTo(host.inviteCode());
+    }
+
+    @Test
+    void sameDeviceId_sequentialJoin_returnsIdempotentPlayerId() {
+        CreateSessionResponse host = createHostSession();
+        UUID deviceId = UUID.randomUUID();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Device-Id", deviceId.toString());
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        var req = new HttpEntity<>(new JoinRequest("bob"), headers);
+
+        var res1 = http.postForEntity(
+            baseUrl() + "/api/sessions/" + host.inviteCode() + "/join",
+            req,
+            JoinResponse.class
+        );
+        assertThat(res1.getStatusCode().is2xxSuccessful()).isTrue();
+        String firstPlayerId = res1.getBody().playerId();
+
+        var res2 = http.postForEntity(
+            baseUrl() + "/api/sessions/" + host.inviteCode() + "/join",
+            req,
+            JoinResponse.class
+        );
+        assertThat(res2.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(res2.getBody().playerId()).isEqualTo(firstPlayerId);
     }
 
     @Test
