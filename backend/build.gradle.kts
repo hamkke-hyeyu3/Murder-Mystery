@@ -37,5 +37,5 @@ dependencies {
 tasks.withType<Test> {
 	useJUnitPlatform()
 	// OrbStack 환경 대응: Gradle 데몬이 쉘의 docker context를 상속받지 못하는 경우 폴백 주입.
-	environment("DOCKER_HOST", System.getenv("DOCKER_HOST") ?: "unix:///Users/yuwon-u/.orbstack/run/docker.sock")
+	environment("DOCKER_HOST", System.getenv("DOCKER_HOST") ?: "unix://${System.getProperty("user.home")}/.orbstack/run/docker.sock")
 }
