@@ -21,4 +21,13 @@ public class SessionEventPublisher {
             new SessionEventEnvelope<>(type, Instant.now(), sessionId, payload)
         );
     }
+
+    // StompPrincipal.name = "{inviteCode}:{playerId}"
+    public <P> void publishToPlayer(String inviteCode, String playerId, String sessionId, String type, P payload) {
+        messagingTemplate.convertAndSendToUser(
+            inviteCode + ":" + playerId,
+            "/queue/session/" + sessionId + "/private",
+            new SessionEventEnvelope<>(type, Instant.now(), sessionId, payload)
+        );
+    }
 }

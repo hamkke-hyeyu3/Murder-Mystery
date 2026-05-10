@@ -1,6 +1,9 @@
 package com.murdermystery.web;
 
+import com.murdermystery.session.LobbyCountMismatchException;
 import com.murdermystery.session.NicknameTakenException;
+import com.murdermystery.session.NotHostException;
+import com.murdermystery.session.SessionAlreadyStartedException;
 import com.murdermystery.session.SessionNotFoundException;
 import com.murdermystery.session.SessionNotJoinableException;
 import org.slf4j.Logger;
@@ -53,6 +56,29 @@ public class RestExceptionHandler {
     public ProblemDetail handleSessionNotJoinable(SessionNotJoinableException ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         detail.setDetail("session not in lobby");
+        return detail;
+    }
+
+    @ExceptionHandler(NotHostException.class)
+    public ProblemDetail handleNotHost(NotHostException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        detail.setDetail("host only");
+        return detail;
+    }
+
+    @ExceptionHandler(SessionAlreadyStartedException.class)
+    public ProblemDetail handleSessionAlreadyStarted(SessionAlreadyStartedException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        detail.setDetail("session already started");
+        return detail;
+    }
+
+    @ExceptionHandler(LobbyCountMismatchException.class)
+    public ProblemDetail handleLobbyCountMismatch(LobbyCountMismatchException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        detail.setDetail("joined count mismatch");
+        detail.setProperty("joined", ex.getJoined());
+        detail.setProperty("required", ex.getRequired());
         return detail;
     }
 

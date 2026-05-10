@@ -260,6 +260,49 @@ describe('Lobby', () => {
     })
   })
 
+  it('게임 시작 클릭 시 POST /api/sessions/:id/start를 호출한다', async () => {
+    server.use(
+      http.post('/api/sessions/:id/start', () => HttpResponse.json({ phase: 'in_progress', state: 'intro', turnOrder: [] }))
+    )
+    useSessionStore.getState().setSession({
+      sessionId: 'sess-001',
+      isHost: true,
+      joinedCount: 3,
+      requiredCharacterCount: 3,
+    })
+
+    renderLobby()
+
+    fireEvent.click(screen.getByRole('button', { name: '게임 시작' }))
+
+    await waitFor(() => {
+      // POST was called — no error should appear
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+  })
+
+  it('phase가 in_progress로 바뀌면 /play/:sessionId로 navigate한다', async () => {
+    const navigatedTo: string[] = []
+    render(
+      <MemoryRouter initialEntries={['/lobby/012345']}>
+        <Routes>
+          <Route path="/lobby/:inviteCode" element={<Lobby />} />
+          <Route
+            path="/play/:sessionId"
+            element={<LocationCapture onLocation={(p) => navigatedTo.push(p)} />}
+          />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    // Simulate SESSION_STATE_CHANGED → phase = in_progress
+    useSessionStore.getState().setSession({ sessionId: 'sess-001', phase: 'in_progress' })
+
+    await waitFor(() => {
+      expect(navigatedTo.some((p) => p.startsWith('/play/'))).toBe(true)
+    })
+  })
+
   it('나가기 클릭 시 publishLeave 호출 후 localStorage 삭제 → store reset → /로 이동한다', async () => {
     useSessionStore.getState().setSession({
       sessionId: 'sess-001',

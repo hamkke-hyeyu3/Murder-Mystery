@@ -76,7 +76,7 @@
 |---|---|---|
 | V1__init.sql | T-00 | 부트스트랩 |
 | V2__session_player.sql | T-02 | sessions, players |
-| V3__game_state.sql | T-05 | sessions 컬럼 추가, tutorial_acked_at, mission_checked_at |
+| V5__game_state.sql | T-05 | sessions state/turn_order 컬럼 추가, players assigned_character_id/tutorial_acked_at/mission_checked_at |
 | V3.5__rounds.sql | T-07 | rounds |
 | V4__round_turn.sql | T-09 | location_occupancy, clues, clue_acl |
 | V5__items.sql | T-11 | item_actions |

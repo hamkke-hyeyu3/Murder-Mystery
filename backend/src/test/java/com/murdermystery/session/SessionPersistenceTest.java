@@ -10,6 +10,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -69,6 +71,30 @@ class SessionPersistenceTest {
 
         assertThatThrownBy(() -> sessionRepo.saveAndFlush(s))
             .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void saveAndReload_gameStateFields_persistCorrectly() {
+        Session s = new Session("333333", "toy-manor");
+        s.addPlayer(new Player("alice", true));
+        s.setPhase("in_progress");
+        s.setState("intro");
+        s.setTurnOrder(List.of("char-alice", "char-bob", "char-charlie"));
+        Session saved = sessionRepo.saveAndFlush(s);
+        em.clear();
+
+        Session reloaded = sessionRepo.findById(saved.getId()).orElseThrow();
+        assertThat(reloaded.getPhase()).isEqualTo("in_progress");
+        assertThat(reloaded.getState()).isEqualTo("intro");
+        assertThat(reloaded.getTurnOrder()).containsExactly("char-alice", "char-bob", "char-charlie");
+
+        Player host = reloaded.getPlayers().get(0);
+        host.setAssignedCharacterId("char-alice");
+        sessionRepo.saveAndFlush(reloaded);
+        em.clear();
+
+        Session reloaded2 = sessionRepo.findById(saved.getId()).orElseThrow();
+        assertThat(reloaded2.getPlayers().get(0).getAssignedCharacterId()).isEqualTo("char-alice");
     }
 
     @Test

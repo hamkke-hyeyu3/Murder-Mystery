@@ -4,3 +4,7 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+
+app:
+  start:
+    character-assignment-delay-ms: 100

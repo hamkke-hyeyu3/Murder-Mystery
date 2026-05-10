@@ -13,6 +13,8 @@ export interface SessionState {
   isHostConfirmed: boolean
   playerId: string | null
   phase: string | null
+  state: string | null
+  turnOrder: string[] | null
   players: PlayerSummary[]
   requiredCharacterCount: number | null
   joinedCount: number | null
@@ -31,6 +33,8 @@ const initialState: SessionState = {
   isHostConfirmed: false,
   playerId: null,
   phase: null,
+  state: null,
+  turnOrder: null,
   players: [],
   requiredCharacterCount: null,
   joinedCount: null,

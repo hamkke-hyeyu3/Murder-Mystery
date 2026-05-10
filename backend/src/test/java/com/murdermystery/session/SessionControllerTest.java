@@ -27,12 +27,13 @@ class SessionControllerTest {
     private final SessionService service = mock(SessionService.class);
     private final JoinService joinService = mock(JoinService.class);
     private final ResumeService resumeService = mock(ResumeService.class);
+    private final StartGameService startGameService = mock(StartGameService.class);
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders
-            .standaloneSetup(new SessionController(service, joinService, resumeService))
+            .standaloneSetup(new SessionController(service, joinService, resumeService, startGameService))
             .setControllerAdvice(new RestExceptionHandler())
             .build();
     }

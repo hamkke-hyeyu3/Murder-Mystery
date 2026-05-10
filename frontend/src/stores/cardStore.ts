@@ -1,13 +1,14 @@
 import { create } from 'zustand'
+import type { CharacterCardPayload } from '@/types/session'
 
 export interface CardState {
-  characterCard: unknown | null
+  characterCard: CharacterCardPayload | null
   clues: unknown[]
   accessibleClueIds: string[]
 }
 
 interface CardActions {
-  setCharacterCard: (card: unknown) => void
+  setCharacterCard: (card: CharacterCardPayload) => void
   addClue: (clue: unknown) => void
   setAccessibleClueIds: (ids: string[]) => void
   reset: () => void

@@ -18,11 +18,14 @@ public class SessionController {
     private final SessionService sessionService;
     private final JoinService joinService;
     private final ResumeService resumeService;
+    private final StartGameService startGameService;
 
-    public SessionController(SessionService sessionService, JoinService joinService, ResumeService resumeService) {
+    public SessionController(SessionService sessionService, JoinService joinService,
+                             ResumeService resumeService, StartGameService startGameService) {
         this.sessionService = sessionService;
         this.joinService = joinService;
         this.resumeService = resumeService;
+        this.startGameService = startGameService;
     }
 
     @PostMapping
@@ -44,6 +47,15 @@ public class SessionController {
     @GetMapping("/{sessionId}")
     public SessionViewResponse get(@PathVariable String sessionId) {
         return sessionService.getSession(UUID.fromString(sessionId));
+    }
+
+    @PostMapping("/{sessionId}/start")
+    public StartGameResponse start(
+            @PathVariable String sessionId,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceIdHeader) {
+        UUID deviceId = parseDeviceId(deviceIdHeader);
+        if (deviceId == null) throw new IllegalArgumentException("X-Device-Id header required");
+        return startGameService.start(UUID.fromString(sessionId), deviceId);
     }
 
     @PostMapping("/{inviteCode}/join")

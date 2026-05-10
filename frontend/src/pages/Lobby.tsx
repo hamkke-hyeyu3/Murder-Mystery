@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
+import { apiFetch } from '@/lib/api'
 import { getSession } from '@/lib/sessionApi'
 import { useSessionStore } from '@/stores/sessionStore'
 import type { SessionState } from '@/stores/sessionStore'
@@ -20,8 +21,11 @@ export default function Lobby() {
   const players = useSessionStore((s) => s.players)
   const requiredCharacterCount = useSessionStore((s) => s.requiredCharacterCount)
   const joinedCount = useSessionStore((s) => s.joinedCount)
+  const phase = useSessionStore((s) => s.phase)
   const setSession = useSessionStore((s) => s.setSession)
   const reset = useSessionStore((s) => s.reset)
+
+  const [startError, setStartError] = useState<string | null>(null)
 
   const joined = joinedCount !== null ? joinedCount : players.length
 
@@ -82,7 +86,23 @@ export default function Lobby() {
       })
   }, [sessionId, setSession])
 
+  useEffect(() => {
+    if (phase === 'in_progress' && sessionId) {
+      navigate(`/play/${sessionId}`)
+    }
+  }, [phase, sessionId, navigate])
+
   const { publishLeave } = useSessionWebSocket({ sessionId, inviteCode: storeInviteCode, nickname, playerId })
+
+  const handleStart = async () => {
+    if (!sessionId) return
+    setStartError(null)
+    try {
+      await apiFetch(`/api/sessions/${sessionId}/start`, { method: 'POST' })
+    } catch {
+      setStartError('게임 시작에 실패했습니다. 다시 시도해주세요.')
+    }
+  }
 
   const handleLeave = async () => {
     publishLeave()
@@ -124,9 +144,15 @@ export default function Lobby() {
         </p>
       )}
       {isHost && (
-        <Button disabled={requiredCharacterCount === null || joined !== requiredCharacterCount}>
-          게임 시작
-        </Button>
+        <>
+          <Button
+            disabled={requiredCharacterCount === null || joined !== requiredCharacterCount}
+            onClick={handleStart}
+          >
+            게임 시작
+          </Button>
+          {startError && <p role="alert" className="text-sm text-destructive">{startError}</p>}
+        </>
       )}
       {!isHost && (
         <Button variant="outline" onClick={handleLeave}>

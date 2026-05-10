@@ -5,6 +5,7 @@ import org.springframework.data.domain.Persistable;
 import java.time.Instant;
 import java.util.UUID;
 
+
 @Entity
 @Table(
     name = "players",
@@ -37,6 +38,15 @@ public class Player implements Persistable<UUID> {
     @Column(name = "joined_at", nullable = false)
     private Instant joinedAt;
 
+    @Column(name = "assigned_character_id", length = 64)
+    private String assignedCharacterId;
+
+    @Column(name = "tutorial_acked_at")
+    private Instant tutorialAckedAt;
+
+    @Column(name = "mission_checked_at")
+    private Instant missionCheckedAt;
+
     protected Player() {}
 
     public Player(String nickname, boolean isHost) {
@@ -68,4 +78,8 @@ public class Player implements Persistable<UUID> {
     public UUID getDeviceId() { return deviceId; }
     public Instant getJoinedAt() { return joinedAt; }
     public Session getSession() { return session; }
+    public String getAssignedCharacterId() { return assignedCharacterId; }
+    public void setAssignedCharacterId(String id) { this.assignedCharacterId = id; }
+    public Instant getTutorialAckedAt() { return tutorialAckedAt; }
+    public Instant getMissionCheckedAt() { return missionCheckedAt; }
 }

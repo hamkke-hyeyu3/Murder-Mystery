@@ -104,13 +104,13 @@
 
 ## 🔵 체크포인트 B — A3 + 라운드 1 진입
 
-- [ ] **T-05** 게임 시작 → 단계 1·2 + turn_order + 캐릭터 자동 배정
-  - [ ] BE: `SessionService.start` (host 검증 + J=C + turn_order 셔플 + 캐릭터 매핑)
-  - [ ] BE: `SESSION_STATE_CHANGED` broadcast + 5초 후 `character_assignment` 전이
-  - [ ] BE: `/user/queue/.../private`에 본인 캐릭터 카드 발사
-  - [ ] FE: `pages/Play.tsx` shell + `useCardStore` 본인 카드 캐싱
-  - [ ] DB: `V3__game_state.sql` (`sessions` 컬럼 추가, `players.tutorial_acked_at/mission_checked_at`)
-  - [ ] 검증: `SessionServiceTest.start_*`, `StartIntegrationTest` (3 클라 ACL verify), 수동 3 탭
+- [x] **T-05** 게임 시작 → 단계 1·2 + turn_order + 캐릭터 자동 배정
+  - [x] BE: `StartGameService.start` (host 검증 + J=C + turn_order 셔플 + 캐릭터 매핑)
+  - [x] BE: `SESSION_STATE_CHANGED` broadcast + 5초 후 `character_assignment` 전이 (ScheduledExecutorService)
+  - [x] BE: `/user/queue/.../private`에 본인 캐릭터 카드 발사 (`SessionEventPublisher.publishToPlayer`)
+  - [x] FE: `pages/Play.tsx` shell + `useCardStore` 본인 카드 캐싱
+  - [x] DB: `V5__game_state.sql` (`sessions` state/turn_order 컬럼 추가, `players.assigned_character_id/tutorial_acked_at/mission_checked_at`)
+  - [x] 검증: `StartGameServiceTest` (13 케이스), `StartIntegrationTest` (3 클라 ACL verify), FE 66 테스트 그린
 
 - [ ] **T-06** 단계 3 튜토리얼 + 거짓말 정책 고정 문구 + L1 자동 진입
   - [ ] BE: `POST /api/sessions/{id}/tutorial-ack`, 모두 통과 시 round 전이

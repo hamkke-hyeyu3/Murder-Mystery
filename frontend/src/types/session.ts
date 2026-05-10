@@ -61,6 +61,12 @@ export type ResumeResponse = {
   players: PlayerSummaryDto[]
 }
 
+export type CharacterCardPayload = {
+  characterId: string
+  name: string
+  turnOrderIndex: number
+}
+
 export type SessionEvent =
   | {
       type: 'PLAYER_JOINED'
@@ -79,4 +85,16 @@ export type SessionEvent =
       sessionId: string
       occurredAt: string
       payload: { joined: number; required: number }
+    }
+  | {
+      type: 'SESSION_STATE_CHANGED'
+      sessionId: string
+      occurredAt: string
+      payload: { state: string; turnOrder: string[] | null }
+    }
+  | {
+      type: 'CHARACTER_CARD_DEALT'
+      sessionId: string
+      occurredAt: string
+      payload: CharacterCardPayload
     }

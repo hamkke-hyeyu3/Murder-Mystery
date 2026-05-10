@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useStompClient } from '@/hooks/useStompClient'
+import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import type { SessionEvent } from '@/types/session'
 
@@ -22,11 +23,12 @@ export function useSessionWebSocket({
     playerId: playerId ?? undefined,
   })
   const setSession = useSessionStore((s) => s.setSession)
+  const setCharacterCard = useCardStore((s) => s.setCharacterCard)
 
   useEffect(() => {
     if (!connected || !client.current || !sessionId) return
 
-    const subscription = client.current.subscribe(
+    const topicSub = client.current.subscribe(
       `/topic/session/${sessionId}/event`,
       (msg) => {
         const envelope = JSON.parse(msg.body) as SessionEvent
@@ -48,11 +50,31 @@ export function useSessionWebSocket({
             joinedCount: envelope.payload.joined,
             requiredCharacterCount: envelope.payload.required,
           })
+        } else if (envelope.type === 'SESSION_STATE_CHANGED') {
+          setSession({
+            phase: 'in_progress',
+            state: envelope.payload.state,
+            ...(envelope.payload.turnOrder ? { turnOrder: envelope.payload.turnOrder } : {}),
+          })
         }
       }
     )
-    return () => subscription.unsubscribe()
-  }, [connected, sessionId, setSession])
+
+    const privateSub = client.current.subscribe(
+      `/user/queue/session/${sessionId}/private`,
+      (msg) => {
+        const envelope = JSON.parse(msg.body) as SessionEvent
+        if (envelope.type === 'CHARACTER_CARD_DEALT') {
+          setCharacterCard(envelope.payload)
+        }
+      }
+    )
+
+    return () => {
+      topicSub.unsubscribe()
+      privateSub.unsubscribe()
+    }
+  }, [connected, sessionId, setSession, setCharacterCard])
 
   const publishLeave = () => {
     if (!client.current || !sessionId) return

@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { IMessage } from '@stomp/stompjs'
 import { useSessionWebSocket } from './useSessionWebSocket'
 import { useStompClient } from './useStompClient'
+import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
 
 vi.mock('./useStompClient')
@@ -12,7 +13,10 @@ const mockUseStompClient = vi.mocked(useStompClient)
 describe('useSessionWebSocket', () => {
   let mockPublish: ReturnType<typeof vi.fn>
   let mockSubscribe: ReturnType<typeof vi.fn>
-  let capturedCallback: ((msg: IMessage) => void) | null
+  // topic callback for /topic/session/{id}/event
+  let topicCallback: ((msg: IMessage) => void) | null
+  // private callback for /user/queue/.../private
+  let privateCallback: ((msg: IMessage) => void) | null
 
   const defaultOptions = {
     sessionId: 'sess-001',
@@ -23,9 +27,11 @@ describe('useSessionWebSocket', () => {
 
   beforeEach(() => {
     mockPublish = vi.fn()
-    capturedCallback = null
-    mockSubscribe = vi.fn((_topic: string, cb: (msg: IMessage) => void) => {
-      capturedCallback = cb
+    topicCallback = null
+    privateCallback = null
+    mockSubscribe = vi.fn((topic: string, cb: (msg: IMessage) => void) => {
+      if (topic.includes('/topic/')) topicCallback = cb
+      else privateCallback = cb
       return { unsubscribe: vi.fn(), id: 'sub-1' }
     })
 
@@ -35,6 +41,7 @@ describe('useSessionWebSocket', () => {
     })
 
     useSessionStore.getState().reset()
+    useCardStore.getState().reset()
   })
 
   it('connected 시 올바른 토픽에 구독한다', () => {
@@ -50,7 +57,7 @@ describe('useSessionWebSocket', () => {
     renderHook(() => useSessionWebSocket(defaultOptions))
 
     act(() => {
-      capturedCallback!({
+      topicCallback!({
         body: JSON.stringify({
           type: 'PLAYER_JOINED',
           sessionId: 'sess-001',
@@ -74,7 +81,7 @@ describe('useSessionWebSocket', () => {
     renderHook(() => useSessionWebSocket(defaultOptions))
 
     act(() => {
-      capturedCallback!({
+      topicCallback!({
         body: JSON.stringify({
           type: 'PLAYER_LEFT',
           sessionId: 'sess-001',
@@ -99,7 +106,7 @@ describe('useSessionWebSocket', () => {
     renderHook(() => useSessionWebSocket(defaultOptions))
 
     act(() => {
-      capturedCallback!({
+      topicCallback!({
         body: JSON.stringify({
           type: 'LOBBY_COUNT_CHANGED',
           sessionId: 'sess-001',
@@ -124,5 +131,52 @@ describe('useSessionWebSocket', () => {
     expect(mockPublish).toHaveBeenCalledWith(
       expect.objectContaining({ destination: '/app/session/sess-001/leave' })
     )
+  })
+
+  it('private 큐를 구독한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    expect(mockSubscribe).toHaveBeenCalledWith(
+      '/user/queue/session/sess-001/private',
+      expect.any(Function)
+    )
+  })
+
+  it('SESSION_STATE_CHANGED 수신 시 sessionStore의 phase와 state를 갱신한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'SESSION_STATE_CHANGED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { state: 'intro', turnOrder: ['char-a', 'char-b', 'char-c'] },
+        }),
+      } as IMessage)
+    })
+
+    const state = useSessionStore.getState()
+    expect(state.phase).toBe('in_progress')
+    expect(state.state).toBe('intro')
+    expect(state.turnOrder).toEqual(['char-a', 'char-b', 'char-c'])
+  })
+
+  it('CHARACTER_CARD_DEALT 수신 시 cardStore에 캐릭터 카드를 설정한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      privateCallback!({
+        body: JSON.stringify({
+          type: 'CHARACTER_CARD_DEALT',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { characterId: 'char-a', name: 'Alice', turnOrderIndex: 0 },
+        }),
+      } as IMessage)
+    })
+
+    const card = useCardStore.getState().characterCard
+    expect(card).toEqual({ characterId: 'char-a', name: 'Alice', turnOrderIndex: 0 })
   })
 })
