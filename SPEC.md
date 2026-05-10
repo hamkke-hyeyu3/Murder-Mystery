@@ -104,6 +104,8 @@ murder-mystery/
 **Backend:** JUnit 5 (Spring Boot 기본 포함) — 게임 규칙 단위 테스트 위주
 UI 통합 테스트·E2E는 MVP 이후 추가 검토.
 
+**Dev 전용 픽스처:** `backend/src/main/resources/scenarios-dev/` 하위 파일은 `dev` profile에서만 로딩된다 (`app.scenarios.patterns` 설정). 운영 시나리오는 캐릭터 ≥ 3 규칙을 지키되, dev fixture는 예외적으로 2명 시나리오를 허용한다 (로컬 2-단말 테스트 편의).
+
 ---
 
 ## 7. Boundaries

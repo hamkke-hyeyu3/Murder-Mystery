@@ -1,2 +1,6 @@
 server:
   shutdown: immediate
+
+app:
+  scenarios:
+    patterns: "classpath:scenarios/*.json,classpath:scenarios-dev/*.json"

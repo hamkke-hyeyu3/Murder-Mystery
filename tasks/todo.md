@@ -7,6 +7,18 @@
 
 ## 🔧 개발 환경
 
+- [x] **INFRA-04** dev 전용 2인 시나리오 로딩 인프라
+  - `scenario-schema.json` `characters.minItems` 3 → 2 (tooling 검증 완화; 운영 ≥ 3 규칙은 SPEC §6 각주로 유지)
+  - `scenarios-dev/dev-duo.json` 추가 (host·guest 2명, dev profile 한정 로딩)
+  - `ScenarioRepository` → `app.scenarios.patterns` 설정 주입식으로 전환
+  - `application.yml` / `application-dev.yml` 패턴 설정 추가
+  - 검증: `ScenarioLoaderTest.dev_classpath_loads_dev_duo` 그린, 전체 `./gradlew test` 그린
+
+- [x] **INFRA-05** FE dev 빌드 한정 `?deviceId=` 쿼리 override (BUG-02 해결)
+  - `deviceId.ts` — `import.meta.env.DEV` guard + `URLSearchParams('deviceId')` valid UUID → localStorage set + URL clean
+  - `deviceId.test.ts` 신규 4케이스
+  - 사용법: 탭마다 `?deviceId=<uuid>` 부여 → 단일 브라우저에서 2-단말 시뮬레이션 가능
+
 - [ ] **INFRA-01** DB 데이터 보존 전환
   - `scripts/dev.sh` `cleanup()` 내 `docker compose down --volumes` → `docker compose stop postgres`
   - 변경 시점: 시드 데이터 또는 지속 테스트 데이터가 필요해지는 시점
@@ -79,7 +91,7 @@
   - 증상: 새 탭을 열면 `useResumeSession`이 기존 세션으로 redirect → 별도 플레이어 시뮬레이션 불가
   - 원인: 같은 브라우저 origin의 탭은 localStorage 공유 (의도된 동작, 테스트 환경 문제)
   - 로컬 테스트 방법: **Chrome 프로필 여러 개** 또는 **Safari + Chrome** 조합으로 각각 접속
-  - 해결 옵션 (선택): 개발 환경에서만 `?deviceId=override` 쿼리 파라미터로 deviceId 주입 허용
+  - [x] 해결 옵션 완료 (INFRA-05): `?deviceId=<uuid>` dev override 구현 — 탭 A에 `?deviceId=...0001`, 탭 B에 `?deviceId=...0002` → dev-duo(2인) 시나리오와 결합 시 단일 브라우저로 호스트+게스트 동시 합류 시뮬레이션 가능
 
 **📝 리뷰 메모 (B 작업 중 동선상 함께 처리):**
 - `JoinService.join` 100줄 분해 + `JoinBroadcastBundle` null sentinel을 `Optional<...>`로 (`JoinService.java:42-135`)

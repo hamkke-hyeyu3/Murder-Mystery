@@ -39,4 +39,17 @@ class ScenarioLoaderTest {
         assertThat(toyManor.allowPrivateTalk()).isTrue();
         assertThat(toyManor.trueCulpritCharacterId()).isEqualTo("bob");
     }
+
+    @Test
+    void dev_classpath_loads_dev_duo() throws IOException {
+        var loader = new ScenarioLoader("classpath:scenarios-dev/*.json");
+        List<Scenario> loaded = loader.loadAll();
+
+        assertThat(loaded).hasSize(1);
+        Scenario devDuo = loaded.getFirst();
+        assertThat(devDuo.id()).isEqualTo("dev-duo");
+        assertThat(devDuo.characters()).hasSize(2);
+        assertThat(devDuo.locationPool()).hasSize(2);
+        assertThat(devDuo.trueCulpritCharacterId()).isEqualTo("guest");
+    }
 }

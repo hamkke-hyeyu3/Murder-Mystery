@@ -17,7 +17,7 @@
     "true_culprit_character_id": { "type": "string", "minLength": 1 },
     "characters": {
       "type": "array",
-      "minItems": 3,
+      "minItems": 2,
       "items": {
         "type": "object",
         "required": ["id", "name"],

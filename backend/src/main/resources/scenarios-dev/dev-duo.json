@@ -1,0 +1,23 @@
+{
+  "id": "dev-duo",
+  "title": "[DEV] 2인 테스트 시나리오",
+  "icon": "🛠️",
+  "summary": "개발/테스트 전용. 호스트와 게스트 단 2명으로 빠르게 로비~시작 흐름 검증.",
+  "estimated_minutes": 10,
+  "round_count": 2,
+  "allow_private_talk": false,
+  "true_culprit_character_id": "guest",
+  "characters": [
+    {"id": "host", "name": "호스트"},
+    {"id": "guest", "name": "게스트"}
+  ],
+  "locations": [
+    {"id": "room-a", "name": "A 방", "icon": "🚪", "description": "첫 번째 테스트 방."},
+    {"id": "room-b", "name": "B 방", "icon": "🔑", "description": "두 번째 테스트 방."}
+  ],
+  "location_pool": ["room-a", "room-b"],
+  "items": [
+    {"id": "item-a", "title": "열쇠", "origin_location_id": "room-a"},
+    {"id": "item-b", "title": "메모지", "origin_location_id": "room-b"}
+  ]
+}
