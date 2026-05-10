@@ -35,16 +35,18 @@ export function useSessionWebSocket({
         const envelope = JSON.parse(msg.body) as SessionEvent
         if (envelope.type === 'PLAYER_JOINED') {
           const current = useSessionStore.getState().players
-          setSession({
-            players: [
-              ...current,
-              { nickname: envelope.payload.nickname, isHost: envelope.payload.isHost },
-            ],
-          })
+          if (!current.some((p) => p.playerId === envelope.payload.playerId)) {
+            setSession({
+              players: [
+                ...current,
+                { playerId: envelope.payload.playerId, nickname: envelope.payload.nickname, isHost: envelope.payload.isHost },
+              ],
+            })
+          }
         } else if (envelope.type === 'PLAYER_LEFT') {
           const current = useSessionStore.getState().players
           setSession({
-            players: current.filter((p) => p.nickname !== envelope.payload.nickname),
+            players: current.filter((p) => p.playerId !== envelope.payload.playerId),
           })
         } else if (envelope.type === 'LOBBY_COUNT_CHANGED') {
           setSession({

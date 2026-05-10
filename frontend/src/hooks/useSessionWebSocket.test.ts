@@ -68,14 +68,35 @@ describe('useSessionWebSocket', () => {
       } as IMessage)
     })
 
-    expect(useSessionStore.getState().players).toContainEqual({ nickname: 'bob', isHost: false })
+    expect(useSessionStore.getState().players).toContainEqual({ playerId: 'player-bob', nickname: 'bob', isHost: false })
+  })
+
+  it('PLAYER_JOINED가 이미 존재하는 playerId면 중복 추가하지 않는다', () => {
+    useSessionStore.getState().setSession({
+      players: [{ playerId: 'player-bob', nickname: 'bob', isHost: false }],
+    })
+
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'PLAYER_JOINED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-06T00:00:00Z',
+          payload: { playerId: 'player-bob', nickname: 'bob', isHost: false },
+        }),
+      } as IMessage)
+    })
+
+    expect(useSessionStore.getState().players).toHaveLength(1)
   })
 
   it('PLAYER_LEFT 이벤트 수신 시 players에서 제거한다', () => {
     useSessionStore.getState().setSession({
       players: [
-        { nickname: 'alice', isHost: true },
-        { nickname: 'bob', isHost: false },
+        { playerId: 'player-alice', nickname: 'alice', isHost: true },
+        { playerId: 'player-bob', nickname: 'bob', isHost: false },
       ],
     })
 
@@ -94,7 +115,7 @@ describe('useSessionWebSocket', () => {
 
     const players = useSessionStore.getState().players
     expect(players).not.toContainEqual(expect.objectContaining({ nickname: 'bob' }))
-    expect(players).toContainEqual({ nickname: 'alice', isHost: true })
+    expect(players).toContainEqual({ playerId: 'player-alice', nickname: 'alice', isHost: true })
   })
 
   it('마운트/언마운트 시 publish를 호출하지 않는다', () => {

@@ -117,8 +117,8 @@ describe('Lobby', () => {
   it('store의 players를 목록으로 렌더한다', () => {
     useSessionStore.getState().setSession({
       players: [
-        { nickname: 'alice', isHost: true },
-        { nickname: 'bob', isHost: false },
+        { playerId: 'p1', nickname: 'alice', isHost: true },
+        { playerId: 'p2', nickname: 'bob', isHost: false },
       ],
     })
 
@@ -300,6 +300,31 @@ describe('Lobby', () => {
 
     await waitFor(() => {
       expect(navigatedTo.some((p) => p.startsWith('/play/'))).toBe(true)
+    })
+  })
+
+  it('getSession이 guest-first 순서로 반환해도 화면에서 host가 먼저 표시된다', async () => {
+    const view: SessionViewResponse = {
+      sessionId: 'sess-001',
+      inviteCode: '012345',
+      scenarioId: 'toy-manor',
+      phase: 'lobby',
+      requiredCharacterCount: 2,
+      joinedCount: 2,
+      players: [
+        { playerId: 'p2', nickname: 'bob', isHost: false },
+        { playerId: 'p1', nickname: 'alice', isHost: true },
+      ],
+    }
+    server.use(http.get('/api/sessions/:id', () => HttpResponse.json(view)))
+    useSessionStore.getState().setSession({ sessionId: 'sess-001', playerId: 'p1' })
+
+    renderLobby()
+
+    await waitFor(() => {
+      const items = screen.getAllByRole('listitem')
+      expect(items[0]).toHaveTextContent('alice')
+      expect(items[1]).toHaveTextContent('bob')
     })
   })
 

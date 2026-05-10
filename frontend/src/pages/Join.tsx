@@ -55,7 +55,7 @@ export default function Join() {
         isHostConfirmed: false,
         playerId: res.playerId,
         phase: res.phase,
-        players: res.players.map((p) => ({ nickname: p.nickname, isHost: p.isHost })),
+        players: res.players.map((p) => ({ playerId: p.playerId, nickname: p.nickname, isHost: p.isHost })),
         requiredCharacterCount: null,
         joinedCount: null,
       })

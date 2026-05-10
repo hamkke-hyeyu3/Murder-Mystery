@@ -65,7 +65,7 @@ export function useResumeSession({ skip = false }: { skip?: boolean } = {}) {
           isHostConfirmed: true,
           playerId: r.playerId,
           phase: r.phase,
-          players: r.players.map((p) => ({ nickname: p.nickname, isHost: p.isHost })),
+          players: r.players.map((p) => ({ playerId: p.playerId, nickname: p.nickname, isHost: p.isHost })),
         })
         navigate(`/lobby/${r.inviteCode}`, { replace: true })
       } catch {

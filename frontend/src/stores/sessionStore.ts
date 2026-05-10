@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 export interface PlayerSummary {
+  playerId: string
   nickname: string
   isHost: boolean
 }

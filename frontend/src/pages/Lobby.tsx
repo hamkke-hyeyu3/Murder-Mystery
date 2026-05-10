@@ -70,7 +70,7 @@ export default function Lobby() {
         if (state.requiredCharacterCount === null) {
           patch.requiredCharacterCount = view.requiredCharacterCount
           patch.joinedCount = view.joinedCount
-          patch.players = view.players.map((p) => ({ nickname: p.nickname, isHost: p.isHost }))
+          patch.players = view.players.map((p) => ({ playerId: p.playerId, nickname: p.nickname, isHost: p.isHost }))
         }
 
         if (!state.isHostConfirmed) {
@@ -125,8 +125,8 @@ export default function Lobby() {
           <p className="text-sm text-muted-foreground">아직 합류자 없음</p>
         ) : (
           <ul className="flex flex-col gap-1">
-            {players.map((p) => (
-              <li key={p.nickname} className="text-sm">
+            {[...players].sort((a, b) => Number(b.isHost) - Number(a.isHost)).map((p) => (
+              <li key={p.playerId} className="text-sm">
                 {p.nickname}
                 {p.nickname === nickname && <span className="ml-1 text-primary">(나)</span>}
                 {p.isHost && <span className="ml-1 text-muted-foreground">(호스트)</span>}
