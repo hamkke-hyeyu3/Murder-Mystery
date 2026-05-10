@@ -17,5 +17,6 @@ public record Scenario(
     @JsonProperty("items") List<ScenarioItem> items,
     @JsonProperty("true_culprit_character_id") String trueCulpritCharacterId,
     @JsonProperty("allow_private_talk") boolean allowPrivateTalk,
-    @JsonProperty("round_count") int roundCount
+    @JsonProperty("round_count") int roundCount,
+    @JsonProperty("rounds") List<Round> rounds
 ) {}

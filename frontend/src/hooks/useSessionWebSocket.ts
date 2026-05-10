@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useStompClient } from '@/hooks/useStompClient'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
+import { useTimerStore } from '@/stores/timerStore'
 import type { SessionEvent } from '@/types/session'
 
 interface UseSessionWebSocketOptions {
@@ -65,6 +66,16 @@ export function useSessionWebSocket({
             patch.myTutorialAcked = true
           }
           setSession(patch)
+        } else if (envelope.type === 'SERVER_TIME_SYNC') {
+          useTimerStore.getState().setServerOffset(envelope.payload.serverNow - Date.now())
+        } else if (envelope.type === 'ROUND_STARTED') {
+          setSession({
+            state: 'round',
+            roundNumber: envelope.payload.roundNumber,
+            roundPrompt: envelope.payload.prompt,
+            roundCommonHint: envelope.payload.commonHint,
+          })
+          useTimerStore.getState().setDeadline(envelope.payload.deadlineAt)
         }
       }
     )

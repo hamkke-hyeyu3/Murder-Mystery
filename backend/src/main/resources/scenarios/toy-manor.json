@@ -24,5 +24,19 @@
     {"id": "poison-vial", "title": "작은 유리병", "origin_location_id": "kitchen"},
     {"id": "muddy-glove", "title": "진흙 묻은 장갑", "origin_location_id": "garden"},
     {"id": "ledger", "title": "비밀 장부", "origin_location_id": "study"}
+  ],
+  "rounds": [
+    {
+      "time_limit_sec": 600
+    },
+    {
+      "prompt": "방문했던 장소를 공유하고 알리바이를 비교해 보세요.",
+      "common_hint": "부검 결과, 사망 추정 시각은 자정 전후 30분이다.",
+      "time_limit_sec": 600
+    },
+    {
+      "prompt": "범인을 특정할 수 있는 마지막 대화를 나누세요.",
+      "time_limit_sec": 600
+    }
   ]
 }

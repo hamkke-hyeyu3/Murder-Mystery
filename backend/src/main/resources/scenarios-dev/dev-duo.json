@@ -19,5 +19,14 @@
   "items": [
     {"id": "item-a", "title": "열쇠", "origin_location_id": "room-a"},
     {"id": "item-b", "title": "메모지", "origin_location_id": "room-b"}
+  ],
+  "rounds": [
+    {
+      "time_limit_sec": 120
+    },
+    {
+      "prompt": "단서를 공유하고 범인을 추리하세요.",
+      "time_limit_sec": 120
+    }
   ]
 }

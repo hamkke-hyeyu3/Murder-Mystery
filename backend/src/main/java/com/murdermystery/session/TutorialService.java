@@ -18,15 +18,18 @@ public class TutorialService {
     private final SessionRepository sessionRepository;
     private final TransactionTemplate transactionTemplate;
     private final SessionEventPublisher eventPublisher;
+    private final RoundService roundService;
 
     public TutorialService(
         SessionRepository sessionRepository,
         TransactionTemplate transactionTemplate,
-        SessionEventPublisher eventPublisher
+        SessionEventPublisher eventPublisher,
+        RoundService roundService
     ) {
         this.sessionRepository = sessionRepository;
         this.transactionTemplate = transactionTemplate;
         this.eventPublisher = eventPublisher;
+        this.roundService = roundService;
     }
 
     // Called by scheduler after character_assignment delay.
@@ -108,6 +111,7 @@ public class TutorialService {
                 "SESSION_STATE_CHANGED",
                 new SessionStateChangedPayload("round", null)
             );
+            roundService.startRound(sessionId, 1);
         }
 
         return new TutorialAckResponse(result.acked(), result.total(), result.allAcked() ? "round" : "tutorial");

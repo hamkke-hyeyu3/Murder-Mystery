@@ -52,7 +52,7 @@ class SessionServiceTest {
             List.of(new ScenarioLocation("loc1", "도서관", null, null)),
             List.of("loc1"),
             List.of(new ScenarioItem("i1", "편지", "loc1")),
-            "alice", true, 3
+            "alice", true, 3, null
         );
     }
 
@@ -168,7 +168,7 @@ class SessionServiceTest {
                 new ScenarioCharacter("c2", "B"),
                 new ScenarioCharacter("c3", "C")
             ),
-            List.of(), List.of(), List.of(), "c1", false, 3
+            List.of(), List.of(), List.of(), "c1", false, 3, null
         );
         when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
 

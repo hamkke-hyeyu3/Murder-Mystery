@@ -60,6 +60,20 @@
           "origin_location_id": { "type": "string" }
         }
       }
+    },
+    "rounds": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["time_limit_sec"],
+        "additionalProperties": true,
+        "properties": {
+          "prompt": { "type": "string" },
+          "common_hint": { "type": "string" },
+          "time_limit_sec": { "type": "integer", "minimum": 30 }
+        }
+      }
     }
   }
 }

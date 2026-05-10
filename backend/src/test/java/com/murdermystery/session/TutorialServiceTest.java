@@ -14,6 +14,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -22,6 +23,7 @@ class TutorialServiceTest {
     private SessionRepository sessionRepo;
     private TransactionTemplate txTemplate;
     private SessionEventPublisher eventPublisher;
+    private RoundService roundService;
     private TutorialService service;
 
     private static final UUID SESSION_ID = UUID.randomUUID();
@@ -35,13 +37,14 @@ class TutorialServiceTest {
         sessionRepo = mock(SessionRepository.class);
         txTemplate = mock(TransactionTemplate.class);
         eventPublisher = mock(SessionEventPublisher.class);
+        roundService = mock(RoundService.class);
 
         when(txTemplate.execute(any())).thenAnswer(inv -> {
             var cb = inv.getArgument(0, org.springframework.transaction.support.TransactionCallback.class);
             return cb.doInTransaction(null);
         });
 
-        service = new TutorialService(sessionRepo, txTemplate, eventPublisher);
+        service = new TutorialService(sessionRepo, txTemplate, eventPublisher, roundService);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -182,6 +185,27 @@ class TutorialServiceTest {
         order.verify(eventPublisher).publish(any(), eq("TUTORIAL_ACKED"), any());
         order.verify(eventPublisher).publish(any(), eq("SESSION_STATE_CHANGED"),
             argThat(p -> p instanceof SessionStateChangedPayload sc && "round".equals(sc.state())));
+    }
+
+    @Test
+    void acknowledge_lastPlayer_triggersRound1Start() {
+        Session s = tutorialSessionWith3Players();
+        s.getPlayers().get(0).acknowledgeTutorial(java.time.Instant.now());
+        s.getPlayers().get(1).acknowledgeTutorial(java.time.Instant.now());
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(s));
+
+        service.acknowledge(SESSION_ID, DEVICE_C);
+
+        verify(roundService).startRound(SESSION_ID, 1);
+    }
+
+    @Test
+    void acknowledge_nonLastPlayer_doesNotTriggerRoundStart() {
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(tutorialSessionWith3Players()));
+
+        service.acknowledge(SESSION_ID, DEVICE_A);
+
+        verify(roundService, never()).startRound(any(), anyInt());
     }
 
     // ── acknowledge: idempotency ───────────────────────────────────────────────

@@ -35,7 +35,7 @@ class ScenarioControllerTest {
             List.of(new ScenarioLocation("loc1", "도서관", null, null)),
             List.of("loc1"),
             List.of(new ScenarioItem("i1", "편지", "loc1")),
-            "bob", true, 3
+            "bob", true, 3, null
         );
     }
 

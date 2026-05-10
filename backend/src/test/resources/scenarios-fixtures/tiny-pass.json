@@ -21,5 +21,14 @@
     {"id": "i1", "title": "아이템1", "origin_location_id": "loc1"},
     {"id": "i2", "title": "아이템2", "origin_location_id": "loc2"},
     {"id": "i3", "title": "아이템3", "origin_location_id": "loc3"}
+  ],
+  "rounds": [
+    {
+      "time_limit_sec": 60
+    },
+    {
+      "prompt": "두 번째 라운드.",
+      "time_limit_sec": 60
+    }
   ]
 }

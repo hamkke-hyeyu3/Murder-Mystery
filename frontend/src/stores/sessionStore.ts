@@ -21,6 +21,9 @@ export interface SessionState {
   tutorialAckedCount: number | null
   tutorialTotalCount: number | null
   myTutorialAcked: boolean
+  roundNumber: number | null
+  roundPrompt: string | null
+  roundCommonHint: string | null
 }
 
 interface SessionActions {
@@ -44,6 +47,9 @@ const initialState: SessionState = {
   tutorialAckedCount: null,
   tutorialTotalCount: null,
   myTutorialAcked: false,
+  roundNumber: null,
+  roundPrompt: null,
+  roundCommonHint: null,
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({

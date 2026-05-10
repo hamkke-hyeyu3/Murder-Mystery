@@ -110,3 +110,21 @@ export type SessionEvent =
       occurredAt: string
       payload: { playerId: string; nickname: string; acked: number; total: number }
     }
+  | {
+      type: 'SERVER_TIME_SYNC'
+      sessionId: string
+      occurredAt: string
+      payload: { serverNow: number }
+    }
+  | {
+      type: 'ROUND_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        roundNumber: number
+        prompt: string
+        commonHint: string | null
+        deadlineAt: number
+        startedAt: number
+      }
+    }

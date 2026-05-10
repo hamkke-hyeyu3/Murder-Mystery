@@ -5,6 +5,7 @@ import { useSessionWebSocket } from './useSessionWebSocket'
 import { useStompClient } from './useStompClient'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
+import { useTimerStore } from '@/stores/timerStore'
 
 vi.mock('./useStompClient')
 
@@ -215,5 +216,77 @@ describe('useSessionWebSocket', () => {
     })
 
     expect(useSessionStore.getState().myTutorialAcked).toBe(true)
+  })
+
+  it('SERVER_TIME_SYNC 이벤트 수신 시 timerStore.serverOffsetMs를 설정한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    const fakeServerNow = Date.now() + 2000
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'SERVER_TIME_SYNC',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { serverNow: fakeServerNow },
+        }),
+      } as IMessage)
+    })
+
+    expect(useTimerStore.getState().serverOffsetMs).toBeCloseTo(2000, -2)
+  })
+
+  it('ROUND_STARTED 이벤트 수신 시 sessionStore와 timerStore를 갱신한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    const deadlineAt = Date.now() + 300_000
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ROUND_STARTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            roundNumber: 1,
+            prompt: '한 사람씩 자기 캐릭터를 짧게 소개해 주세요.',
+            commonHint: null,
+            deadlineAt,
+            startedAt: Date.now(),
+          },
+        }),
+      } as IMessage)
+    })
+
+    const sessionState = useSessionStore.getState()
+    expect(sessionState.state).toBe('round')
+    expect(sessionState.roundNumber).toBe(1)
+    expect(sessionState.roundPrompt).toBe('한 사람씩 자기 캐릭터를 짧게 소개해 주세요.')
+    expect(sessionState.roundCommonHint).toBeNull()
+
+    expect(useTimerStore.getState().deadlineAt).toBe(deadlineAt)
+  })
+
+  it('ROUND_STARTED commonHint가 있으면 sessionStore에 저장한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ROUND_STARTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            roundNumber: 2,
+            prompt: '알리바이를 비교해 보세요.',
+            commonHint: '부검 결과가 공개됐다.',
+            deadlineAt: Date.now() + 300_000,
+            startedAt: Date.now(),
+          },
+        }),
+      } as IMessage)
+    })
+
+    expect(useSessionStore.getState().roundCommonHint).toBe('부검 결과가 공개됐다.')
   })
 })

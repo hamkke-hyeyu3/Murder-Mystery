@@ -2,7 +2,9 @@ import { useParams } from 'react-router-dom'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
+import { useTimerStore } from '@/stores/timerStore'
 import { Tutorial } from '@/components/Tutorial'
+import { RoundPanel } from '@/components/RoundPanel'
 import { postTutorialAck } from '@/lib/sessionApi'
 
 export default function Play() {
@@ -16,8 +18,13 @@ export default function Play() {
   const tutorialAckedCount = useSessionStore((s) => s.tutorialAckedCount)
   const tutorialTotalCount = useSessionStore((s) => s.tutorialTotalCount)
   const myTutorialAcked = useSessionStore((s) => s.myTutorialAcked)
+  const roundNumber = useSessionStore((s) => s.roundNumber)
+  const roundPrompt = useSessionStore((s) => s.roundPrompt)
+  const roundCommonHint = useSessionStore((s) => s.roundCommonHint)
   const setSession = useSessionStore((s) => s.setSession)
   const characterCard = useCardStore((s) => s.characterCard)
+  const deadlineAt = useTimerStore((s) => s.deadlineAt)
+  const serverOffsetMs = useTimerStore((s) => s.serverOffsetMs)
 
   useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 
@@ -48,7 +55,13 @@ export default function Play() {
   if (state === 'round') {
     return (
       <div data-testid="page-play" className="min-h-screen p-6">
-        <p data-testid="play-round-placeholder">라운드 시작 중…</p>
+        <RoundPanel
+          roundNumber={roundNumber ?? 1}
+          prompt={roundPrompt ?? ''}
+          commonHint={roundCommonHint}
+          deadlineAt={deadlineAt}
+          serverOffsetMs={serverOffsetMs}
+        />
       </div>
     )
   }

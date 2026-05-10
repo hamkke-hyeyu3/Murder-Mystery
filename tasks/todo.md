@@ -118,11 +118,11 @@
   - [x] FE: `Tutorial.tsx` (고정 문구 + "확인" 버튼 + "X / N 통과" 대기)
   - [x] 검증: `TutorialServiceTest`
 
-- [ ] **T-07** 라운드 진입 + 프롬프트 + 카운트다운 + k=1 자기소개 + common_hint
-  - [ ] BE: `RoundService.startRound`, `SERVER_TIME_SYNC` broadcast, ScheduledExecutor 등록
-  - [ ] FE: `RoundPanel.tsx` (프롬프트 + common_hint + 카운트다운 + 5초 경고)
-  - [ ] DB: `V3.5__rounds.sql`
-  - [ ] 검증: `RoundServiceTest` (k=1 자기소개 트리거, common_hint 선언 라운드만)
+- [x] **T-07** 라운드 진입 + 프롬프트 + 카운트다운 + k=1 자기소개 + common_hint
+  - [x] BE: `RoundService.startRound`, `SERVER_TIME_SYNC` broadcast (ScheduledExecutor는 T-10에서 — 라운드 종료/자동 전환 범위)
+  - [x] FE: `RoundPanel.tsx` (프롬프트 + common_hint + 카운트다운 + 5초 경고) + `useCountdown` 훅
+  - [x] DB: `V6__rounds.sql` (V3.5는 V5/V5_1 이후 사용 불가 — V6으로 교체)
+  - [x] 검증: `RoundServiceTest` 17케이스, `TutorialServiceTest` 2케이스 추가, `RoundPanel.test.tsx` 7케이스, `useCountdown.test.ts` 7케이스, `useSessionWebSocket.test.ts` 4케이스 추가 (총 95 FE 테스트 그린)
 
 - [ ] **T-08** 캐릭터 카드 단일 표면 (E2-01·02·04·05 통합)
   - [ ] FE: `CharacterCard.tsx` (6 영역: 헤더·라운드목표·미션자리표시자·아이템·본문·알리바이)

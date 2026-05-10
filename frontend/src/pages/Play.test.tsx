@@ -59,12 +59,18 @@ describe('Play', () => {
     expect(screen.queryByTestId('play-waiting-card')).not.toBeInTheDocument()
   })
 
-  it("state='round'일 때 라운드 placeholder를 렌더한다", () => {
-    useSessionStore.getState().setSession({ state: 'round' })
+  it("state='round'일 때 RoundPanel을 렌더한다", () => {
+    useSessionStore.getState().setSession({
+      state: 'round',
+      roundNumber: 1,
+      roundPrompt: '한 사람씩 자기 캐릭터를 짧게 소개해 주세요.',
+      roundCommonHint: null,
+    })
 
     renderPlay()
 
-    expect(screen.getByTestId('play-round-placeholder')).toBeInTheDocument()
+    expect(screen.getByTestId('round-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('round-prompt')).toHaveTextContent('한 사람씩 자기 캐릭터를 짧게 소개해 주세요.')
     expect(screen.queryByTestId('tutorial')).not.toBeInTheDocument()
   })
 

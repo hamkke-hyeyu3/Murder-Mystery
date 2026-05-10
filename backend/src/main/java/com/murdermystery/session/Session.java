@@ -38,6 +38,9 @@ public class Session implements Persistable<UUID> {
     @Column(name = "turn_order", columnDefinition = "text[]")
     private List<String> turnOrder;
 
+    @Column(name = "current_round_number")
+    private Integer currentRoundNumber;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -93,6 +96,8 @@ public class Session implements Persistable<UUID> {
     public void setState(String state) { this.state = state; }
     public List<String> getTurnOrder() { return turnOrder; }
     public void setTurnOrder(List<String> turnOrder) { this.turnOrder = turnOrder; }
+    public Integer getCurrentRoundNumber() { return currentRoundNumber; }
+    public void setCurrentRoundNumber(Integer currentRoundNumber) { this.currentRoundNumber = currentRoundNumber; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public List<Player> getPlayers() { return players; }
