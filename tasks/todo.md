@@ -70,6 +70,7 @@
   - [x] FE: `pages/Join.tsx` + `useSessionWebSocket(sessionId)` 훅
   - [x] FE: `Lobby.tsx` players 상태 갱신 + 게스트 "나가기" 버튼
   - [x] 검증: `JoinServiceTest`, `useSessionWebSocket.test.ts`
+  - [x] fix(lobby): `PlayerSummary`에 `playerId` 추가, PLAYER_JOINED dedup(playerId 기준), PLAYER_LEFT playerId 필터링, Lobby host-first 정렬
 
 - [x] **T-04** 인원 매칭 + "게임 시작" 게이트 + 사유 인라인 + Device ID 정체성 추적
   - [x] BE: `GET /api/sessions/{sessionId}` 에 `requiredCharacterCount` + `joinedCount`
@@ -130,6 +131,8 @@
   - [x] FE: `RoundPanel.tsx` (프롬프트 + common_hint + 카운트다운 + 5초 경고) + `useCountdown` 훅
   - [x] DB: `V6__rounds.sql` (V3.5는 V5/V5_1 이후 사용 불가 — V6으로 교체)
   - [x] 검증: `RoundServiceTest` 17케이스, `TutorialServiceTest` 2케이스 추가, `RoundPanel.test.tsx` 7케이스, `useCountdown.test.ts` 7케이스, `useSessionWebSocket.test.ts` 4케이스 추가 (총 95 FE 테스트 그린)
+  - [x] fix(T-07): `rounds==null` 시나리오 로딩 시점 거부 (`ScenarioCrossFieldValidator`)
+  - [x] adversarial-review 수정: `CrossFieldValidatorTest` 4케이스 ROUNDS_2 상수 적용(pool/culprit 경로 복구), PLAYER_LEFT `leftId` guard, PLAYER_JOINED/LEFT functional updater 전환
 
 - [ ] **T-08** 캐릭터 카드 단일 표면 (E2-01·02·04·05 통합)
   - [ ] FE: `CharacterCard.tsx` (6 영역: 헤더·라운드목표·미션자리표시자·아이템·본문·알리바이)
