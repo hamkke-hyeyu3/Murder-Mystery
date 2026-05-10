@@ -49,6 +49,7 @@
   - [x] FE: `lib/deviceId.ts`, `useResumeSession` hook, Catalog/Join 자동 redirect
   - [x] FE: Playwright e2e `device-resume.spec.ts` (4 시나리오)
   - [x] 동시 join race 처리: aborted 트랜잭션 후 outer catch에서 idempotent 복구
+  - [x] BE: `JoinIntegrationTest` — 같은 deviceId 순차 합류 idempotent 케이스 추가
 
 - [x] **BUG-01** Lobby 합류자 목록 실시간 갱신 안 됨
   - 원인: useStompClient가 raw WebSocket으로 연결 시도 → SockJS 전용 /ws 엔드포인트 거절 → STOMP 연결 불가
