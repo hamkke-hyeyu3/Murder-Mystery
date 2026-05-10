@@ -93,10 +93,10 @@
   - 로컬 테스트 방법: **Chrome 프로필 여러 개** 또는 **Safari + Chrome** 조합으로 각각 접속
   - [x] 해결 옵션 완료 (INFRA-05): `?deviceId=<uuid>` dev override 구현 — 탭 A에 `?deviceId=...0001`, 탭 B에 `?deviceId=...0002` → dev-duo(2인) 시나리오와 결합 시 단일 브라우저로 호스트+게스트 동시 합류 시뮬레이션 가능
 
-**📝 리뷰 메모 (B 작업 중 동선상 함께 처리):**
-- `JoinService.join` 100줄 분해 + `JoinBroadcastBundle` null sentinel을 `Optional<...>`로 (`JoinService.java:42-135`)
-- `validateNickname` 중복 제거 (Session/Join 양쪽) + `SessionEventPublisher` 추상화 검토
-- `useResumeSession.test.ts` setup의 store/localStorage `beforeEach` reset 점검 (`frontend/src/test/setup.ts`)
+**✅ 리뷰 메모 완료 (체크포인트 A → B 전환 시 처리):**
+- [x] `JoinService.join` 분해 (`loadJoinableSession`/`tryJoin`/`recoverFromConflict`/`broadcastJoin`) + `Optional<LobbyCountChangedPayload>` (null sentinel 제거)
+- [x] `validateNickname` → `Nicknames.validate` 유틸 일원화 + `SessionEventPublisher` 컴포넌트 추출 (`JoinService`/`LeaveService` 공유)
+- [x] `vitest.config.ts` `clearMocks:true` + `setup.ts` 전체 store reset (`transient`/`timer`/`card`)
 
 **✅ 체크포인트 A 완료 조건:** 3 단말 lobby 데모 + `./gradlew test` + `npm run test` 그린
 

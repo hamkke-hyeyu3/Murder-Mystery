@@ -4,13 +4,10 @@ import com.murdermystery.config.StompPrincipal;
 import com.murdermystery.scenario.ScenarioRepository;
 import com.murdermystery.ws.event.LobbyCountChangedPayload;
 import com.murdermystery.ws.event.PlayerLeftPayload;
-import com.murdermystery.ws.event.SessionEventEnvelope;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.security.Principal;
-import java.time.Instant;
 
 @Service
 public class LeaveService {
@@ -19,16 +16,16 @@ public class LeaveService {
 
     private final SessionRepository sessionRepository;
     private final TransactionTemplate transactionTemplate;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final SessionEventPublisher eventPublisher;
     private final ScenarioRepository scenarioRepository;
 
     public LeaveService(SessionRepository sessionRepository,
                         TransactionTemplate transactionTemplate,
-                        SimpMessagingTemplate messagingTemplate,
+                        SessionEventPublisher eventPublisher,
                         ScenarioRepository scenarioRepository) {
         this.sessionRepository = sessionRepository;
         this.transactionTemplate = transactionTemplate;
-        this.messagingTemplate = messagingTemplate;
+        this.eventPublisher = eventPublisher;
         this.scenarioRepository = scenarioRepository;
     }
 
@@ -65,13 +62,7 @@ public class LeaveService {
 
         if (bundle == null) return;
 
-        messagingTemplate.convertAndSend(
-            "/topic/session/" + sessionId + "/event",
-            new SessionEventEnvelope<>("PLAYER_LEFT", Instant.now(), sessionId, bundle.left())
-        );
-        messagingTemplate.convertAndSend(
-            "/topic/session/" + sessionId + "/event",
-            new SessionEventEnvelope<>("LOBBY_COUNT_CHANGED", Instant.now(), sessionId, bundle.count())
-        );
+        eventPublisher.publish(sessionId, "PLAYER_LEFT", bundle.left());
+        eventPublisher.publish(sessionId, "LOBBY_COUNT_CHANGED", bundle.count());
     }
 }

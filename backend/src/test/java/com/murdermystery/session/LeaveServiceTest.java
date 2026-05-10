@@ -5,12 +5,10 @@ import com.murdermystery.scenario.Scenario;
 import com.murdermystery.scenario.ScenarioCharacter;
 import com.murdermystery.scenario.ScenarioRepository;
 import com.murdermystery.ws.event.LobbyCountChangedPayload;
-import com.murdermystery.ws.event.SessionEventEnvelope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.security.Principal;
@@ -20,21 +18,20 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.Mockito.*;
 
 class LeaveServiceTest {
 
     private SessionRepository sessionRepo;
     private TransactionTemplate txTemplate;
-    private SimpMessagingTemplate messaging;
+    private SessionEventPublisher eventPublisher;
     private ScenarioRepository scenarioRepo;
     private LeaveService service;
 
     @BeforeEach
     void setUp() {
         sessionRepo = mock(SessionRepository.class);
-        messaging = mock(SimpMessagingTemplate.class);
+        eventPublisher = mock(SessionEventPublisher.class);
         txTemplate = mock(TransactionTemplate.class);
         scenarioRepo = mock(ScenarioRepository.class);
         when(txTemplate.execute(any())).thenAnswer(inv -> {
@@ -46,7 +43,7 @@ class LeaveServiceTest {
             mock(ScenarioCharacter.class), mock(ScenarioCharacter.class), mock(ScenarioCharacter.class)
         ));
         when(scenarioRepo.findById(any())).thenReturn(Optional.of(scenario));
-        service = new LeaveService(sessionRepo, txTemplate, messaging, scenarioRepo);
+        service = new LeaveService(sessionRepo, txTemplate, eventPublisher, scenarioRepo);
     }
 
     @Test
@@ -59,14 +56,13 @@ class LeaveServiceTest {
 
         service.leave(session.getId().toString(), new StompPrincipal("123456:" + bob.getId()));
 
-        InOrder order = inOrder(sessionRepo, messaging);
+        InOrder order = inOrder(sessionRepo, eventPublisher);
         order.verify(sessionRepo).saveAndFlush(any());
-        order.verify(messaging, times(2)).convertAndSend(contains("/event"), any(SessionEventEnvelope.class));
+        order.verify(eventPublisher, times(2)).publish(any(), any(), any());
         assertThat(session.getPlayers()).doesNotContain(bob);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void leave_validPrincipal_lobbyCountReflectsRemainingPlayers() {
         Session session = new Session("123456", "toy-manor");
         Player alice = new Player("alice", true);
@@ -78,12 +74,12 @@ class LeaveServiceTest {
 
         service.leave(session.getId().toString(), new StompPrincipal("123456:" + bob.getId()));
 
-        ArgumentCaptor<SessionEventEnvelope> captor = ArgumentCaptor.forClass(SessionEventEnvelope.class);
-        verify(messaging, times(2)).convertAndSend(any(String.class), captor.capture());
-        List<SessionEventEnvelope> envelopes = captor.getAllValues();
-        assertThat(envelopes.get(0).type()).isEqualTo("PLAYER_LEFT");
-        assertThat(envelopes.get(1).type()).isEqualTo("LOBBY_COUNT_CHANGED");
-        LobbyCountChangedPayload count = (LobbyCountChangedPayload) envelopes.get(1).payload();
+        ArgumentCaptor<String> typeCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Object> payloadCaptor = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, times(2)).publish(any(), typeCaptor.capture(), payloadCaptor.capture());
+        assertThat(typeCaptor.getAllValues().get(0)).isEqualTo("PLAYER_LEFT");
+        assertThat(typeCaptor.getAllValues().get(1)).isEqualTo("LOBBY_COUNT_CHANGED");
+        LobbyCountChangedPayload count = (LobbyCountChangedPayload) payloadCaptor.getAllValues().get(1);
         assertThat(count.joined()).isEqualTo(1); // only alice remains
         assertThat(count.required()).isEqualTo(3); // mocked toy-manor
     }
@@ -94,7 +90,7 @@ class LeaveServiceTest {
 
         service.leave("any-session-id", new StompPrincipal("999999:" + UUID.randomUUID()));
 
-        verify(messaging, never()).convertAndSend(any(String.class), any(Object.class));
+        verify(eventPublisher, never()).publish(any(), any(), any());
     }
 
     @Test
@@ -106,7 +102,7 @@ class LeaveServiceTest {
 
         service.leave(session.getId().toString(), new StompPrincipal("123456:" + alice.getId()));
 
-        verify(messaging, never()).convertAndSend(any(String.class), any(Object.class));
+        verify(eventPublisher, never()).publish(any(), any(), any());
         assertThat(session.getPlayers()).contains(alice);
     }
 
@@ -119,7 +115,7 @@ class LeaveServiceTest {
 
         service.leave("completely-different-uuid", new StompPrincipal("AAAAAA:" + bob.getId()));
 
-        verify(messaging, never()).convertAndSend(any(String.class), any(Object.class));
+        verify(eventPublisher, never()).publish(any(), any(), any());
         assertThat(sessionA.getPlayers()).contains(bob);
     }
 
@@ -130,7 +126,7 @@ class LeaveServiceTest {
 
         service.leave(session.getId().toString(), new StompPrincipal("123456:" + UUID.randomUUID()));
 
-        verify(messaging, never()).convertAndSend(any(String.class), any(Object.class));
+        verify(eventPublisher, never()).publish(any(), any(), any());
     }
 
     @Test
@@ -141,7 +137,7 @@ class LeaveServiceTest {
         UUID playerId = UUID.randomUUID();
         service.leave(session.getId().toString(), new StompPrincipal("123456:" + playerId));
 
-        verify(messaging, never()).convertAndSend(any(String.class), any(Object.class));
+        verify(eventPublisher, never()).publish(any(), any(), any());
         verify(sessionRepo, never()).saveAndFlush(any());
     }
 
@@ -155,7 +151,7 @@ class LeaveServiceTest {
 
         service.leave(session.getId().toString(), new StompPrincipal("123456:" + bob.getId()));
 
-        verify(messaging, never()).convertAndSend(any(String.class), any(Object.class));
+        verify(eventPublisher, never()).publish(any(), any(), any());
     }
 
     @Test
@@ -163,7 +159,7 @@ class LeaveServiceTest {
         service.leave("any-id", new StompPrincipal("anon-" + UUID.randomUUID()));
 
         verify(sessionRepo, never()).findByInviteCode(any());
-        verify(messaging, never()).convertAndSend(any(String.class), any(Object.class));
+        verify(eventPublisher, never()).publish(any(), any(), any());
     }
 
     @Test
@@ -173,6 +169,6 @@ class LeaveServiceTest {
         service.leave("any-id", plainPrincipal);
 
         verify(sessionRepo, never()).findByInviteCode(any());
-        verify(messaging, never()).convertAndSend(any(String.class), any(Object.class));
+        verify(eventPublisher, never()).publish(any(), any(), any());
     }
 }

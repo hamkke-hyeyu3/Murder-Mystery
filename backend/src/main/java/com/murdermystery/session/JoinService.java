@@ -3,13 +3,10 @@ package com.murdermystery.session;
 import com.murdermystery.scenario.ScenarioRepository;
 import com.murdermystery.ws.event.LobbyCountChangedPayload;
 import com.murdermystery.ws.event.PlayerJoinedPayload;
-import com.murdermystery.ws.event.SessionEventEnvelope;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,130 +14,120 @@ import java.util.UUID;
 @Service
 public class JoinService {
 
-    private record JoinBroadcastBundle(JoinResponse response, LobbyCountChangedPayload count) {}
+    private record JoinBroadcastBundle(JoinResponse response, Optional<LobbyCountChangedPayload> count) {}
 
     private final SessionRepository sessionRepository;
     private final PlayerRepository playerRepository;
     private final TransactionTemplate transactionTemplate;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final SessionEventPublisher eventPublisher;
     private final ScenarioRepository scenarioRepository;
 
     public JoinService(
         SessionRepository sessionRepository,
         PlayerRepository playerRepository,
         TransactionTemplate transactionTemplate,
-        SimpMessagingTemplate messagingTemplate,
+        SessionEventPublisher eventPublisher,
         ScenarioRepository scenarioRepository
     ) {
         this.sessionRepository = sessionRepository;
         this.playerRepository = playerRepository;
         this.transactionTemplate = transactionTemplate;
-        this.messagingTemplate = messagingTemplate;
+        this.eventPublisher = eventPublisher;
         this.scenarioRepository = scenarioRepository;
     }
 
     public JoinResponse join(String inviteCode, String rawNickname, UUID deviceId) {
-        Session session = sessionRepository.findByInviteCode(inviteCode)
-            .orElseThrow(() -> new InviteCodeNotFoundException(inviteCode));
-
-        if (!"lobby".equals(session.getPhase())) {
-            throw new SessionNotJoinableException(session.getPhase());
-        }
-
-        String nickname = validateNickname(rawNickname);
+        Session session = loadJoinableSession(inviteCode);
+        String nickname = Nicknames.validate(rawNickname);
 
         JoinBroadcastBundle bundle;
         try {
             // Idempotent check and new-join insert run in the same transaction to close the
             // sequential race window. The partial unique index on (session_id, device_id) guards
             // against truly concurrent requests that slip past the in-transaction check.
-            bundle = transactionTemplate.execute(status -> {
-                if (deviceId != null) {
-                    Optional<Player> existing = playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId);
-                    if (existing.isPresent()) {
-                        Player p = existing.get();
-                        List<PlayerSummary> players = session.getPlayers().stream()
-                            .map(pl -> new PlayerSummary(pl.getId().toString(), pl.getNickname(), pl.isHost()))
-                            .toList();
-                        return new JoinBroadcastBundle(
-                            new JoinResponse(session.getId().toString(), session.getInviteCode(),
-                                session.getScenarioId(), session.getPhase(),
-                                p.getNickname(), p.getId().toString(), players),
-                            null  // null = idempotent, skip broadcast
-                        );
-                    }
-                }
-
-                Player player = new Player(nickname, false, deviceId);
-                session.addPlayer(player);
-                sessionRepository.saveAndFlush(session);
-                List<PlayerSummary> players = session.getPlayers().stream()
-                    .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
-                    .toList();
-                JoinResponse response = new JoinResponse(
-                    session.getId().toString(),
-                    session.getInviteCode(),
-                    session.getScenarioId(),
-                    session.getPhase(),
-                    player.getNickname(),
-                    player.getId().toString(),
-                    players
-                );
-                int joined = players.size();
-                int required = scenarioRepository.findById(session.getScenarioId())
-                    .orElseThrow(() -> new IllegalStateException("scenario not found: " + session.getScenarioId()))
-                    .characters().size();
-                return new JoinBroadcastBundle(response, new LobbyCountChangedPayload(joined, required));
-            });
+            bundle = transactionTemplate.execute(status -> tryJoin(session, nickname, deviceId));
         } catch (DataIntegrityViolationException ex) {
-            // Transaction rolled back. All re-queries run in fresh transactions (safe after abort).
-            // Priority 1: same device won the race → idempotent response, no broadcast.
-            if (deviceId != null) {
-                Optional<Player> existing = playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId);
-                if (existing.isPresent()) {
-                    Player p = existing.get();
-                    List<PlayerSummary> players = sessionRepository.findById(session.getId())
-                        .map(s -> s.getPlayers().stream()
-                            .map(pl -> new PlayerSummary(pl.getId().toString(), pl.getNickname(), pl.isHost()))
-                            .toList())
-                        .orElse(List.of());
-                    return new JoinResponse(
-                        session.getId().toString(), session.getInviteCode(),
-                        session.getScenarioId(), session.getPhase(),
-                        p.getNickname(), p.getId().toString(), players
-                    );
-                }
-            }
-            // Priority 2: different device took the same nickname → 409.
-            if (playerRepository.existsBySessionIdAndNickname(session.getId(), nickname)) {
-                throw new NicknameTakenException(nickname);
-            }
-            throw ex;
+            return recoverFromConflict(session, nickname, deviceId, ex);
         }
 
-        // Broadcast after transaction commits — skipped for idempotent re-joins (count == null)
-        if (bundle.count() != null) {
-            var playerJoined = new PlayerJoinedPayload(bundle.response().playerId(), bundle.response().nickname(), false);
-            messagingTemplate.convertAndSend(
-                "/topic/session/" + bundle.response().sessionId() + "/event",
-                new SessionEventEnvelope<>("PLAYER_JOINED", Instant.now(), bundle.response().sessionId(), playerJoined)
-            );
-            messagingTemplate.convertAndSend(
-                "/topic/session/" + bundle.response().sessionId() + "/event",
-                new SessionEventEnvelope<>("LOBBY_COUNT_CHANGED", Instant.now(), bundle.response().sessionId(), bundle.count())
-            );
-        }
-
+        // Broadcast after transaction commits — skipped for idempotent re-joins (count is empty)
+        bundle.count().ifPresent(count -> broadcastJoin(bundle.response(), count));
         return bundle.response();
     }
 
-    private static String validateNickname(String raw) {
-        if (raw == null) throw new IllegalArgumentException("nickname must not be null");
-        String trimmed = raw.trim();
-        if (trimmed.isEmpty()) throw new IllegalArgumentException("nickname must not be blank");
-        if (trimmed.length() > 20) throw new IllegalArgumentException("nickname too long (max 20)");
-        if (trimmed.chars().anyMatch(Character::isISOControl))
-            throw new IllegalArgumentException("nickname contains invalid characters");
-        return trimmed;
+    private Session loadJoinableSession(String inviteCode) {
+        Session session = sessionRepository.findByInviteCode(inviteCode)
+            .orElseThrow(() -> new InviteCodeNotFoundException(inviteCode));
+        if (!"lobby".equals(session.getPhase())) {
+            throw new SessionNotJoinableException(session.getPhase());
+        }
+        return session;
+    }
+
+    private JoinBroadcastBundle tryJoin(Session session, String nickname, UUID deviceId) {
+        if (deviceId != null) {
+            Optional<Player> existing = playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId);
+            if (existing.isPresent()) {
+                Player p = existing.get();
+                List<PlayerSummary> players = toSummaries(session.getPlayers());
+                return new JoinBroadcastBundle(
+                    new JoinResponse(session.getId().toString(), session.getInviteCode(),
+                        session.getScenarioId(), session.getPhase(),
+                        p.getNickname(), p.getId().toString(), players),
+                    Optional.empty()
+                );
+            }
+        }
+
+        Player player = new Player(nickname, false, deviceId);
+        session.addPlayer(player);
+        sessionRepository.saveAndFlush(session);
+        List<PlayerSummary> players = toSummaries(session.getPlayers());
+        JoinResponse response = new JoinResponse(
+            session.getId().toString(), session.getInviteCode(),
+            session.getScenarioId(), session.getPhase(),
+            player.getNickname(), player.getId().toString(), players
+        );
+        int required = scenarioRepository.findById(session.getScenarioId())
+            .orElseThrow(() -> new IllegalStateException("scenario not found: " + session.getScenarioId()))
+            .characters().size();
+        return new JoinBroadcastBundle(response, Optional.of(new LobbyCountChangedPayload(players.size(), required)));
+    }
+
+    private JoinResponse recoverFromConflict(Session session, String nickname, UUID deviceId,
+                                              DataIntegrityViolationException ex) {
+        // Transaction rolled back. All re-queries run in fresh transactions (safe after abort).
+        // Priority 1: same device won the race → idempotent response, no broadcast.
+        if (deviceId != null) {
+            Optional<Player> existing = playerRepository.findBySessionIdAndDeviceId(session.getId(), deviceId);
+            if (existing.isPresent()) {
+                Player p = existing.get();
+                List<PlayerSummary> players = sessionRepository.findById(session.getId())
+                    .map(s -> toSummaries(s.getPlayers()))
+                    .orElse(List.of());
+                return new JoinResponse(
+                    session.getId().toString(), session.getInviteCode(),
+                    session.getScenarioId(), session.getPhase(),
+                    p.getNickname(), p.getId().toString(), players
+                );
+            }
+        }
+        // Priority 2: different device took the same nickname → 409.
+        if (playerRepository.existsBySessionIdAndNickname(session.getId(), nickname)) {
+            throw new NicknameTakenException(nickname);
+        }
+        throw ex;
+    }
+
+    private void broadcastJoin(JoinResponse response, LobbyCountChangedPayload count) {
+        var playerJoined = new PlayerJoinedPayload(response.playerId(), response.nickname(), false);
+        eventPublisher.publish(response.sessionId(), "PLAYER_JOINED", playerJoined);
+        eventPublisher.publish(response.sessionId(), "LOBBY_COUNT_CHANGED", count);
+    }
+
+    private static List<PlayerSummary> toSummaries(List<Player> players) {
+        return players.stream()
+            .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
+            .toList();
     }
 }
