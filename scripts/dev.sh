@@ -9,6 +9,12 @@ for cmd in docker java npm; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "ERROR: '$cmd' not found in PATH" >&2; exit 1; }
 done
 
+if lsof -ti:8080 >/dev/null 2>&1; then
+  echo "ERROR: port 8080 already in use (PID: $(lsof -ti:8080 | tr '\n' ' '))" >&2
+  echo "       Run: kill \$(lsof -ti:8080)" >&2
+  exit 1
+fi
+
 kill_tree() {
   local sig=${2:-TERM}
   for child in $(pgrep -P "$1" 2>/dev/null); do
