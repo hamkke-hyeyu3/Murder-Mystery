@@ -56,7 +56,7 @@
   - 수정: sockjs-client 추가 + webSocketFactory로 전환, stale callback 가드 추가
   - 검증: useStompClient unit test 5케이스 그린, e2e lobby-realtime-join.spec.ts로 통합 확인
 
-- [ ] **BUG-02** 로컬 다중 플레이어 테스트: 같은 브라우저 탭은 `mm:deviceId` 공유
+- [x] **BUG-02** 로컬 다중 플레이어 테스트: 같은 브라우저 탭은 `mm:deviceId` 공유
   - 증상: 새 탭을 열면 `useResumeSession`이 기존 세션으로 redirect → 별도 플레이어 시뮬레이션 불가
   - 원인: 같은 브라우저 origin의 탭은 localStorage 공유 (의도된 동작, 테스트 환경 문제)
   - 로컬 테스트 방법: **Chrome 프로필 여러 개** 또는 **Safari + Chrome** 조합으로 각각 접속
