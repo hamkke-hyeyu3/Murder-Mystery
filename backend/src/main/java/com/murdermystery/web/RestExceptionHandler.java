@@ -3,9 +3,11 @@ package com.murdermystery.web;
 import com.murdermystery.session.LobbyCountMismatchException;
 import com.murdermystery.session.NicknameTakenException;
 import com.murdermystery.session.NotHostException;
+import com.murdermystery.session.PlayerNotInSessionException;
 import com.murdermystery.session.SessionAlreadyStartedException;
 import com.murdermystery.session.SessionNotFoundException;
 import com.murdermystery.session.SessionNotJoinableException;
+import com.murdermystery.session.TutorialPhaseRequiredException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -78,6 +80,20 @@ public class RestExceptionHandler {
     public ProblemDetail handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
         ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
         detail.setDetail("session already started");
+        return detail;
+    }
+
+    @ExceptionHandler(TutorialPhaseRequiredException.class)
+    public ProblemDetail handleTutorialPhaseRequired(TutorialPhaseRequiredException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        detail.setDetail("tutorial phase required");
+        return detail;
+    }
+
+    @ExceptionHandler(PlayerNotInSessionException.class)
+    public ProblemDetail handlePlayerNotInSession(PlayerNotInSessionException ex) {
+        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+        detail.setDetail("player not in session");
         return detail;
     }
 

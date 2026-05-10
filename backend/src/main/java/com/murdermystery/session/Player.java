@@ -81,5 +81,8 @@ public class Player implements Persistable<UUID> {
     public String getAssignedCharacterId() { return assignedCharacterId; }
     public void setAssignedCharacterId(String id) { this.assignedCharacterId = id; }
     public Instant getTutorialAckedAt() { return tutorialAckedAt; }
+    public void acknowledgeTutorial(Instant ackedAt) {
+        if (this.tutorialAckedAt == null) this.tutorialAckedAt = ackedAt;
+    }
     public Instant getMissionCheckedAt() { return missionCheckedAt; }
 }

@@ -34,6 +34,7 @@ class StartGameServiceTest {
     private TransactionTemplate txTemplate;
     private SessionEventPublisher eventPublisher;
     private ScheduledExecutorService scheduler;
+    private TutorialService tutorialService;
     private StartGameService service;
 
     // Captures the Runnable passed to scheduler.schedule so tests can trigger it manually
@@ -51,6 +52,7 @@ class StartGameServiceTest {
         txTemplate = mock(TransactionTemplate.class);
         eventPublisher = mock(SessionEventPublisher.class);
         scheduler = mock(ScheduledExecutorService.class);
+        tutorialService = mock(TutorialService.class);
         capturedTasks.clear();
 
         when(txTemplate.execute(any())).thenAnswer(inv -> {
@@ -76,7 +78,7 @@ class StartGameServiceTest {
 
         // deterministic random (seed=0)
         service = new StartGameService(
-            sessionRepo, scenarioRepo, txTemplate, eventPublisher, scheduler, new Random(0), 5000);
+            sessionRepo, scenarioRepo, txTemplate, eventPublisher, scheduler, tutorialService, new Random(0), 5000, 5000);
     }
 
     private Session lobbySessionWith3Players() {
@@ -328,5 +330,63 @@ class StartGameServiceTest {
             assertThat(p.name()).isEqualTo("Bob");
             assertThat(p.turnOrderIndex()).isEqualTo(1);
         });
+    }
+
+    @Test
+    void start_preservesIsHostFlag_afterShuffle() {
+        Session s = lobbySessionWith3Players();
+        when(sessionRepo.findById(SESSION_ID)).thenReturn(Optional.of(s));
+        when(sessionRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.start(SESSION_ID, HOST_DEVICE);
+
+        List<Player> hosts = s.getPlayers().stream().filter(Player::isHost).toList();
+        assertThat(hosts).hasSize(1);
+        assertThat(hosts.get(0).getDeviceId()).isEqualTo(HOST_DEVICE);
+        s.getPlayers().stream()
+            .filter(p -> !p.isHost())
+            .forEach(p -> assertThat(p.getDeviceId()).isIn(GUEST_DEVICE, OTHER_DEVICE));
+    }
+
+    @Test
+    void start_preservesIsHostFlag_acrossDifferentShuffleSeeds() {
+        Session s = lobbySessionWith3Players();
+        StartGameService service42 = new StartGameService(
+            sessionRepo, scenarioRepo, txTemplate, eventPublisher, scheduler, tutorialService, new Random(42), 5000, 5000);
+        when(sessionRepo.findById(SESSION_ID)).thenReturn(Optional.of(s));
+        when(sessionRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service42.start(SESSION_ID, HOST_DEVICE);
+
+        List<Player> hosts = s.getPlayers().stream().filter(Player::isHost).toList();
+        assertThat(hosts).hasSize(1);
+        assertThat(hosts.get(0).getDeviceId()).isEqualTo(HOST_DEVICE);
+        s.getPlayers().stream()
+            .filter(p -> !p.isHost())
+            .forEach(p -> assertThat(p.getDeviceId()).isIn(GUEST_DEVICE, OTHER_DEVICE));
+    }
+
+    @Test
+    void transitionToCharacterAssignment_schedulesTutorialEnter() {
+        Session s = lobbySessionWith3Players();
+        s.setPhase("in_progress");
+        s.setState("intro");
+        s.setTurnOrder(List.of("char-a", "char-b", "char-c"));
+        List<Player> players = s.getPlayers().stream()
+            .sorted(java.util.Comparator.comparing(Player::getJoinedAt))
+            .toList();
+        players.get(0).setAssignedCharacterId("char-a");
+        players.get(1).setAssignedCharacterId("char-b");
+        players.get(2).setAssignedCharacterId("char-c");
+
+        when(sessionRepo.findById(SESSION_ID)).thenReturn(Optional.of(s));
+        when(sessionRepo.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.transitionToCharacterAssignment(SESSION_ID, "123456");
+
+        // Two tasks: [0] was start's schedule, [1] is tutorial enter scheduled here
+        assertThat(capturedTasks).hasSize(1); // only the tutorial enter task from this call
+        capturedTasks.get(0).run();
+        verify(tutorialService).enterTutorialState(SESSION_ID);
     }
 }

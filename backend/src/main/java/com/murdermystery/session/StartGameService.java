@@ -34,8 +34,10 @@ public class StartGameService {
     private final TransactionTemplate transactionTemplate;
     private final SessionEventPublisher eventPublisher;
     private final ScheduledExecutorService scheduler;
+    private final TutorialService tutorialService;
     private final Random random;
     private final long characterAssignmentDelayMs;
+    private final long tutorialEnterDelayMs;
 
     @Autowired
     public StartGameService(
@@ -44,10 +46,12 @@ public class StartGameService {
         TransactionTemplate transactionTemplate,
         SessionEventPublisher eventPublisher,
         ScheduledExecutorService gameScheduler,
-        @Value("${app.start.character-assignment-delay-ms:5000}") long characterAssignmentDelayMs
+        TutorialService tutorialService,
+        @Value("${app.start.character-assignment-delay-ms:5000}") long characterAssignmentDelayMs,
+        @Value("${app.tutorial.enter-delay-ms:5000}") long tutorialEnterDelayMs
     ) {
         this(sessionRepository, scenarioRepository, transactionTemplate, eventPublisher,
-            gameScheduler, null, characterAssignmentDelayMs);
+            gameScheduler, tutorialService, null, characterAssignmentDelayMs, tutorialEnterDelayMs);
     }
 
     StartGameService(
@@ -56,16 +60,20 @@ public class StartGameService {
         TransactionTemplate transactionTemplate,
         SessionEventPublisher eventPublisher,
         ScheduledExecutorService scheduler,
+        TutorialService tutorialService,
         Random random,
-        long characterAssignmentDelayMs
+        long characterAssignmentDelayMs,
+        long tutorialEnterDelayMs
     ) {
         this.sessionRepository = sessionRepository;
         this.scenarioRepository = scenarioRepository;
         this.transactionTemplate = transactionTemplate;
         this.eventPublisher = eventPublisher;
         this.scheduler = scheduler;
+        this.tutorialService = tutorialService;
         this.random = random;
         this.characterAssignmentDelayMs = characterAssignmentDelayMs;
+        this.tutorialEnterDelayMs = tutorialEnterDelayMs;
     }
 
     public StartGameResponse start(UUID sessionId, UUID requesterDeviceId) {
@@ -165,6 +173,12 @@ public class StartGameService {
             sessionId.toString(),
             "SESSION_STATE_CHANGED",
             new SessionStateChangedPayload("character_assignment", null)
+        );
+
+        scheduler.schedule(
+            () -> tutorialService.enterTutorialState(sessionId),
+            tutorialEnterDelayMs,
+            TimeUnit.MILLISECONDS
         );
 
         Map<String, String> charNames = scenarioRepository.findAll().stream()

@@ -1,6 +1,6 @@
 import { apiFetch, apiPost } from '@/lib/api'
 import { getDeviceId } from '@/lib/deviceId'
-import type { CreateSessionRequest, CreateSessionResponse, JoinSessionResponse, ResumeResponse, SessionViewResponse } from '@/types/session'
+import type { CreateSessionRequest, CreateSessionResponse, JoinSessionResponse, ResumeResponse, SessionViewResponse, TutorialAckResponse } from '@/types/session'
 
 export function getSession(sessionId: string): Promise<SessionViewResponse> {
   return apiFetch<SessionViewResponse>(`/api/sessions/${sessionId}`)
@@ -35,6 +35,13 @@ export async function joinSession(
     throw Object.assign(new Error(`API error ${res.status}`), { status: res.status, detail })
   }
   return res.json() as Promise<JoinSessionResponse>
+}
+
+export function postTutorialAck(sessionId: string): Promise<TutorialAckResponse> {
+  return apiFetch<TutorialAckResponse>(`/api/sessions/${sessionId}/tutorial-ack`, {
+    method: 'POST',
+    headers: { 'X-Device-Id': getDeviceId() },
+  })
 }
 
 export async function getResumeSession(): Promise<ResumeResponse | null> {

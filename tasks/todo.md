@@ -113,10 +113,10 @@
   - [x] 검증: `StartGameServiceTest` (13 케이스), `StartIntegrationTest` (3 클라 ACL verify), FE 66 테스트 그린
   - [x] adversarial-review 수정: `Random`→`ThreadLocalRandom`, `@Version` 낙관적 잠금, 스케줄러 비데몬+awaitTermination, scenarioFindAll 루프 외부화, 부분 전송 try-catch, turnOrder null 가드, start 엔드포인트 컨트롤러 테스트 6케이스
 
-- [ ] **T-06** 단계 3 튜토리얼 + 거짓말 정책 고정 문구 + L1 자동 진입
-  - [ ] BE: `POST /api/sessions/{id}/tutorial-ack`, 모두 통과 시 round 전이
-  - [ ] FE: `Tutorial.tsx` (고정 문구 + "확인" 버튼 + "X / N 통과" 대기)
-  - [ ] 검증: `TutorialServiceTest`
+- [x] **T-06** 단계 3 튜토리얼 + 거짓말 정책 고정 문구 + L1 자동 진입
+  - [x] BE: `POST /api/sessions/{id}/tutorial-ack`, 모두 통과 시 round 전이
+  - [x] FE: `Tutorial.tsx` (고정 문구 + "확인" 버튼 + "X / N 통과" 대기)
+  - [x] 검증: `TutorialServiceTest`
 
 - [ ] **T-07** 라운드 진입 + 프롬프트 + 카운트다운 + k=1 자기소개 + common_hint
   - [ ] BE: `RoundService.startRound`, `SERVER_TIME_SYNC` broadcast, ScheduledExecutor 등록

@@ -18,6 +18,9 @@ export interface SessionState {
   players: PlayerSummary[]
   requiredCharacterCount: number | null
   joinedCount: number | null
+  tutorialAckedCount: number | null
+  tutorialTotalCount: number | null
+  myTutorialAcked: boolean
 }
 
 interface SessionActions {
@@ -38,6 +41,9 @@ const initialState: SessionState = {
   players: [],
   requiredCharacterCount: null,
   joinedCount: null,
+  tutorialAckedCount: null,
+  tutorialTotalCount: null,
+  myTutorialAcked: false,
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({

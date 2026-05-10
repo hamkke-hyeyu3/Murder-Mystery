@@ -25,3 +25,5 @@ app:
     allowed-origins: http://localhost:5173
   scenarios:
     patterns: "classpath:scenarios/*.json"
+  tutorial:
+    enter-delay-ms: 5000

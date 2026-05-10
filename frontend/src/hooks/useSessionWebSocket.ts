@@ -56,6 +56,15 @@ export function useSessionWebSocket({
             state: envelope.payload.state,
             ...(envelope.payload.turnOrder ? { turnOrder: envelope.payload.turnOrder } : {}),
           })
+        } else if (envelope.type === 'TUTORIAL_ACKED') {
+          const patch: Parameters<typeof setSession>[0] = {
+            tutorialAckedCount: envelope.payload.acked,
+            tutorialTotalCount: envelope.payload.total,
+          }
+          if (envelope.payload.playerId === playerId) {
+            patch.myTutorialAcked = true
+          }
+          setSession(patch)
         }
       }
     )
@@ -74,7 +83,7 @@ export function useSessionWebSocket({
       topicSub.unsubscribe()
       privateSub.unsubscribe()
     }
-  }, [connected, sessionId, setSession, setCharacterCard])
+  }, [connected, sessionId, playerId, setSession, setCharacterCard])
 
   const publishLeave = () => {
     if (!client.current || !sessionId) return

@@ -3,9 +3,13 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
 import { useCardStore } from '@/stores/cardStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import Play from './Play'
 
 vi.mock('@/hooks/useSessionWebSocket')
+vi.mock('@/lib/sessionApi', () => ({
+  postTutorialAck: vi.fn().mockResolvedValue({ acked: 1, total: 3, state: 'tutorial' }),
+}))
 
 const mockUseSessionWebSocket = vi.mocked(useSessionWebSocket)
 
@@ -43,5 +47,38 @@ describe('Play', () => {
     expect(screen.getByText('Alice')).toBeInTheDocument()
     expect(screen.getByText('조사 순서 #1')).toBeInTheDocument()
     expect(screen.queryByTestId('play-waiting-card')).not.toBeInTheDocument()
+  })
+
+  it("state='tutorial'일 때 Tutorial 컴포넌트를 렌더한다", () => {
+    useSessionStore.getState().setSession({ state: 'tutorial', players: [] })
+
+    renderPlay()
+
+    expect(screen.getByTestId('tutorial')).toBeInTheDocument()
+    expect(screen.getByText(/전원 거짓말 가능/)).toBeInTheDocument()
+    expect(screen.queryByTestId('play-waiting-card')).not.toBeInTheDocument()
+  })
+
+  it("state='round'일 때 라운드 placeholder를 렌더한다", () => {
+    useSessionStore.getState().setSession({ state: 'round' })
+
+    renderPlay()
+
+    expect(screen.getByTestId('play-round-placeholder')).toBeInTheDocument()
+    expect(screen.queryByTestId('tutorial')).not.toBeInTheDocument()
+  })
+
+  it("state='character_assignment'일 때 카드 영역을 렌더한다", () => {
+    useSessionStore.getState().setSession({ state: 'character_assignment' })
+    useCardStore.getState().setCharacterCard({
+      characterId: 'char-a',
+      name: 'Alice',
+      turnOrderIndex: 0,
+    })
+
+    renderPlay()
+
+    expect(screen.getByTestId('character-card')).toBeInTheDocument()
+    expect(screen.queryByTestId('tutorial')).not.toBeInTheDocument()
   })
 })

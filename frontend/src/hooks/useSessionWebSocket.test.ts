@@ -179,4 +179,41 @@ describe('useSessionWebSocket', () => {
     const card = useCardStore.getState().characterCard
     expect(card).toEqual({ characterId: 'char-a', name: 'Alice', turnOrderIndex: 0 })
   })
+
+  it('TUTORIAL_ACKED 수신 시 tutorialAckedCount와 tutorialTotalCount를 갱신한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'TUTORIAL_ACKED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { playerId: 'player-bob', nickname: 'bob', acked: 2, total: 3 },
+        }),
+      } as IMessage)
+    })
+
+    const state = useSessionStore.getState()
+    expect(state.tutorialAckedCount).toBe(2)
+    expect(state.tutorialTotalCount).toBe(3)
+    expect(state.myTutorialAcked).toBe(false)
+  })
+
+  it('TUTORIAL_ACKED 페이로드가 본인 playerId면 myTutorialAcked를 true로 설정한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'TUTORIAL_ACKED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { playerId: 'player-alice', nickname: 'alice', acked: 1, total: 3 },
+        }),
+      } as IMessage)
+    })
+
+    expect(useSessionStore.getState().myTutorialAcked).toBe(true)
+  })
 })

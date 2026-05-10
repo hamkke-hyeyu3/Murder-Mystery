@@ -67,6 +67,12 @@ export type CharacterCardPayload = {
   turnOrderIndex: number
 }
 
+export type TutorialAckResponse = {
+  acked: number
+  total: number
+  state: string
+}
+
 export type SessionEvent =
   | {
       type: 'PLAYER_JOINED'
@@ -97,4 +103,10 @@ export type SessionEvent =
       sessionId: string
       occurredAt: string
       payload: CharacterCardPayload
+    }
+  | {
+      type: 'TUTORIAL_ACKED'
+      sessionId: string
+      occurredAt: string
+      payload: { playerId: string; nickname: string; acked: number; total: number }
     }

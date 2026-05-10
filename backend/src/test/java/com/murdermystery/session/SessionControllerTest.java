@@ -30,12 +30,13 @@ class SessionControllerTest {
     private final JoinService joinService = mock(JoinService.class);
     private final ResumeService resumeService = mock(ResumeService.class);
     private final StartGameService startGameService = mock(StartGameService.class);
+    private final TutorialService tutorialService = mock(TutorialService.class);
     private final ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders
-            .standaloneSetup(new SessionController(service, joinService, resumeService, startGameService))
+            .standaloneSetup(new SessionController(service, joinService, resumeService, startGameService, tutorialService))
             .setControllerAdvice(new RestExceptionHandler())
             .build();
     }
@@ -255,6 +256,47 @@ class SessionControllerTest {
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.joined").value(2))
             .andExpect(jsonPath("$.required").value(3));
+    }
+
+    @Test
+    void post_tutorialAck_missingDeviceId_returns400() throws Exception {
+        mvc.perform(post("/api/sessions/" + UUID.randomUUID() + "/tutorial-ack"))
+            .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void post_tutorialAck_happyPath_returnsAckResponse() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID deviceId = UUID.randomUUID();
+        when(tutorialService.acknowledge(eq(sessionId), eq(deviceId)))
+            .thenReturn(new TutorialAckResponse(2, 3, "tutorial"));
+
+        mvc.perform(post("/api/sessions/" + sessionId + "/tutorial-ack")
+                .header("X-Device-Id", deviceId.toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.acked").value(2))
+            .andExpect(jsonPath("$.total").value(3))
+            .andExpect(jsonPath("$.state").value("tutorial"));
+    }
+
+    @Test
+    void post_tutorialAck_wrongPhase_returns409() throws Exception {
+        when(tutorialService.acknowledge(any(), any())).thenThrow(new TutorialPhaseRequiredException());
+
+        mvc.perform(post("/api/sessions/" + UUID.randomUUID() + "/tutorial-ack")
+                .header("X-Device-Id", UUID.randomUUID().toString()))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.detail").value("tutorial phase required"));
+    }
+
+    @Test
+    void post_tutorialAck_playerNotInSession_returns403() throws Exception {
+        when(tutorialService.acknowledge(any(), any())).thenThrow(new PlayerNotInSessionException());
+
+        mvc.perform(post("/api/sessions/" + UUID.randomUUID() + "/tutorial-ack")
+                .header("X-Device-Id", UUID.randomUUID().toString()))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.detail").value("player not in session"));
     }
 
     @Test
