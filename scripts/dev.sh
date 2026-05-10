@@ -9,6 +9,23 @@ for cmd in docker java npm; do
   command -v "$cmd" >/dev/null 2>&1 || { echo "ERROR: '$cmd' not found in PATH" >&2; exit 1; }
 done
 
+kill_tree() {
+  local sig=${2:-TERM}
+  for child in $(pgrep -P "$1" 2>/dev/null); do
+    kill_tree "$child" "$sig"
+  done
+  kill "-$sig" "$1" 2>/dev/null || true
+}
+
+wait_for_exit() {
+  local pid=$1 timeout=${2:-15}
+  for i in $(seq 1 "$timeout"); do
+    kill -0 "$pid" 2>/dev/null || return 0
+    sleep 1
+  done
+  return 1
+}
+
 # db
 echo "[DB] starting postgres..."
 docker compose up -d postgres
@@ -28,7 +45,7 @@ for i in $(seq 1 30); do
 done
 
 # backend
-( cd "$ROOT/backend" && ./gradlew bootRun ) > >(sed 's/^/[BE] /') 2>&1 &
+( cd "$ROOT/backend" && ./gradlew bootRun --args='--spring.profiles.active=dev' ) > >(sed 's/^/[BE] /') 2>&1 &
 BE_PID=$!
 
 # frontend
@@ -42,10 +59,23 @@ FE_PID=$!
 cleanup() {
   trap - INT TERM EXIT
   echo ""
-  echo "stopping backend and frontend..."
-  kill "$BE_PID" "$FE_PID" 2>/dev/null || true
+
+  echo "[FE] stopping..."
+  kill_tree "$FE_PID"
+  wait_for_exit "$FE_PID" 5 || kill_tree "$FE_PID" KILL
+
+  echo "[BE] stopping..."
+  kill_tree "$BE_PID"
+  wait_for_exit "$BE_PID" 10 || {
+    echo "[BE] timeout — force killing"
+    kill_tree "$BE_PID" KILL
+  }
+
+  echo "[DB] stopping..."
+  docker compose down --volumes
+
   wait 2>/dev/null || true
-  echo "done. postgres container is still running. to stop it: docker compose down"
+  echo "done."
 }
 trap cleanup INT TERM EXIT
 

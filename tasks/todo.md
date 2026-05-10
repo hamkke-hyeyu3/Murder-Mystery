@@ -5,6 +5,14 @@
 
 ---
 
+## 🔧 개발 환경
+
+- [ ] **INFRA-01** DB 데이터 보존 전환
+  - `scripts/dev.sh` `cleanup()` 내 `docker compose down --volumes` → `docker compose stop postgres`
+  - 변경 시점: 시드 데이터 또는 지속 테스트 데이터가 필요해지는 시점
+
+---
+
 ## 🔵 체크포인트 A — A2 Walking Skeleton
 
 - [x] **T-00** 인프라·DB·STOMP 부트스트랩
