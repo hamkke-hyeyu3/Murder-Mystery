@@ -53,11 +53,13 @@
 
 ## 위험 Top 5
 
-1. **T-09** 회전 턴 30초 서버·클라 시계 race → `deadlineAt` + grace 1s + `SERVER_TIME_SYNC` offset 단위 테스트
+1. ~~**T-09** 회전 턴 30초 서버·클라 시계 race~~ → **완료 (T-09)** `deadlineAt` + grace 1s + Clock 추상화 + 단위 테스트 그린
 2. **T-18** 재합류 풀 스테이트 스냅샷 완전성 → PR 리뷰 체크리스트로 필드 동기 강제
 3. **T-15** NB3 좁은 인계가 다른 호스트 액션에 번지면 가드 위반 → 단위 테스트 명시
 4. **T-10·T-18** 단서 monotonic 누적의 재합류 복원(꼬리표·발견 장소 라벨) → snapshot DTO 명시
 5. **T-01** cross-field 검증(`location_pool ≥ 캐릭터 수` 등) → Java validator + fixture test
+
+> **T-10 주의:** `RoundService → RoundTurnService` 단방향 의존 확립. T-10에서 라운드 종료 트리거를 `RoundTurnService`가 `RoundService`로 다시 호출하면 순환 의존 발생 → 별도 `RoundLifecycleService` 분리 또는 이벤트 기반 역전이 필요.
 
 ## STOMP 토픽 요약
 
@@ -76,16 +78,19 @@
 |---|---|---|
 | V1__init.sql | T-00 | 부트스트랩 |
 | V2__session_player.sql | T-02 | sessions, players |
-| V5__game_state.sql | T-05 | sessions state/turn_order 컬럼 추가, players assigned_character_id/tutorial_acked_at/mission_checked_at |
-| V6__rounds.sql | T-07 | rounds (V3.5는 V5 이후 적용 불가 → V6으로 변경) |
-| V4__round_turn.sql | T-09 | location_occupancy, clues, clue_acl |
-| V5__items.sql | T-11 | item_actions |
-| V6__private_talk.sql | T-12 | private_talks |
-| V7__vote.sql | T-13 | votes |
-| V8__mission.sql | T-14 | mission_checks |
-| V9__survey.sql | T-17 | survey_responses |
-| V10__session_log.sql | T-19 | session_log |
-| V11__cleanup_indexes.sql | T-20 | 청소 인덱스 |
+| V3__player_device_id.sql | T-04 | players.device_id 컬럼 |
+| V4__player_device_unique.sql | T-04 | device_id partial unique index |
+| V5__game_state.sql | T-05 | sessions state/turn_order, players assigned_character_id/tutorial_acked_at |
+| V5_1__sessions_version.sql | T-05 | sessions.version (@Version 낙관적 잠금) |
+| V6__rounds.sql | T-07 | rounds 테이블 |
+| V7__round_turn.sql | T-09 | location_occupancy, clues, clue_acl |
+| V8__items.sql | T-11 | item_actions |
+| V9__private_talk.sql | T-12 | private_talks |
+| V10__vote.sql | T-13 | votes |
+| V11__mission.sql | T-14 | mission_checks |
+| V12__survey.sql | T-17 | survey_responses |
+| V13__session_log.sql | T-19 | session_log |
+| V14__cleanup_indexes.sql | T-20 | 청소 인덱스 |
 
 ## 골든 패스 E2E (체크포인트 E 완료 후)
 

@@ -154,11 +154,13 @@
   - [x] BE S4: autoSelectTurn 테스트 4 케이스 (random pick, idempotent, AUTO_SELECTED 이벤트, ROUND_TURNS_COMPLETE) 추가 — autoSelectTurn 구현은 S2에서 완료
   - [x] BE S5: `SessionViewResponse` 스냅샷 확장 (`TurnView currentTurn`, `List<OccupancyView> locationOccupancy`, `MeView.myClues`) + `SessionService` 조회 로직 + `RoundTurnService.getTurnDeadline`
   - [x] FE S6: types(TurnView/OccupancyView/ClueView + 5 이벤트), sessionStore(턴 필드 + hydrateFromSnapshot 확장), timerStore(roundDeadlineAt/turnDeadlineAt), cardStore(ClueView 타입), useSessionWebSocket(5 이벤트 dispatch + publishSelectLocation)
-  - [x] FE S7: `LocationGrid.tsx` (본인/타인/점유 분기 + 카운트다운 + 마감 비활성, 6 단위 케이스) + `Play.tsx` 통합(round 분기 + myClues hydration) — 117 FE 테스트 그린
+  - [x] FE S7: `LocationGrid.tsx` (본인/타인/점유 분기 + 카운트다운 + 마감 비활성, 6 단위 케이스) + `Play.tsx` 통합(round 분기 + myClues hydration) — 119 FE 테스트 그린
   - [x] BE: select 수신 시 `now < deadlineAt + 1s` grace 윈도우 (S3에서 완료)
+  - [x] review 적용 (S7 커밋 후): myClues 0-clue rejoin 버그 수정(`?.length`→`!== undefined`) + 타인-readonly 클릭 미호출 검증 + turnDeadlineAt=null 동작 고정 테스트
   - [ ] 검증: `RoundTurnIntegrationTest` (3단말 select + autoSelect), `checkpoint-c-round-turn.spec.ts` e2e
 
 - [ ] **T-10** monotonic 누적 + 라운드 자동 전환
+  - ⚠️ **설계 주의:** `RoundService → RoundTurnService` 단방향 확립. T-10에서 라운드 종료 트리거를 RoundTurnService가 RoundService로 역호출하면 순환 의존 발생 → 별도 `RoundLifecycleService` 분리 또는 이벤트 역전 필요 (plan.md §위험 참조)
   - [ ] BE: 라운드 종료 트리거 (모든 차례 완료 + `time_limit_sec` 만료)
   - [ ] BE: `clue_acl` 절대 삭제 금지. k<N → `startRound(k+1)`, k=N → `phase='vote'`
   - [ ] FE: 라운드 전환 애니메이션 + 단서 라운드 꼬리표 그룹
