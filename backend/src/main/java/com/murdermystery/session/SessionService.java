@@ -70,6 +70,11 @@ public class SessionService {
             .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
             .toList();
 
+        List<SessionViewResponse.ScenarioLocationView> locationViews = scenario.locations() == null ? List.of()
+            : scenario.locations().stream()
+                .map(l -> new SessionViewResponse.ScenarioLocationView(l.id(), l.name(), l.icon()))
+                .toList();
+
         SessionViewResponse.RoundView roundView = null;
         SessionViewResponse.TurnView currentTurnView = null;
         List<SessionViewResponse.OccupancyView> occupancyViews = List.of();
@@ -170,7 +175,7 @@ public class SessionService {
             session.getId().toString(), session.getInviteCode(), session.getScenarioId(),
             session.getPhase(), required, players.size(), players,
             session.getState(), session.getCurrentRoundNumber(), session.getTurnOrder(),
-            roundView, currentTurnView, occupancyViews, meView
+            locationViews, roundView, currentTurnView, occupancyViews, meView
         );
     }
 

@@ -7,6 +7,7 @@ import { useTimerStore } from '@/stores/timerStore'
 import { Tutorial } from '@/components/Tutorial'
 import { RoundPanel } from '@/components/RoundPanel'
 import { CharacterCard } from '@/components/CharacterCard'
+import { LocationGrid } from '@/components/LocationGrid'
 import { postTutorialAck, getSession } from '@/lib/sessionApi'
 
 export default function Play() {
@@ -30,8 +31,15 @@ export default function Play() {
   const characterCard = useCardStore((s) => s.characterCard)
   const setCharacterCard = useCardStore((s) => s.setCharacterCard)
   const setObjective = useCardStore((s) => s.setObjective)
+  const setClues = useCardStore((s) => s.setClues)
   const resetCard = useCardStore((s) => s.reset)
+  const currentTurnIndex = useSessionStore((s) => s.currentTurnIndex)
+  const currentTurnPlayerId = useSessionStore((s) => s.currentTurnPlayerId)
+  const currentRoundCandidateLocationIds = useSessionStore((s) => s.currentRoundCandidateLocationIds)
+  const locationOccupancy = useSessionStore((s) => s.locationOccupancy)
+  const scenarioLocations = useSessionStore((s) => s.scenarioLocations)
   const roundDeadlineAt = useTimerStore((s) => s.roundDeadlineAt)
+  const turnDeadlineAt = useTimerStore((s) => s.turnDeadlineAt)
   const serverOffsetMs = useTimerStore((s) => s.serverOffsetMs)
   const setRoundDeadline = useTimerStore((s) => s.setRoundDeadline)
 
@@ -51,13 +59,15 @@ export default function Play() {
         hydrateFromSnapshot(snap)
         if (snap.me.character) setCharacterCard(snap.me.character)
         if (snap.me.objective) setObjective(snap.me.objective)
+        if (snap.me.myClues?.length) setClues(snap.me.myClues)
         if (snap.round) setRoundDeadline(snap.round.deadlineAt)
+        if (snap.currentTurn) useTimerStore.getState().setTurnDeadline(snap.currentTurn.deadlineAt)
       })
       .catch(() => { if (!cancelled) navigate('/') })
     return () => { cancelled = true }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
+  const { publishSelectLocation } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 
   const handleTutorialAck = async () => {
     if (!sessionId) return
@@ -94,6 +104,20 @@ export default function Play() {
           commonHint={roundCommonHint}
           deadlineAt={roundDeadlineAt}
           serverOffsetMs={serverOffsetMs}
+        />
+        <LocationGrid
+          locations={scenarioLocations}
+          candidateLocationIds={currentRoundCandidateLocationIds}
+          occupancy={locationOccupancy}
+          players={players}
+          myPlayerId={playerId}
+          currentTurnPlayerId={currentTurnPlayerId}
+          currentTurnIndex={currentTurnIndex}
+          turnDeadlineAt={turnDeadlineAt}
+          serverOffsetMs={serverOffsetMs}
+          onSelectLocation={(locationId) =>
+            publishSelectLocation(locationId, roundNumber ?? 1, currentTurnIndex ?? 0)
+          }
         />
       </div>
     )

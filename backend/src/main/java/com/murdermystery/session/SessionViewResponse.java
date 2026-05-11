@@ -13,6 +13,7 @@ public record SessionViewResponse(
     String state,
     Integer currentRoundNumber,
     List<String> turnOrder,
+    List<ScenarioLocationView> locations,
     RoundView round,
     TurnView currentTurn,
     List<OccupancyView> locationOccupancy,
@@ -77,6 +78,8 @@ public record SessionViewResponse(
     ) {}
 
     public record LocationRef(String id, String name, String icon) {}
+
+    public record ScenarioLocationView(String id, String name, String icon) {}
 
     public record ItemRef(String id, String title, LocationRef originLocation) {}
 

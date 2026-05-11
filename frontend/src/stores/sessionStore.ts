@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { OccupancyView, SessionViewResponse } from '@/types/session'
+import type { OccupancyView, ScenarioLocationView, SessionViewResponse } from '@/types/session'
 
 export interface PlayerSummary {
   playerId: string
@@ -34,6 +34,7 @@ export interface SessionState {
   currentTurnDeadlineAt: number | null
   currentRoundCandidateLocationIds: string[]
   locationOccupancy: OccupancyView[]
+  scenarioLocations: ScenarioLocationView[]
 }
 
 interface SessionActions {
@@ -68,6 +69,7 @@ const initialState: SessionState = {
   currentTurnDeadlineAt: null,
   currentRoundCandidateLocationIds: [],
   locationOccupancy: [],
+  scenarioLocations: [],
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({
@@ -96,6 +98,7 @@ export const useSessionStore = create<SessionState & SessionActions>((set) => ({
       roundCommonHint: snap.round.commonHint,
     } : {}),
     locationOccupancy: snap.locationOccupancy ?? state.locationOccupancy,
+    scenarioLocations: snap.locations ?? state.scenarioLocations,
     ...(snap.currentTurn != null ? {
       currentTurnIndex: snap.currentTurn.turnIndex,
       currentTurnPlayerId: snap.currentTurn.playerId,

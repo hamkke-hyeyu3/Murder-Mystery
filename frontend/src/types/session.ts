@@ -90,6 +90,12 @@ export type MeView = {
   myClues: ClueView[]
 }
 
+export type ScenarioLocationView = {
+  id: string
+  name: string
+  icon?: string
+}
+
 export type SessionViewResponse = {
   sessionId: string
   inviteCode: string
@@ -101,6 +107,7 @@ export type SessionViewResponse = {
   state?: string | null
   currentRoundNumber?: number | null
   turnOrder?: string[] | null
+  locations?: ScenarioLocationView[]
   round?: RoundView | null
   currentTurn?: TurnView | null
   locationOccupancy?: OccupancyView[]

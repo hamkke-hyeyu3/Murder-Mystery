@@ -159,7 +159,7 @@ class SessionControllerTest {
             3, 2,
             List.of(new PlayerSummary("p1", "alice", true),
                     new PlayerSummary("p2", "bob", false)),
-            null, null, null, null, null, List.of(), null
+            null, null, null, List.of(), null, null, List.of(), null
         );
     }
 
@@ -181,7 +181,7 @@ class SessionControllerTest {
             3, 3,
             List.of(new PlayerSummary("p1", "alice", true)),
             "round", 1, List.of("char-a", "char-b", "char-c"),
-            round, null, List.of(), me
+            List.of(), round, null, List.of(), me
         );
     }
 
