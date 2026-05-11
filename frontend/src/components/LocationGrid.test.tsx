@@ -77,7 +77,8 @@ describe('LocationGrid', () => {
     expect(cellA).toHaveTextContent('Bob')
   })
 
-  it('타인 차례 — 모든 셀이 read-only div이고 헤더에 조사 중 표시', () => {
+  it('타인 차례 — 모든 셀이 read-only div이고 헤더에 조사 중 표시, 클릭해도 onSelect 미호출', () => {
+    const onSelect = vi.fn()
     render(
       <LocationGrid
         locations={locations}
@@ -89,7 +90,7 @@ describe('LocationGrid', () => {
         currentTurnIndex={1}
         turnDeadlineAt={Date.now() + 30_000}
         serverOffsetMs={0}
-        onSelectLocation={vi.fn()}
+        onSelectLocation={onSelect}
       />
     )
 
@@ -97,6 +98,30 @@ describe('LocationGrid', () => {
     const cellA = screen.getByTestId('location-cell-loc-a')
     expect(cellA.tagName).toBe('DIV')
     expect(cellA).not.toHaveAttribute('role', 'button')
+    expect(cellA).not.toHaveAttribute('tabindex')
+    fireEvent.click(cellA)
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('본인 차례 + turnDeadlineAt=null — 후보 버튼 활성(마감 미설정)', () => {
+    render(
+      <LocationGrid
+        locations={locations}
+        candidateLocationIds={['loc-a']}
+        occupancy={[]}
+        players={players}
+        myPlayerId="p1"
+        currentTurnPlayerId="p1"
+        currentTurnIndex={0}
+        turnDeadlineAt={null}
+        serverOffsetMs={0}
+        onSelectLocation={vi.fn()}
+      />
+    )
+
+    const cellA = screen.getByTestId('location-cell-loc-a')
+    expect(cellA.tagName).toBe('BUTTON')
+    expect(cellA).not.toBeDisabled()
   })
 
   it('카운트다운이 5초 이하이면 경고 스타일 적용', () => {

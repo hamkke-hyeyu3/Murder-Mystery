@@ -59,7 +59,7 @@ export default function Play() {
         hydrateFromSnapshot(snap)
         if (snap.me.character) setCharacterCard(snap.me.character)
         if (snap.me.objective) setObjective(snap.me.objective)
-        if (snap.me.myClues?.length) setClues(snap.me.myClues)
+        if (snap.me.myClues !== undefined) setClues(snap.me.myClues)
         if (snap.round) setRoundDeadline(snap.round.deadlineAt)
         if (snap.currentTurn) useTimerStore.getState().setTurnDeadline(snap.currentTurn.deadlineAt)
       })

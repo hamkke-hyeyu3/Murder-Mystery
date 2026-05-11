@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
+import { getSession } from '@/lib/sessionApi'
 import Play from './Play'
 
 vi.mock('@/hooks/useSessionWebSocket')
@@ -14,8 +15,14 @@ vi.mock('@/lib/sessionApi', () => ({
 
 const mockUseSessionWebSocket = vi.mocked(useSessionWebSocket)
 
+const mockGetSession = vi.mocked(getSession)
+
 beforeEach(() => {
-  mockUseSessionWebSocket.mockReturnValue({ connected: false, publishLeave: vi.fn() })
+  mockUseSessionWebSocket.mockReturnValue({
+    connected: false,
+    publishLeave: vi.fn(),
+    publishSelectLocation: vi.fn(),
+  })
 })
 
 function renderPlay(sessionId = 'sess-001') {
@@ -86,6 +93,33 @@ describe('Play', () => {
 
     expect(screen.getByTestId('character-card')).toBeInTheDocument()
     expect(screen.queryByTestId('tutorial')).not.toBeInTheDocument()
+  })
+
+  it('스냅샷 hydration: myClues=[] 이면 cardStore.clues가 빈 배열로 덮어쓰인다', async () => {
+    useCardStore.getState().setClues([
+      { id: 'clue-old', itemId: 'item-1', title: '낡은 편지', originLocationId: 'loc-a',
+        roundNumberDiscovered: 1, discoveredAt: 1000, source: 'discovery' },
+    ])
+
+    const snap = {
+      sessionId: 'sess-001', inviteCode: '123456', scenarioId: 'toy-manor',
+      phase: 'in_progress', requiredCharacterCount: 3, joinedCount: 3,
+      players: [{ playerId: 'p1', nickname: 'Alice', isHost: true }],
+      me: {
+        playerId: 'p1', nickname: 'Alice', isHost: true,
+        assignedCharacterId: 'char-a',
+        character: { characterId: 'char-a', name: 'Alice', turnOrderIndex: 0 },
+        objective: null, tutorialAckedAt: null,
+        myClues: [],
+      },
+    }
+    mockGetSession.mockResolvedValueOnce(snap as never)
+
+    renderPlay('sess-001')
+
+    await waitFor(() => {
+      expect(useCardStore.getState().clues).toHaveLength(0)
+    })
   })
 
   it("state='round'일 때 CharacterCard와 RoundPanel이 함께 렌더된다", () => {
