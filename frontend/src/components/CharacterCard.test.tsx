@@ -65,4 +65,11 @@ describe('CharacterCard', () => {
 
     expect(screen.getByTestId('card-section-items')).toHaveTextContent('아이템 없음')
   })
+
+  it('루트에 data-character-id가 characterId로 노출된다', () => {
+    useCardStore.getState().setCharacterCard(baseCard)
+    render(<CharacterCard />)
+
+    expect(screen.getByTestId('character-card')).toHaveAttribute('data-character-id', 'alice')
+  })
 })

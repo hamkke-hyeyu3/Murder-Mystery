@@ -139,8 +139,9 @@
   - [x] FE: `LocationLabel` 공통 컴포넌트 (icon fallback `📍`)
   - [x] BE: 라운드 전환 시 `OBJECTIVE_UPDATED` broadcast (본인 private)
   - [x] 검증: `CharacterCard.test.tsx` (6 영역 도달 + 말투 미선언 비표시 + 라운드 전환)
+  - [x] `CharacterCard.tsx` — `data-character-id` 속성 추가 (e2e ACL 식별용)
 
-**✅ 체크포인트 B 완료 조건:** 시작 → 라운드 1 진입 3 단말 동기 데모 + 본인 카드 ACL verify
+**✅ 체크포인트 B 완료:** `e2e/checkpoint-b-three-terminal.spec.ts` 3 context (Alice·Bob·Charlie) 12.4s 통과 — 시작 → 라운드 1 동기 + distinct characterId ACL verify. `./gradlew test` + `npm run test` + `npm run test:e2e` 전체 그린.
 
 ---
 

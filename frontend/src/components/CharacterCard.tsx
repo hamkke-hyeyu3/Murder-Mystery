@@ -10,7 +10,7 @@ export function CharacterCard() {
   const { name, speechStyle, background, motive, alibi, secret, relationships, alibiLocation, items } = characterCard
 
   return (
-    <div data-testid="character-card" className="flex flex-col gap-4 p-4 border rounded-lg">
+    <div data-testid="character-card" data-character-id={characterCard.characterId} className="flex flex-col gap-4 p-4 border rounded-lg">
       {/* 헤더: 이름 + 말투(선택) + 라운드 진행 */}
       <div data-testid="card-section-header" className="flex flex-col gap-1">
         <p className="text-xl font-bold">{name}</p>
