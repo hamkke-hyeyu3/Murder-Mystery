@@ -48,7 +48,7 @@ class SessionServiceTest {
     private Scenario toyManor() {
         return new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
-            List.of(new ScenarioCharacter("alice", "앨리스")),
+            List.of(new ScenarioCharacter("alice", "앨리스", null, null, null, null, null, null, null, null)),
             List.of(new ScenarioLocation("loc1", "도서관", null, null)),
             List.of("loc1"),
             List.of(new ScenarioItem("i1", "편지", "loc1")),
@@ -164,9 +164,9 @@ class SessionServiceTest {
         Scenario scenario = new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
             List.of(
-                new ScenarioCharacter("c1", "A"),
-                new ScenarioCharacter("c2", "B"),
-                new ScenarioCharacter("c3", "C")
+                new ScenarioCharacter("c1", "A", null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("c2", "B", null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("c3", "C", null, null, null, null, null, null, null, null)
             ),
             List.of(), List.of(), List.of(), "c1", false, 3, null
         );

@@ -134,11 +134,11 @@
   - [x] fix(T-07): `rounds==null` 시나리오 로딩 시점 거부 (`ScenarioCrossFieldValidator`)
   - [x] adversarial-review 수정: `CrossFieldValidatorTest` 4케이스 ROUNDS_2 상수 적용(pool/culprit 경로 복구), PLAYER_LEFT `leftId` guard, PLAYER_JOINED/LEFT functional updater 전환
 
-- [ ] **T-08** 캐릭터 카드 단일 표면 (E2-01·02·04·05 통합)
-  - [ ] FE: `CharacterCard.tsx` (6 영역: 헤더·라운드목표·미션자리표시자·아이템·본문·알리바이)
-  - [ ] FE: `LocationLabel` 공통 컴포넌트 (icon fallback `📍`)
-  - [ ] BE: 라운드 전환 시 `OBJECTIVE_UPDATED` broadcast (본인 private)
-  - [ ] 검증: `CharacterCard.test.tsx` (6 영역 도달 + 말투 미선언 비표시 + 라운드 전환)
+- [x] **T-08** 캐릭터 카드 단일 표면 (E2-01·02·04·05 통합)
+  - [x] FE: `CharacterCard.tsx` (6 영역: 헤더·라운드목표·미션자리표시자·아이템·본문·알리바이)
+  - [x] FE: `LocationLabel` 공통 컴포넌트 (icon fallback `📍`)
+  - [x] BE: 라운드 전환 시 `OBJECTIVE_UPDATED` broadcast (본인 private)
+  - [x] 검증: `CharacterCard.test.tsx` (6 영역 도달 + 말투 미선언 비표시 + 라운드 전환)
 
 **✅ 체크포인트 B 완료 조건:** 시작 → 라운드 1 진입 3 단말 동기 데모 + 본인 카드 ACL verify
 

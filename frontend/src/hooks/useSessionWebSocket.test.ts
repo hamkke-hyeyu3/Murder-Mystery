@@ -327,4 +327,24 @@ describe('useSessionWebSocket', () => {
 
     expect(useSessionStore.getState().roundCommonHint).toBe('부검 결과가 공개됐다.')
   })
+
+  it('OBJECTIVE_UPDATED private 수신 시 cardStore.currentObjective에 반영한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      privateCallback!({
+        body: JSON.stringify({
+          type: 'OBJECTIVE_UPDATED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { roundNumber: 1, totalRounds: 3, objective: '자기소개를 하세요.' },
+        }),
+      } as IMessage)
+    })
+
+    const obj = useCardStore.getState().currentObjective
+    expect(obj?.roundNumber).toBe(1)
+    expect(obj?.totalRounds).toBe(3)
+    expect(obj?.objective).toBe('자기소개를 하세요.')
+  })
 })

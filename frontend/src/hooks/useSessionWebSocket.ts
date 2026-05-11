@@ -25,6 +25,7 @@ export function useSessionWebSocket({
   })
   const setSession = useSessionStore((s) => s.setSession)
   const setCharacterCard = useCardStore((s) => s.setCharacterCard)
+  const setObjective = useCardStore((s) => s.setObjective)
 
   useEffect(() => {
     if (!connected || !client.current || !sessionId) return
@@ -87,6 +88,8 @@ export function useSessionWebSocket({
         const envelope = JSON.parse(msg.body) as SessionEvent
         if (envelope.type === 'CHARACTER_CARD_DEALT') {
           setCharacterCard(envelope.payload)
+        } else if (envelope.type === 'OBJECTIVE_UPDATED') {
+          setObjective(envelope.payload)
         }
       }
     )
@@ -95,7 +98,7 @@ export function useSessionWebSocket({
       topicSub.unsubscribe()
       privateSub.unsubscribe()
     }
-  }, [connected, sessionId, playerId, setSession, setCharacterCard])
+  }, [connected, sessionId, playerId, setSession, setCharacterCard, setObjective])
 
   const publishLeave = () => {
     if (!client.current || !sessionId) return

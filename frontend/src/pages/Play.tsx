@@ -5,6 +5,7 @@ import { useSessionStore } from '@/stores/sessionStore'
 import { useTimerStore } from '@/stores/timerStore'
 import { Tutorial } from '@/components/Tutorial'
 import { RoundPanel } from '@/components/RoundPanel'
+import { CharacterCard } from '@/components/CharacterCard'
 import { postTutorialAck } from '@/lib/sessionApi'
 
 export default function Play() {
@@ -41,7 +42,8 @@ export default function Play() {
 
   if (state === 'tutorial') {
     return (
-      <div data-testid="page-play" className="min-h-screen">
+      <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <CharacterCard />
         <Tutorial
           ackedCount={tutorialAckedCount ?? 0}
           totalCount={tutorialTotalCount ?? players.length}
@@ -54,7 +56,8 @@ export default function Play() {
 
   if (state === 'round') {
     return (
-      <div data-testid="page-play" className="min-h-screen p-6">
+      <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <CharacterCard />
         <RoundPanel
           roundNumber={roundNumber ?? 1}
           prompt={roundPrompt ?? ''}
@@ -69,12 +72,7 @@ export default function Play() {
   return (
     <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
       {characterCard ? (
-        <div data-testid="character-card">
-          <p className="text-xl font-bold">{characterCard.name}</p>
-          <p className="text-sm text-muted-foreground">
-            조사 순서 #{characterCard.turnOrderIndex + 1}
-          </p>
-        </div>
+        <CharacterCard />
       ) : (
         <div data-testid="play-waiting-card">
           <p>캐릭터 배정 중…</p>

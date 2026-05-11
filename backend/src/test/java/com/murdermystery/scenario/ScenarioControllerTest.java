@@ -29,9 +29,9 @@ class ScenarioControllerTest {
         return new Scenario(
             "toy-manor", "Toy Manor 살인 사건", "summary", "🏚️", 60,
             List.of(
-                new ScenarioCharacter("alice", "앨리스"),
-                new ScenarioCharacter("bob", "밥"),
-                new ScenarioCharacter("charlie", "찰리")),
+                new ScenarioCharacter("alice", "앨리스", null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("bob", "밥", null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("charlie", "찰리", null, null, null, null, null, null, null, null)),
             List.of(new ScenarioLocation("loc1", "도서관", null, null)),
             List.of("loc1"),
             List.of(new ScenarioItem("i1", "편지", "loc1")),

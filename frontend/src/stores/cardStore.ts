@@ -1,14 +1,16 @@
 import { create } from 'zustand'
-import type { CharacterCardPayload } from '@/types/session'
+import type { CharacterCardPayload, ObjectiveUpdatedPayload } from '@/types/session'
 
 export interface CardState {
   characterCard: CharacterCardPayload | null
+  currentObjective: ObjectiveUpdatedPayload | null
   clues: unknown[]
   accessibleClueIds: string[]
 }
 
 interface CardActions {
   setCharacterCard: (card: CharacterCardPayload) => void
+  setObjective: (objective: ObjectiveUpdatedPayload) => void
   addClue: (clue: unknown) => void
   setAccessibleClueIds: (ids: string[]) => void
   reset: () => void
@@ -16,6 +18,7 @@ interface CardActions {
 
 const initialState: CardState = {
   characterCard: null,
+  currentObjective: null,
   clues: [],
   accessibleClueIds: [],
 }
@@ -23,6 +26,7 @@ const initialState: CardState = {
 export const useCardStore = create<CardState & CardActions>((set) => ({
   ...initialState,
   setCharacterCard: (characterCard) => set({ characterCard }),
+  setObjective: (currentObjective) => set({ currentObjective }),
   addClue: (clue) => set((state) => ({ clues: [...state.clues, clue] })),
   setAccessibleClueIds: (accessibleClueIds) => set({ accessibleClueIds }),
   reset: () => set(initialState),

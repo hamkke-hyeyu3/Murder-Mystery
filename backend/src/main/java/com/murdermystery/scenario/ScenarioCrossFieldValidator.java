@@ -1,5 +1,6 @@
 package com.murdermystery.scenario;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -55,6 +56,36 @@ public class ScenarioCrossFieldValidator {
             Round r = scenario.rounds().get(i);
             if (r.prompt() == null || r.prompt().isBlank()) {
                 return Optional.of("rounds[" + i + "] (round " + (i + 1) + ") has blank prompt — required for k>=2");
+            }
+        }
+
+        int totalRounds = scenario.roundCount();
+        for (ScenarioCharacter ch : scenario.characters()) {
+            List<RoundObjective> objectives = ch.objectivesByRound();
+            if (objectives == null || objectives.isEmpty()) continue;
+
+            Set<Integer> roundNums = objectives.stream()
+                .map(RoundObjective::round)
+                .collect(Collectors.toSet());
+            if (roundNums.size() != objectives.size()) {
+                return Optional.of("character '" + ch.id() + "' has duplicate round in objectives_by_round");
+            }
+            for (RoundObjective obj : objectives) {
+                if (obj.round() < 1 || obj.round() > totalRounds) {
+                    return Optional.of("character '" + ch.id() + "' objective round=" + obj.round()
+                        + " is out of range [1.." + totalRounds + "]");
+                }
+            }
+            if (roundNums.size() != totalRounds) {
+                return Optional.of("character '" + ch.id() + "' objectives_by_round covers "
+                    + roundNums.size() + " rounds but round_count=" + totalRounds);
+            }
+        }
+
+        for (ScenarioCharacter ch : scenario.characters()) {
+            if (ch.alibiLocationId() != null && !locationIds.contains(ch.alibiLocationId())) {
+                return Optional.of("character '" + ch.id() + "' alibi_location_id='"
+                    + ch.alibiLocationId() + "' not found in locations");
             }
         }
 

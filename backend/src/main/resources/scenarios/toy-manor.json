@@ -8,9 +8,54 @@
   "allow_private_talk": true,
   "true_culprit_character_id": "bob",
   "characters": [
-    {"id": "alice", "name": "앨리스 · 가정부"},
-    {"id": "bob", "name": "밥 · 집사"},
-    {"id": "charlie", "name": "찰리 · 손님"}
+    {
+      "id": "alice",
+      "name": "앨리스 · 가정부",
+      "speech_style": "공손한 존댓말. 감정을 잘 드러내지 않는다.",
+      "background": "10년째 저택을 관리해 온 가정부. 주인 가족의 모든 비밀을 알고 있다.",
+      "motive": "월급을 6개월째 받지 못했고, 주인이 해고를 암시했다.",
+      "alibi": "저녁 8시부터 9시까지 도서관 서고에서 먼지를 털고 있었다.",
+      "secret": "주인의 유언장을 몰래 읽은 적이 있다.",
+      "relationships": "주인에게는 충성스럽지만, 집사 밥을 신뢰하지 않는다.",
+      "alibi_location_id": "library",
+      "objectives_by_round": [
+        { "round": 1, "text": "자신의 이름과 역할을 밝히고, 그날 밤 자신의 동선을 간략히 소개하세요." },
+        { "round": 2, "text": "도서관 서고에서 목격한 것을 공유하고, 다른 사람의 알리바이와 비교해 보세요." },
+        { "round": 3, "text": "당신이 범인이라고 생각하는 인물을 이유와 함께 지목하세요." }
+      ]
+    },
+    {
+      "id": "bob",
+      "name": "밥 · 집사",
+      "speech_style": "격식체. 항상 차분하지만 약간 거만하다.",
+      "background": "귀족 가문 출신으로 몰락 후 집사가 됐다. 저택 재정을 관리한다.",
+      "motive": "주인이 자신의 횡령 사실을 알아냈고, 폭로 직전이었다.",
+      "alibi": "저녁 8시에 주방에서 야식을 준비했다고 주장한다.",
+      "secret": "지난 2년간 저택 자금을 빼돌려 왔다.",
+      "relationships": "가정부 앨리스를 불신하며, 손님 찰리와는 구면이다.",
+      "alibi_location_id": "kitchen",
+      "objectives_by_round": [
+        { "round": 1, "text": "자신의 이름과 역할을 밝히고, 그날 밤 자신의 동선을 간략히 소개하세요." },
+        { "round": 2, "text": "주방에 있었다는 알리바이를 뒷받침할 증거를 제시하세요." },
+        { "round": 3, "text": "당신이 범인이라고 생각하는 인물을 이유와 함께 지목하세요." }
+      ]
+    },
+    {
+      "id": "charlie",
+      "name": "찰리 · 손님",
+      "speech_style": "격의 없는 반말. 쾌활하지만 숨기는 것이 많다.",
+      "background": "주인의 오랜 사업 파트너. 이번이 세 번째 방문이다.",
+      "motive": "주인이 공동 투자금을 돌려주지 않는다고 주장한다.",
+      "alibi": "저녁 9시에 혼자 옥상 정원에 있었다고 한다.",
+      "secret": "실제로는 주인의 빚보증을 서 있어 주인이 죽으면 빚을 떠안는다.",
+      "relationships": "집사 밥과는 구면이며, 가정부 앨리스는 처음 만났다.",
+      "alibi_location_id": "garden",
+      "objectives_by_round": [
+        { "round": 1, "text": "자신의 이름과 역할을 밝히고, 그날 밤 자신의 동선을 간략히 소개하세요." },
+        { "round": 2, "text": "옥상 정원에서 무엇을 보고 들었는지 공유하세요." },
+        { "round": 3, "text": "당신이 범인이라고 생각하는 인물을 이유와 함께 지목하세요." }
+      ]
+    }
   ],
   "locations": [
     {"id": "library", "name": "도서관 서고", "icon": "📚", "description": "먼지가 쌓인 오래된 책들이 빽빽한 서고."},

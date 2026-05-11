@@ -34,7 +34,7 @@ describe('Play', () => {
     expect(screen.getByText('캐릭터 배정 중…')).toBeInTheDocument()
   })
 
-  it('캐릭터 카드가 있으면 이름과 순서를 보인다', () => {
+  it('캐릭터 카드가 있으면 카드를 렌더하고 배정 대기 placeholder는 숨긴다', () => {
     useCardStore.getState().setCharacterCard({
       characterId: 'char-a',
       name: 'Alice',
@@ -45,7 +45,6 @@ describe('Play', () => {
 
     expect(screen.getByTestId('character-card')).toBeInTheDocument()
     expect(screen.getByText('Alice')).toBeInTheDocument()
-    expect(screen.getByText('조사 순서 #1')).toBeInTheDocument()
     expect(screen.queryByTestId('play-waiting-card')).not.toBeInTheDocument()
   })
 
@@ -86,5 +85,24 @@ describe('Play', () => {
 
     expect(screen.getByTestId('character-card')).toBeInTheDocument()
     expect(screen.queryByTestId('tutorial')).not.toBeInTheDocument()
+  })
+
+  it("state='round'일 때 CharacterCard와 RoundPanel이 함께 렌더된다", () => {
+    useSessionStore.getState().setSession({
+      state: 'round',
+      roundNumber: 1,
+      roundPrompt: '자기소개를 해주세요.',
+      roundCommonHint: null,
+    })
+    useCardStore.getState().setCharacterCard({
+      characterId: 'char-a',
+      name: 'Alice',
+      turnOrderIndex: 0,
+    })
+
+    renderPlay()
+
+    expect(screen.getByTestId('character-card')).toBeInTheDocument()
+    expect(screen.getByTestId('round-panel')).toBeInTheDocument()
   })
 })

@@ -69,9 +69,9 @@ class StartGameServiceTest {
 
         Scenario scenario = mock(Scenario.class);
         when(scenario.characters()).thenReturn(List.of(
-            new ScenarioCharacter("char-a", "Alice"),
-            new ScenarioCharacter("char-b", "Bob"),
-            new ScenarioCharacter("char-c", "Charlie")
+            new ScenarioCharacter("char-a", "Alice", null, null, null, null, null, null, null, null),
+            new ScenarioCharacter("char-b", "Bob", null, null, null, null, null, null, null, null),
+            new ScenarioCharacter("char-c", "Charlie", null, null, null, null, null, null, null, null)
         ));
         when(scenarioRepo.findById(any())).thenReturn(Optional.of(scenario));
         when(scenarioRepo.findAll()).thenReturn(List.of(scenario));

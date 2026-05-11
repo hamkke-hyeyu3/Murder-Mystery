@@ -1,8 +1,11 @@
 package com.murdermystery.session;
 
 import com.murdermystery.scenario.Round;
+import com.murdermystery.scenario.RoundObjective;
 import com.murdermystery.scenario.Scenario;
+import com.murdermystery.scenario.ScenarioCharacter;
 import com.murdermystery.scenario.ScenarioRepository;
+import com.murdermystery.ws.event.ObjectiveUpdatedPayload;
 import com.murdermystery.ws.event.RoundStartedPayload;
 import com.murdermystery.ws.event.ServerTimeSyncPayload;
 import org.slf4j.Logger;
@@ -12,6 +15,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.UUID;
 
 @Service
@@ -60,10 +66,11 @@ public class RoundService {
             }
 
             if (alreadyAtRound) {
-                // Idempotent re-broadcast: load existing round data
+                // Idempotent re-broadcast: load existing round data (OBJECTIVE_UPDATED skipped — handled by T-18 snapshot)
                 return roundRepository.findBySessionIdAndRoundNumber(sessionId, roundNumber)
                     .map(r -> new RoundEntry(roundNumber, r.getPrompt(), r.getCommonHint(),
-                        r.getStartedAt().toEpochMilli(), r.getDeadlineAt().toEpochMilli()))
+                        r.getStartedAt().toEpochMilli(), r.getDeadlineAt().toEpochMilli(),
+                        session.getInviteCode(), sessionId.toString(), 0, List.of()))
                     .orElse(null);
             }
 
@@ -86,7 +93,30 @@ public class RoundService {
             session.setCurrentRoundNumber(roundNumber);
             sessionRepository.saveAndFlush(session);
 
-            return new RoundEntry(roundNumber, prompt, roundMeta.commonHint(), now.toEpochMilli(), deadline.toEpochMilli());
+            String inviteCode = session.getInviteCode();
+            int totalRounds = scenario.roundCount();
+            Map<String, String> charObjectiveMap = new HashMap<>();
+            scenario.characters().stream()
+                .filter(c -> c.objectivesByRound() != null)
+                .forEach(c -> charObjectiveMap.put(
+                    c.id(),
+                    c.objectivesByRound().stream()
+                        .filter(o -> o.round() == roundNumber)
+                        .findFirst()
+                        .map(RoundObjective::text)
+                        .orElse(null)
+                ));
+            List<PlayerObjective> playerObjectives = session.getPlayers().stream()
+                .filter(p -> p.getAssignedCharacterId() != null)
+                .map(p -> new PlayerObjective(
+                    p.getId().toString(),
+                    charObjectiveMap.getOrDefault(p.getAssignedCharacterId(), null)
+                ))
+                .toList();
+
+            return new RoundEntry(roundNumber, prompt, roundMeta.commonHint(),
+                now.toEpochMilli(), deadline.toEpochMilli(),
+                inviteCode, sessionId.toString(), totalRounds, playerObjectives);
         });
 
         if (entry == null) return;
@@ -96,7 +126,23 @@ public class RoundService {
         eventPublisher.publish(sessionId.toString(), "ROUND_STARTED",
             new RoundStartedPayload(entry.roundNumber(), entry.prompt(), entry.commonHint(),
                 entry.deadlineAt(), entry.startedAt()));
+
+        for (PlayerObjective po : entry.playerObjectives()) {
+            try {
+                eventPublisher.publishToPlayer(
+                    entry.inviteCode(), po.playerId(), entry.sessionIdStr(),
+                    "OBJECTIVE_UPDATED",
+                    new ObjectiveUpdatedPayload(entry.roundNumber(), entry.totalRounds(), po.objective())
+                );
+            } catch (Exception e) {
+                log.error("OBJECTIVE_UPDATED delivery failed for player {} in session {}", po.playerId(), sessionId, e);
+            }
+        }
     }
 
-    private record RoundEntry(int roundNumber, String prompt, String commonHint, long startedAt, long deadlineAt) {}
+    private record RoundEntry(
+        int roundNumber, String prompt, String commonHint, long startedAt, long deadlineAt,
+        String inviteCode, String sessionIdStr, int totalRounds, List<PlayerObjective> playerObjectives
+    ) {}
+    private record PlayerObjective(String playerId, String objective) {}
 }

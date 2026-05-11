@@ -61,10 +61,36 @@ export type ResumeResponse = {
   players: PlayerSummaryDto[]
 }
 
+export type LocationRef = {
+  id: string
+  name: string
+  icon?: string
+}
+
+export type ItemRef = {
+  id: string
+  title: string
+  originLocation?: LocationRef
+}
+
 export type CharacterCardPayload = {
   characterId: string
   name: string
   turnOrderIndex: number
+  speechStyle?: string
+  background?: string
+  motive?: string
+  alibi?: string
+  secret?: string
+  relationships?: string
+  alibiLocation?: LocationRef
+  items?: ItemRef[]
+}
+
+export type ObjectiveUpdatedPayload = {
+  roundNumber: number
+  totalRounds: number
+  objective: string | null
 }
 
 export type TutorialAckResponse = {
@@ -127,4 +153,10 @@ export type SessionEvent =
         deadlineAt: number
         startedAt: number
       }
+    }
+  | {
+      type: 'OBJECTIVE_UPDATED'
+      sessionId: string
+      occurredAt: string
+      payload: ObjectiveUpdatedPayload
     }

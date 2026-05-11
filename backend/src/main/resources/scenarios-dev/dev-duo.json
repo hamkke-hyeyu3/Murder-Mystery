@@ -8,8 +8,36 @@
   "allow_private_talk": false,
   "true_culprit_character_id": "guest",
   "characters": [
-    {"id": "host", "name": "호스트"},
-    {"id": "guest", "name": "게스트"}
+    {
+      "id": "host",
+      "name": "호스트",
+      "speech_style": "테스트용 말투.",
+      "background": "이 시나리오의 진행자 역할을 맡은 테스트 캐릭터.",
+      "motive": "범인을 찾아야 하는 탐정 역할.",
+      "alibi": "라운드 1 내내 A 방에 있었다.",
+      "secret": "사실 범인이 누구인지 알고 있다.",
+      "relationships": "게스트와는 초면이다.",
+      "alibi_location_id": "room-a",
+      "objectives_by_round": [
+        { "round": 1, "text": "자신의 역할을 소개하고 A 방에서 발견한 단서를 공유하세요." },
+        { "round": 2, "text": "단서를 종합해 범인을 지목하세요." }
+      ]
+    },
+    {
+      "id": "guest",
+      "name": "게스트",
+      "speech_style": "테스트용 말투.",
+      "background": "이 시나리오의 용의자 역할을 맡은 테스트 캐릭터.",
+      "motive": "숨겨진 동기가 있다.",
+      "alibi": "라운드 1에 B 방에 있었다고 주장한다.",
+      "secret": "실제 범인이다.",
+      "relationships": "호스트와는 초면이다.",
+      "alibi_location_id": "room-b",
+      "objectives_by_round": [
+        { "round": 1, "text": "자신의 역할을 소개하고 B 방에서 발견한 단서를 공유하세요." },
+        { "round": 2, "text": "자신이 범인이 아님을 설득하세요." }
+      ]
+    }
   ],
   "locations": [
     {"id": "room-a", "name": "A 방", "icon": "🚪", "description": "첫 번째 테스트 방."},

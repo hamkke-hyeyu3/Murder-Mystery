@@ -2,6 +2,7 @@ package com.murdermystery.session;
 
 import com.murdermystery.scenario.Scenario;
 import com.murdermystery.scenario.ScenarioCharacter;
+import com.murdermystery.scenario.ScenarioLocation;
 import com.murdermystery.scenario.ScenarioRepository;
 import com.murdermystery.ws.event.CharacterCardDealtPayload;
 import com.murdermystery.ws.event.SessionStateChangedPayload;
@@ -140,7 +141,7 @@ public class StartGameService {
     }
 
     void transitionToCharacterAssignment(UUID sessionId, String inviteCode) {
-        List<PlayerCard> cards = transactionTemplate.execute(status -> {
+        CardBundle cards = transactionTemplate.execute(status -> {
             Session session = sessionRepository.findById(sessionId).orElse(null);
             if (session == null
                     || !"in_progress".equals(session.getPhase())
@@ -155,13 +156,14 @@ public class StartGameService {
                 log.error("turnOrder is null for session {} in intro state — skipping card delivery", sessionId);
                 return null;
             }
-            return session.getPlayers().stream()
+            List<PlayerCard> playerCards = session.getPlayers().stream()
                 .sorted(Comparator.comparing(Player::getJoinedAt))
                 .map(p -> {
                     int index = turnOrder.indexOf(p.getAssignedCharacterId());
                     return new PlayerCard(p.getId().toString(), p.getAssignedCharacterId(), index);
                 })
                 .toList();
+            return new CardBundle(session.getScenarioId(), playerCards);
         });
 
         if (cards == null) {
@@ -181,19 +183,37 @@ public class StartGameService {
             TimeUnit.MILLISECONDS
         );
 
-        Map<String, String> charNames = scenarioRepository.findAll().stream()
-            .flatMap(s -> s.characters().stream())
-            .collect(Collectors.toMap(ScenarioCharacter::id, ScenarioCharacter::name));
+        Scenario scenario = scenarioRepository.findById(cards.scenarioId()).orElse(null);
+        if (scenario == null) {
+            log.warn("Scenario {} not found during card delivery for session {} — character names will fall back to characterId",
+                cards.scenarioId(), sessionId);
+        }
+        Map<String, ScenarioCharacter> charMap = (scenario == null || scenario.characters() == null) ? Map.of() :
+            scenario.characters().stream().collect(Collectors.toMap(ScenarioCharacter::id, c -> c, (a, b) -> a));
+        Map<String, ScenarioLocation> locMap = (scenario == null || scenario.locations() == null) ? Map.of() :
+            scenario.locations().stream().collect(Collectors.toMap(ScenarioLocation::id, l -> l, (a, b) -> a));
 
-        for (PlayerCard card : cards) {
-            String name = charNames.getOrDefault(card.characterId(), card.characterId());
+        for (PlayerCard card : cards.cards()) {
+            ScenarioCharacter ch = charMap.get(card.characterId());
+            String name = ch != null ? ch.name() : card.characterId();
+            CharacterCardDealtPayload.LocationRef alibiLocation = buildAlibiLocation(ch, locMap);
             try {
                 eventPublisher.publishToPlayer(
                     inviteCode,
                     card.playerId(),
                     sessionId.toString(),
                     "CHARACTER_CARD_DEALT",
-                    new CharacterCardDealtPayload(card.characterId(), name, card.turnOrderIndex())
+                    new CharacterCardDealtPayload(
+                        card.characterId(), name, card.turnOrderIndex(),
+                        ch != null ? ch.speechStyle() : null,
+                        ch != null ? ch.background() : null,
+                        ch != null ? ch.motive() : null,
+                        ch != null ? ch.alibi() : null,
+                        ch != null ? ch.secret() : null,
+                        ch != null ? ch.relationships() : null,
+                        alibiLocation,
+                        List.of()
+                    )
                 );
             } catch (Exception e) {
                 log.error("CHARACTER_CARD_DEALT delivery failed for player {} in session {}", card.playerId(), sessionId, e);
@@ -201,6 +221,15 @@ public class StartGameService {
         }
     }
 
+    private CharacterCardDealtPayload.LocationRef buildAlibiLocation(
+            ScenarioCharacter ch, Map<String, ScenarioLocation> locMap) {
+        if (ch == null || ch.alibiLocationId() == null) return null;
+        ScenarioLocation loc = locMap.get(ch.alibiLocationId());
+        if (loc == null) return null;
+        return new CharacterCardDealtPayload.LocationRef(loc.id(), loc.name(), loc.icon());
+    }
+
     private record StartResult(UUID sessionId, String inviteCode, List<String> turnOrder) {}
+    private record CardBundle(String scenarioId, List<PlayerCard> cards) {}
     private record PlayerCard(String playerId, String characterId, int turnOrderIndex) {}
 }

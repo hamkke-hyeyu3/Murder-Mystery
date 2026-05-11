@@ -12,9 +12,9 @@ class ScenarioCrossFieldValidatorTest {
     private final ScenarioCrossFieldValidator validator = new ScenarioCrossFieldValidator();
 
     private static final List<ScenarioCharacter> CHARS_3 = List.of(
-        new ScenarioCharacter("a", "A"),
-        new ScenarioCharacter("b", "B"),
-        new ScenarioCharacter("c", "C"));
+        new ScenarioCharacter("a", "A", null, null, null, null, null, null, null, null),
+        new ScenarioCharacter("b", "B", null, null, null, null, null, null, null, null),
+        new ScenarioCharacter("c", "C", null, null, null, null, null, null, null, null));
 
     private static final List<ScenarioLocation> LOCS_3 = List.of(
         new ScenarioLocation("loc1", "L1", null, null),
@@ -35,9 +35,9 @@ class ScenarioCrossFieldValidatorTest {
         return new Scenario(
             "id", "title", "summary", null, 30,
             List.of(
-                new ScenarioCharacter("a", "A"),
-                new ScenarioCharacter("b", "B"),
-                new ScenarioCharacter("c", "C")),
+                new ScenarioCharacter("a", "A", null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("b", "B", null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("c", "C", null, null, null, null, null, null, null, null)),
             List.of(
                 new ScenarioLocation("loc1", "L1", null, null),
                 new ScenarioLocation("loc2", "L2", null, null),
@@ -137,5 +137,60 @@ class ScenarioCrossFieldValidatorTest {
             List.of(new Round(null, null, 60), new Round("두 번째 라운드.", null, 60))
         );
         assertThat(validator.validate(s)).isEmpty();
+    }
+
+    // ── objectives_by_round 검증 ──────────────────────────────────────────────
+
+    @Test
+    void objectives_missing_round_fails() {
+        // round_count=2, but character only has objective for round 1 → round 2 missing
+        var chars = List.of(
+            new ScenarioCharacter("a", "A", null, null, null, null, null, null, null,
+                List.of(new RoundObjective(1, "R1 목표"))),
+            new ScenarioCharacter("b", "B", null, null, null, null, null, null, null, null),
+            new ScenarioCharacter("c", "C", null, null, null, null, null, null, null, null));
+        var s = new Scenario("id", "title", "summary", null, 30, chars, LOCS_3, POOL_3, ITEMS_3,
+            "c", false, 2, ROUNDS_2);
+        assertThat(validator.validate(s)).isPresent();
+    }
+
+    @Test
+    void objectives_duplicate_round_fails() {
+        // round 1 appears twice → duplicate
+        var chars = List.of(
+            new ScenarioCharacter("a", "A", null, null, null, null, null, null, null,
+                List.of(new RoundObjective(1, "R1"), new RoundObjective(1, "R1 dup"),
+                        new RoundObjective(2, "R2"))),
+            new ScenarioCharacter("b", "B", null, null, null, null, null, null, null, null),
+            new ScenarioCharacter("c", "C", null, null, null, null, null, null, null, null));
+        var s = new Scenario("id", "title", "summary", null, 30, chars, LOCS_3, POOL_3, ITEMS_3,
+            "c", false, 2, ROUNDS_2);
+        assertThat(validator.validate(s)).isPresent();
+    }
+
+    @Test
+    void objectives_extra_round_fails() {
+        // round_count=2, but character has objective for round 3 → extra round
+        var chars = List.of(
+            new ScenarioCharacter("a", "A", null, null, null, null, null, null, null,
+                List.of(new RoundObjective(1, "R1"), new RoundObjective(2, "R2"),
+                        new RoundObjective(3, "R3 extra"))),
+            new ScenarioCharacter("b", "B", null, null, null, null, null, null, null, null),
+            new ScenarioCharacter("c", "C", null, null, null, null, null, null, null, null));
+        var s = new Scenario("id", "title", "summary", null, 30, chars, LOCS_3, POOL_3, ITEMS_3,
+            "c", false, 2, ROUNDS_2);
+        assertThat(validator.validate(s)).isPresent();
+    }
+
+    @Test
+    void alibi_location_id_unknown_fails() {
+        // alibi_location_id references a location not in locations[]
+        var chars = List.of(
+            new ScenarioCharacter("a", "A", null, null, null, null, null, null, "unknown-loc", null),
+            new ScenarioCharacter("b", "B", null, null, null, null, null, null, null, null),
+            new ScenarioCharacter("c", "C", null, null, null, null, null, null, null, null));
+        var s = new Scenario("id", "title", "summary", null, 30, chars, LOCS_3, POOL_3, ITEMS_3,
+            "c", false, 2, ROUNDS_2);
+        assertThat(validator.validate(s)).isPresent();
     }
 }

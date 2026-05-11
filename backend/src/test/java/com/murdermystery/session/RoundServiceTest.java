@@ -1,8 +1,11 @@
 package com.murdermystery.session;
 
 import com.murdermystery.scenario.Round;
+import com.murdermystery.scenario.RoundObjective;
 import com.murdermystery.scenario.Scenario;
+import com.murdermystery.scenario.ScenarioCharacter;
 import com.murdermystery.scenario.ScenarioRepository;
+import com.murdermystery.ws.event.ObjectiveUpdatedPayload;
 import com.murdermystery.ws.event.RoundStartedPayload;
 import com.murdermystery.ws.event.ServerTimeSyncPayload;
 import org.junit.jupiter.api.BeforeEach;
@@ -203,6 +206,88 @@ class RoundServiceTest {
 
         verify(roundRepo, never()).save(any());
         verify(eventPublisher).publish(any(), eq("ROUND_STARTED"), any(RoundStartedPayload.class));
+    }
+
+    // ── startRound: OBJECTIVE_UPDATED per-player ────────────────────────────────
+
+    @Test
+    void startRound_emitsObjectiveUpdatedPerAssignedPlayer() {
+        List<ScenarioCharacter> chars = List.of(
+            new ScenarioCharacter("char-a", "A", null, null, null, null, null, null, null,
+                List.of(new RoundObjective(1, "R1 목표 A"))),
+            new ScenarioCharacter("char-b", "B", null, null, null, null, null, null, null,
+                List.of(new RoundObjective(1, "R1 목표 B")))
+        );
+        Scenario scenario = scenarioWith(List.of(round(null, null, 300)));
+        when(scenario.characters()).thenReturn(chars);
+        when(scenario.roundCount()).thenReturn(1);
+
+        Session session = roundSession();
+        Player p1 = new Player("alice", true);
+        p1.setAssignedCharacterId("char-a");
+        Player p2 = new Player("bob", false);
+        p2.setAssignedCharacterId("char-b");
+        session.addPlayer(p1);
+        session.addPlayer(p2);
+
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        service.startRound(SESSION_ID, 1);
+
+        ArgumentCaptor<ObjectiveUpdatedPayload> captor = ArgumentCaptor.forClass(ObjectiveUpdatedPayload.class);
+        verify(eventPublisher, times(2)).publishToPlayer(
+            eq("ABCDEF"), any(), eq(SESSION_ID.toString()), eq("OBJECTIVE_UPDATED"), captor.capture());
+
+        List<ObjectiveUpdatedPayload> payloads = captor.getAllValues();
+        assertThat(payloads).anySatisfy(p -> assertThat(p.objective()).isEqualTo("R1 목표 A"));
+        assertThat(payloads).anySatisfy(p -> assertThat(p.objective()).isEqualTo("R1 목표 B"));
+        assertThat(payloads).allSatisfy(p -> {
+            assertThat(p.roundNumber()).isEqualTo(1);
+            assertThat(p.totalRounds()).isEqualTo(1);
+        });
+    }
+
+    @Test
+    void startRound_playerWithoutAssignedCharacter_noObjectiveUpdated() {
+        Scenario scenario = scenarioWith(List.of(round(null, null, 300)));
+        when(scenario.characters()).thenReturn(List.of());
+
+        Session session = roundSession();
+        Player p = new Player("alice", true); // assignedCharacterId is null
+        session.addPlayer(p);
+
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        service.startRound(SESSION_ID, 1);
+
+        verify(eventPublisher, never()).publishToPlayer(any(), any(), any(), eq("OBJECTIVE_UPDATED"), any());
+    }
+
+    @Test
+    void startRound_characterWithoutObjectives_sendsNullObjective() {
+        List<ScenarioCharacter> chars = List.of(
+            new ScenarioCharacter("char-a", "A", null, null, null, null, null, null, null, null)
+        );
+        Scenario scenario = scenarioWith(List.of(round(null, null, 300)));
+        when(scenario.characters()).thenReturn(chars);
+        when(scenario.roundCount()).thenReturn(1);
+
+        Session session = roundSession();
+        Player p = new Player("alice", true);
+        p.setAssignedCharacterId("char-a");
+        session.addPlayer(p);
+
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        service.startRound(SESSION_ID, 1);
+
+        ArgumentCaptor<ObjectiveUpdatedPayload> captor = ArgumentCaptor.forClass(ObjectiveUpdatedPayload.class);
+        verify(eventPublisher, times(1)).publishToPlayer(
+            any(), any(), any(), eq("OBJECTIVE_UPDATED"), captor.capture());
+        assertThat(captor.getValue().objective()).isNull();
     }
 
     // ── startRound: guard cases ───────────────────────────────────────────────
