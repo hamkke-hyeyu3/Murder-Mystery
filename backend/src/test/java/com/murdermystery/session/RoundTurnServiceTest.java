@@ -6,6 +6,8 @@ import com.murdermystery.scenario.ScenarioCharacter;
 import com.murdermystery.scenario.ScenarioItem;
 import com.murdermystery.scenario.ScenarioLocation;
 import com.murdermystery.scenario.ScenarioRepository;
+import com.murdermystery.ws.event.CluePayload;
+import com.murdermystery.ws.event.LocationSelectedPayload;
 import com.murdermystery.ws.event.ServerTimeSyncPayload;
 import com.murdermystery.ws.event.TurnStartedPayload;
 import org.junit.jupiter.api.BeforeEach;
@@ -250,6 +252,139 @@ class RoundTurnServiceTest {
         service.startRoundTurns(SESSION_ID, 1);
 
         verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    // ── selectLocation ──
+
+    private Session roundSessionForSelect(int roundNumber) {
+        List<String> order = List.of("char-a", "char-b", "char-c");
+        Session s = roundSession(order, roundNumber);
+        return s;
+    }
+
+    private void stubSelectHappyPath(Session session, int roundNumber) {
+        stubRoundExists(roundNumber);
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toy3Scenario()));
+        when(occupancyRepo.findBySessionIdAndRoundNumber(SESSION_ID, roundNumber)).thenReturn(List.of());
+    }
+
+    @Test
+    void selectLocation_happyPath_broadcastsLocationSelectedAndCancelsTimeout() {
+        Session session = roundSessionForSelect(1);
+        stubSelectHappyPath(session, 1);
+        // prime turnDeadlines so grace check passes
+        service.putDeadlineForTest(SESSION_ID, 1, 0, FIXED_NOW.plusSeconds(30));
+
+        @SuppressWarnings("unchecked")
+        ScheduledFuture<Object> mockFuture = mock(ScheduledFuture.class);
+        // simulate a pending future already registered
+        service.putDeadlineForTest(SESSION_ID, 1, 0, FIXED_NOW.plusSeconds(30));
+
+        service.selectLocation(SESSION_ID, ALICE_ID, "ABCDEF", "library", 1, 0);
+
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("LOCATION_SELECTED"), any(LocationSelectedPayload.class));
+        verify(occupancyRepo).save(any(LocationOccupancy.class));
+    }
+
+    @Test
+    void selectLocation_deliversClueToSelectingPlayer() {
+        Session session = roundSessionForSelect(1);
+        stubSelectHappyPath(session, 1);
+        service.putDeadlineForTest(SESSION_ID, 1, 0, FIXED_NOW.plusSeconds(30));
+
+        service.selectLocation(SESSION_ID, ALICE_ID, "ABCDEF", "library", 1, 0);
+
+        ArgumentCaptor<CluePayload> captor = ArgumentCaptor.forClass(CluePayload.class);
+        verify(eventPublisher).publishToPlayer(
+            eq("ABCDEF"), eq(ALICE_ID.toString()), eq(SESSION_ID.toString()), eq("CLUE_DELIVERED"), captor.capture());
+        assertThat(captor.getValue().itemId()).isEqualTo("torn-letter");
+        assertThat(captor.getValue().originLocationId()).isEqualTo("library");
+    }
+
+    @Test
+    void selectLocation_rejectedWhenNotMyTurn() {
+        Session session = roundSessionForSelect(1);
+        stubSelectHappyPath(session, 1);
+        service.putDeadlineForTest(SESSION_ID, 1, 0, FIXED_NOW.plusSeconds(30));
+
+        // BOB tries to select on ALICE's turn (turnIndex=0)
+        service.selectLocation(SESSION_ID, BOB_ID, "ABCDEF", "library", 1, 0);
+
+        verify(eventPublisher, never()).publish(any(), eq("LOCATION_SELECTED"), any());
+    }
+
+    @Test
+    void selectLocation_rejectedWhenLocationAlreadyOccupied() {
+        Session session = roundSessionForSelect(1);
+        stubRoundExists(1);
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toy3Scenario()));
+        LocationOccupancy taken = new LocationOccupancy(SESSION_ID, 1, "library", BOB_ID, "char-b", FIXED_NOW, false);
+        when(occupancyRepo.findBySessionIdAndRoundNumber(SESSION_ID, 1)).thenReturn(List.of(taken));
+        service.putDeadlineForTest(SESSION_ID, 1, 0, FIXED_NOW.plusSeconds(30));
+
+        service.selectLocation(SESSION_ID, ALICE_ID, "ABCDEF", "library", 1, 0);
+
+        verify(eventPublisher, never()).publish(any(), eq("LOCATION_SELECTED"), any());
+    }
+
+    @Test
+    void selectLocation_rejectedAfterGracePeriod() {
+        // deadline was 30s ago — grace period (1s) has fully elapsed
+        service.putDeadlineForTest(SESSION_ID, 1, 0, FIXED_NOW.minusSeconds(2));
+
+        service.selectLocation(SESSION_ID, ALICE_ID, "ABCDEF", "library", 1, 0);
+
+        verify(eventPublisher, never()).publish(any(), eq("LOCATION_SELECTED"), any());
+        verify(sessionRepo, never()).findByIdForUpdate(any());
+    }
+
+    @Test
+    void selectLocation_acceptedWithinGracePeriod() {
+        Session session = roundSessionForSelect(1);
+        stubSelectHappyPath(session, 1);
+        // deadline exactly at FIXED_NOW: grace = FIXED_NOW + 1s; clock.instant() = FIXED_NOW → accepted
+        service.putDeadlineForTest(SESSION_ID, 1, 0, FIXED_NOW);
+
+        service.selectLocation(SESSION_ID, ALICE_ID, "ABCDEF", "library", 1, 0);
+
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("LOCATION_SELECTED"), any());
+    }
+
+    @Test
+    void selectLocation_rejectedOnStaleTurnIndex() {
+        Session session = roundSessionForSelect(1);
+        stubSelectHappyPath(session, 1);
+        service.putDeadlineForTest(SESSION_ID, 1, 5, FIXED_NOW.plusSeconds(30)); // index 5 >= n(3)
+
+        service.selectLocation(SESSION_ID, ALICE_ID, "ABCDEF", "library", 1, 5);
+
+        verify(eventPublisher, never()).publish(any(), eq("LOCATION_SELECTED"), any());
+    }
+
+    @Test
+    void selectLocation_emitsRoundTurnsCompleteAfterLastTurn() {
+        // 1-player scenario for simplicity: only char-a in turn order
+        Session s = new Session("ABCDEF", "toy-manor");
+        s.setPhase("in_progress");
+        s.setState("round");
+        s.setTurnOrder(List.of("char-a"));
+        s.setCurrentRoundNumber(1);
+        Player alice = new Player("alice", true, UUID.randomUUID());
+        setId(alice, ALICE_ID);
+        alice.setAssignedCharacterId("char-a");
+        s.addPlayer(alice);
+
+        stubRoundExists(1);
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(s));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toy3Scenario()));
+        when(occupancyRepo.findBySessionIdAndRoundNumber(SESSION_ID, 1)).thenReturn(List.of());
+        service.putDeadlineForTest(SESSION_ID, 1, 0, FIXED_NOW.plusSeconds(30));
+
+        service.selectLocation(SESSION_ID, ALICE_ID, "ABCDEF", "library", 1, 0);
+
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ROUND_TURNS_COMPLETE"), any());
     }
 
     @Test

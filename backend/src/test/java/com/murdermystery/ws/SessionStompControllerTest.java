@@ -2,6 +2,7 @@ package com.murdermystery.ws;
 
 import com.murdermystery.config.StompPrincipal;
 import com.murdermystery.session.LeaveService;
+import com.murdermystery.session.RoundTurnService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,12 +13,14 @@ import static org.mockito.Mockito.*;
 class SessionStompControllerTest {
 
     private LeaveService leaveService;
+    private RoundTurnService roundTurnService;
     private SessionStompController controller;
 
     @BeforeEach
     void setUp() {
         leaveService = mock(LeaveService.class);
-        controller = new SessionStompController(leaveService);
+        roundTurnService = mock(RoundTurnService.class);
+        controller = new SessionStompController(leaveService, roundTurnService);
     }
 
     @Test
