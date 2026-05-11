@@ -88,4 +88,25 @@ class TurnQueueCalculatorTest {
         assertThatThrownBy(() -> TurnQueueCalculator.characterIdAt(null, 1, 0))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void roundNumberZero_throws() {
+        assertThatThrownBy(() -> TurnQueueCalculator.characterIdAt(ORDER_3, 0, 0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("roundNumber");
+    }
+
+    @Test
+    void turnIndexNegative_throws() {
+        assertThatThrownBy(() -> TurnQueueCalculator.characterIdAt(ORDER_3, 1, -1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("turnIndex");
+    }
+
+    @Test
+    void turnIndexEqualsN_throws() {
+        assertThatThrownBy(() -> TurnQueueCalculator.characterIdAt(ORDER_3, 1, 3))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("turnIndex");
+    }
 }

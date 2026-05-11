@@ -28,19 +28,22 @@ public class RoundService {
     private final ScenarioRepository scenarioRepository;
     private final TransactionTemplate transactionTemplate;
     private final SessionEventPublisher eventPublisher;
+    private final RoundTurnService roundTurnService;
 
     public RoundService(
         SessionRepository sessionRepository,
         RoundRepository roundRepository,
         ScenarioRepository scenarioRepository,
         TransactionTemplate transactionTemplate,
-        SessionEventPublisher eventPublisher
+        SessionEventPublisher eventPublisher,
+        RoundTurnService roundTurnService
     ) {
         this.sessionRepository = sessionRepository;
         this.roundRepository = roundRepository;
         this.scenarioRepository = scenarioRepository;
         this.transactionTemplate = transactionTemplate;
         this.eventPublisher = eventPublisher;
+        this.roundTurnService = roundTurnService;
     }
 
     public void startRound(UUID sessionId, int roundNumber) {
@@ -123,6 +126,8 @@ public class RoundService {
                 log.error("OBJECTIVE_UPDATED delivery failed for player {} in session {}", po.playerId(), sessionId, e);
             }
         }
+
+        roundTurnService.startRoundTurns(sessionId, roundNumber);
     }
 
     private record RoundEntry(

@@ -18,6 +18,13 @@ final class TurnQueueCalculator {
             throw new IllegalArgumentException("turnOrder must not be empty");
         }
         int n = turnOrder.size();
+        if (roundNumber < 1) {
+            throw new IllegalArgumentException("roundNumber must be >= 1: " + roundNumber);
+        }
+        if (turnIndex < 0 || turnIndex >= n) {
+            throw new IllegalArgumentException(
+                "turnIndex must be in [0.." + (n - 1) + "] for turnOrder size " + n + ": " + turnIndex);
+        }
         int slot = ((roundNumber - 1) + turnIndex) % n;
         return turnOrder.get(slot);
     }

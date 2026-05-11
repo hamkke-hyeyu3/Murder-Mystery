@@ -31,6 +31,7 @@ class RoundServiceTest {
     private ScenarioRepository scenarioRepo;
     private TransactionTemplate txTemplate;
     private SessionEventPublisher eventPublisher;
+    private RoundTurnService roundTurnService;
     private RoundService service;
 
     private static final UUID SESSION_ID = UUID.randomUUID();
@@ -42,13 +43,14 @@ class RoundServiceTest {
         scenarioRepo = mock(ScenarioRepository.class);
         txTemplate = mock(TransactionTemplate.class);
         eventPublisher = mock(SessionEventPublisher.class);
+        roundTurnService = mock(RoundTurnService.class);
 
         when(txTemplate.execute(any())).thenAnswer(inv -> {
             var cb = inv.getArgument(0, org.springframework.transaction.support.TransactionCallback.class);
             return cb.doInTransaction(null);
         });
 
-        service = new RoundService(sessionRepo, roundRepo, scenarioRepo, txTemplate, eventPublisher);
+        service = new RoundService(sessionRepo, roundRepo, scenarioRepo, txTemplate, eventPublisher, roundTurnService);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

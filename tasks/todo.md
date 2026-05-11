@@ -148,13 +148,15 @@
 ## 🔵 체크포인트 C — A4 라운드 루프 핵심
 
 - [ ] **T-09** 회전 턴 30초 + 점유 잠금 + 단서 ACL + 랜덤 자동 선택 ⚠️ *최고 위험*
-  - [ ] BE: `RoundTurnService` (차례 큐 + `TURN_STARTED` + 30s ScheduledExecutor)
-  - [ ] BE: `select-location` 핸들러 (잠금 검증 + ACL + `CLUE_DELIVERED` + `LOCATION_SELECTED`)
-  - [ ] BE: 30s 만료 시 남은 후보 무작위 1개 `LOCATION_AUTO_SELECTED`
+  - [x] BE S1: `V7__round_turn.sql` + 엔티티(LocationOccupancy/Clue/ClueAcl) + `TurnQueueCalculator` + `TurnQueueCalculatorTest` (15 케이스)
+  - [x] BE S2: `RoundTurnService` (차례 큐 + `TURN_STARTED` + 30s ScheduledExecutor) + `ClockConfig` + `RoundTurnServiceTest` (7 케이스) + Codex adversarial review 3개 fix (#1 future cancel, #4 rounds row guard, #6 bounds validation) 적용
+  - [ ] BE S3: `select-location` 핸들러 (잠금 검증 + ACL + `CLUE_DELIVERED` + `LOCATION_SELECTED`)
+  - [ ] BE S4: 30s 만료 시 남은 후보 무작위 1개 `LOCATION_AUTO_SELECTED` + `ROUND_TURNS_COMPLETE`
+  - [ ] BE S5: `SessionViewResponse` 스냅샷 확장 (`currentTurn`, `locationOccupancy`, `me.myClues`)
+  - [ ] FE S6: 타입 + WS dispatch + store 분리 + `publishSelectLocation`
+  - [ ] FE S7: `LocationGrid.tsx` (본인/타인/점유 분기 + 카운트다운) + e2e 3단말
   - [ ] BE: select 수신 시 `now < deadlineAt + 1s` grace 윈도우
-  - [ ] FE: `LocationGrid.tsx` (본인/타인/점유 분기 + 카운트다운)
-  - [ ] DB: `V4__round_turn.sql` (`location_occupancy`, `clues`, `clue_acl`)
-  - [ ] 검증: `RoundTurnServiceTest` (snake 회전·timeout·동시 탭 거부·단서 ACL), `RoundTurnIntegrationTest`
+  - [ ] 검증: `RoundTurnIntegrationTest` (3단말 select + autoSelect), `checkpoint-c-round-turn.spec.ts`
 
 - [ ] **T-10** monotonic 누적 + 라운드 자동 전환
   - [ ] BE: 라운드 종료 트리거 (모든 차례 완료 + `time_limit_sec` 만료)
