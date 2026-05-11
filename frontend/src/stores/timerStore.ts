@@ -1,24 +1,28 @@
 import { create } from 'zustand'
 
 export interface TimerState {
-  deadlineAt: number | null
+  roundDeadlineAt: number | null
+  turnDeadlineAt: number | null
   serverOffsetMs: number
 }
 
 interface TimerActions {
-  setDeadline: (deadlineAt: number | null) => void
+  setRoundDeadline: (deadlineAt: number | null) => void
+  setTurnDeadline: (deadlineAt: number | null) => void
   setServerOffset: (serverOffsetMs: number) => void
   reset: () => void
 }
 
 const initialState: TimerState = {
-  deadlineAt: null,
+  roundDeadlineAt: null,
+  turnDeadlineAt: null,
   serverOffsetMs: 0,
 }
 
 export const useTimerStore = create<TimerState & TimerActions>((set) => ({
   ...initialState,
-  setDeadline: (deadlineAt) => set({ deadlineAt }),
+  setRoundDeadline: (roundDeadlineAt) => set({ roundDeadlineAt }),
+  setTurnDeadline: (turnDeadlineAt) => set({ turnDeadlineAt }),
   setServerOffset: (serverOffsetMs) => set({ serverOffsetMs }),
   reset: () => set(initialState),
 }))

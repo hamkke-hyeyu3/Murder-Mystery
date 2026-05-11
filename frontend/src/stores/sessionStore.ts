@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { SessionViewResponse } from '@/types/session'
+import type { OccupancyView, SessionViewResponse } from '@/types/session'
 
 export interface PlayerSummary {
   playerId: string
@@ -27,6 +27,13 @@ export interface SessionState {
   roundNumber: number | null
   roundPrompt: string | null
   roundCommonHint: string | null
+  // turn state
+  currentTurnIndex: number | null
+  currentTurnPlayerId: string | null
+  currentTurnCharacterId: string | null
+  currentTurnDeadlineAt: number | null
+  currentRoundCandidateLocationIds: string[]
+  locationOccupancy: OccupancyView[]
 }
 
 interface SessionActions {
@@ -55,6 +62,12 @@ const initialState: SessionState = {
   roundNumber: null,
   roundPrompt: null,
   roundCommonHint: null,
+  currentTurnIndex: null,
+  currentTurnPlayerId: null,
+  currentTurnCharacterId: null,
+  currentTurnDeadlineAt: null,
+  currentRoundCandidateLocationIds: [],
+  locationOccupancy: [],
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({
@@ -81,6 +94,14 @@ export const useSessionStore = create<SessionState & SessionActions>((set) => ({
       roundNumber: snap.round.roundNumber,
       roundPrompt: snap.round.prompt,
       roundCommonHint: snap.round.commonHint,
+    } : {}),
+    locationOccupancy: snap.locationOccupancy ?? state.locationOccupancy,
+    ...(snap.currentTurn != null ? {
+      currentTurnIndex: snap.currentTurn.turnIndex,
+      currentTurnPlayerId: snap.currentTurn.playerId,
+      currentTurnCharacterId: snap.currentTurn.characterId,
+      currentTurnDeadlineAt: snap.currentTurn.deadlineAt,
+      currentRoundCandidateLocationIds: snap.currentTurn.candidateLocationIds,
     } : {}),
   })),
   reset: () => set(initialState),

@@ -31,9 +31,9 @@ export default function Play() {
   const setCharacterCard = useCardStore((s) => s.setCharacterCard)
   const setObjective = useCardStore((s) => s.setObjective)
   const resetCard = useCardStore((s) => s.reset)
-  const deadlineAt = useTimerStore((s) => s.deadlineAt)
+  const roundDeadlineAt = useTimerStore((s) => s.roundDeadlineAt)
   const serverOffsetMs = useTimerStore((s) => s.serverOffsetMs)
-  const setDeadline = useTimerStore((s) => s.setDeadline)
+  const setRoundDeadline = useTimerStore((s) => s.setRoundDeadline)
 
   // storeSessionId가 다른 세션을 가리키면 store 값을 사용하지 않음 (stale 노출 방지)
   const sessionMatches = storeSessionId === null || storeSessionId === sessionId
@@ -51,7 +51,7 @@ export default function Play() {
         hydrateFromSnapshot(snap)
         if (snap.me.character) setCharacterCard(snap.me.character)
         if (snap.me.objective) setObjective(snap.me.objective)
-        if (snap.round) setDeadline(snap.round.deadlineAt)
+        if (snap.round) setRoundDeadline(snap.round.deadlineAt)
       })
       .catch(() => { if (!cancelled) navigate('/') })
     return () => { cancelled = true }
@@ -92,7 +92,7 @@ export default function Play() {
           roundNumber={roundNumber ?? 1}
           prompt={roundPrompt ?? ''}
           commonHint={roundCommonHint}
-          deadlineAt={deadlineAt}
+          deadlineAt={roundDeadlineAt}
           serverOffsetMs={serverOffsetMs}
         />
       </div>

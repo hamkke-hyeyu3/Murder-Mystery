@@ -153,7 +153,7 @@
   - [x] BE S3: `select-location` STOMP 핸들러 + `selectLocation` (7 가드 + grace 1s + ACL + `CLUE_DELIVERED` + `LOCATION_SELECTED`) + `RoundTurnServiceTest` selectLocation 7 케이스
   - [x] BE S4: autoSelectTurn 테스트 4 케이스 (random pick, idempotent, AUTO_SELECTED 이벤트, ROUND_TURNS_COMPLETE) 추가 — autoSelectTurn 구현은 S2에서 완료
   - [x] BE S5: `SessionViewResponse` 스냅샷 확장 (`TurnView currentTurn`, `List<OccupancyView> locationOccupancy`, `MeView.myClues`) + `SessionService` 조회 로직 + `RoundTurnService.getTurnDeadline`
-  - [ ] FE S6: 타입 + WS dispatch + store 분리 + `publishSelectLocation`
+  - [x] FE S6: types(TurnView/OccupancyView/ClueView + 5 이벤트), sessionStore(턴 필드 + hydrateFromSnapshot 확장), timerStore(roundDeadlineAt/turnDeadlineAt), cardStore(ClueView 타입), useSessionWebSocket(5 이벤트 dispatch + publishSelectLocation)
   - [ ] FE S7: `LocationGrid.tsx` (본인/타인/점유 분기 + 카운트다운) + e2e 3단말
   - [ ] BE: select 수신 시 `now < deadlineAt + 1s` grace 윈도우
   - [ ] 검증: `RoundTurnIntegrationTest` (3단말 select + autoSelect), `checkpoint-c-round-turn.spec.ts`

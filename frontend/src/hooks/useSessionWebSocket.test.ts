@@ -302,7 +302,7 @@ describe('useSessionWebSocket', () => {
     expect(sessionState.roundPrompt).toBe('한 사람씩 자기 캐릭터를 짧게 소개해 주세요.')
     expect(sessionState.roundCommonHint).toBeNull()
 
-    expect(useTimerStore.getState().deadlineAt).toBe(deadlineAt)
+    expect(useTimerStore.getState().roundDeadlineAt).toBe(deadlineAt)
   })
 
   it('ROUND_STARTED commonHint가 있으면 sessionStore에 저장한다', () => {

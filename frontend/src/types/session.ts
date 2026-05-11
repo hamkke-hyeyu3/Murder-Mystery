@@ -54,6 +54,31 @@ export type ObjectiveView = {
   objective: string | null
 }
 
+export type TurnView = {
+  turnIndex: number
+  playerId: string
+  characterId: string
+  deadlineAt: number
+  candidateLocationIds: string[]
+}
+
+export type OccupancyView = {
+  locationId: string
+  playerId: string
+  characterId: string
+  autoSelected: boolean
+}
+
+export type ClueView = {
+  id: string
+  itemId: string
+  title: string
+  originLocationId: string
+  roundNumberDiscovered: number
+  discoveredAt: number
+  source: string
+}
+
 export type MeView = {
   playerId: string
   nickname: string
@@ -62,6 +87,7 @@ export type MeView = {
   character: CharacterCardPayload | null
   objective: ObjectiveView | null
   tutorialAckedAt: number | null
+  myClues: ClueView[]
 }
 
 export type SessionViewResponse = {
@@ -76,6 +102,8 @@ export type SessionViewResponse = {
   currentRoundNumber?: number | null
   turnOrder?: string[] | null
   round?: RoundView | null
+  currentTurn?: TurnView | null
+  locationOccupancy?: OccupancyView[]
   me?: MeView | null
 }
 
@@ -188,4 +216,53 @@ export type SessionEvent =
       sessionId: string
       occurredAt: string
       payload: ObjectiveUpdatedPayload
+    }
+  | {
+      type: 'TURN_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        roundNumber: number
+        turnIndex: number
+        playerId: string
+        characterId: string
+        deadlineAt: number
+        candidateLocationIds: string[]
+      }
+    }
+  | {
+      type: 'LOCATION_SELECTED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        roundNumber: number
+        turnIndex: number
+        playerId: string
+        characterId: string
+        locationId: string
+      }
+    }
+  | {
+      type: 'LOCATION_AUTO_SELECTED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        roundNumber: number
+        turnIndex: number
+        playerId: string
+        characterId: string
+        locationId: string
+      }
+    }
+  | {
+      type: 'CLUE_DELIVERED'
+      sessionId: string
+      occurredAt: string
+      payload: ClueView
+    }
+  | {
+      type: 'ROUND_TURNS_COMPLETE'
+      sessionId: string
+      occurredAt: string
+      payload: { roundNumber: number }
     }

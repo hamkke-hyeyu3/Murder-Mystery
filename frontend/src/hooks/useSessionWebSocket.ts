@@ -26,6 +26,7 @@ export function useSessionWebSocket({
   const setSession = useSessionStore((s) => s.setSession)
   const setCharacterCard = useCardStore((s) => s.setCharacterCard)
   const setObjective = useCardStore((s) => s.setObjective)
+  const addClue = useCardStore((s) => s.addClue)
 
   useEffect(() => {
     if (!connected || !client.current || !sessionId) return
@@ -77,7 +78,40 @@ export function useSessionWebSocket({
             roundPrompt: envelope.payload.prompt,
             roundCommonHint: envelope.payload.commonHint,
           })
-          useTimerStore.getState().setDeadline(envelope.payload.deadlineAt)
+          useTimerStore.getState().setRoundDeadline(envelope.payload.deadlineAt)
+        } else if (envelope.type === 'TURN_STARTED') {
+          const p = envelope.payload
+          setSession({
+            currentTurnIndex: p.turnIndex,
+            currentTurnPlayerId: p.playerId,
+            currentTurnCharacterId: p.characterId,
+            currentTurnDeadlineAt: p.deadlineAt,
+            currentRoundCandidateLocationIds: p.candidateLocationIds,
+          })
+          useTimerStore.getState().setTurnDeadline(p.deadlineAt)
+        } else if (envelope.type === 'LOCATION_SELECTED' || envelope.type === 'LOCATION_AUTO_SELECTED') {
+          const p = envelope.payload
+          useSessionStore.setState((state) => ({
+            ...state,
+            locationOccupancy: [
+              ...state.locationOccupancy.filter((o) => o.locationId !== p.locationId),
+              {
+                locationId: p.locationId,
+                playerId: p.playerId,
+                characterId: p.characterId,
+                autoSelected: envelope.type === 'LOCATION_AUTO_SELECTED',
+              },
+            ],
+          }))
+        } else if (envelope.type === 'ROUND_TURNS_COMPLETE') {
+          useTimerStore.getState().setTurnDeadline(null)
+          setSession({
+            currentTurnIndex: null,
+            currentTurnPlayerId: null,
+            currentTurnCharacterId: null,
+            currentTurnDeadlineAt: null,
+            currentRoundCandidateLocationIds: [],
+          })
         }
       }
     )
@@ -90,6 +124,8 @@ export function useSessionWebSocket({
           setCharacterCard(envelope.payload)
         } else if (envelope.type === 'OBJECTIVE_UPDATED') {
           setObjective(envelope.payload)
+        } else if (envelope.type === 'CLUE_DELIVERED') {
+          addClue(envelope.payload)
         }
       }
     )
@@ -98,7 +134,7 @@ export function useSessionWebSocket({
       topicSub.unsubscribe()
       privateSub.unsubscribe()
     }
-  }, [connected, sessionId, playerId, setSession, setCharacterCard, setObjective])
+  }, [connected, sessionId, playerId, setSession, setCharacterCard, setObjective, addClue])
 
   const publishLeave = () => {
     if (!client.current || !sessionId) return
@@ -108,5 +144,13 @@ export function useSessionWebSocket({
     })
   }
 
-  return { connected, publishLeave }
+  const publishSelectLocation = (locationId: string, roundNumber: number, turnIndex: number) => {
+    if (!client.current || !sessionId) return
+    client.current.publish({
+      destination: `/app/session/${sessionId}/select-location`,
+      body: JSON.stringify({ locationId, roundNumber, turnIndex }),
+    })
+  }
+
+  return { connected, publishLeave, publishSelectLocation }
 }

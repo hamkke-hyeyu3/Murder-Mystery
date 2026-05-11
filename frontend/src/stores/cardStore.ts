@@ -1,17 +1,17 @@
 import { create } from 'zustand'
-import type { CharacterCardPayload, ObjectiveUpdatedPayload } from '@/types/session'
+import type { CharacterCardPayload, ClueView, ObjectiveUpdatedPayload } from '@/types/session'
 
 export interface CardState {
   characterCard: CharacterCardPayload | null
   currentObjective: ObjectiveUpdatedPayload | null
-  clues: unknown[]
+  clues: ClueView[]
   accessibleClueIds: string[]
 }
 
 interface CardActions {
   setCharacterCard: (card: CharacterCardPayload) => void
   setObjective: (objective: ObjectiveUpdatedPayload) => void
-  addClue: (clue: unknown) => void
+  addClue: (clue: ClueView) => void
   setAccessibleClueIds: (ids: string[]) => void
   reset: () => void
 }
