@@ -35,8 +35,13 @@ export default function Play() {
   const serverOffsetMs = useTimerStore((s) => s.serverOffsetMs)
   const setDeadline = useTimerStore((s) => s.setDeadline)
 
+  // storeSessionId가 다른 세션을 가리키면 store 값을 사용하지 않음 (stale 노출 방지)
+  const sessionMatches = storeSessionId === null || storeSessionId === sessionId
+  const effectiveState = sessionMatches ? state : null
+  const effectiveCard = sessionMatches ? characterCard : null
+
   useEffect(() => {
-    if (!sessionId || (storeSessionId === sessionId && state && characterCard)) return
+    if (!sessionId || (sessionMatches && effectiveState && effectiveCard)) return
     if (storeSessionId !== null && storeSessionId !== sessionId) resetCard()
     let cancelled = false
     getSession(sessionId)
@@ -65,7 +70,7 @@ export default function Play() {
     })
   }
 
-  if (state === 'tutorial') {
+  if (effectiveState === 'tutorial') {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
         <CharacterCard />
@@ -79,7 +84,7 @@ export default function Play() {
     )
   }
 
-  if (state === 'round') {
+  if (effectiveState === 'round') {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
         <CharacterCard />
@@ -96,7 +101,7 @@ export default function Play() {
 
   return (
     <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
-      {characterCard ? (
+      {effectiveCard ? (
         <CharacterCard />
       ) : (
         <div data-testid="play-waiting-card">
