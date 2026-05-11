@@ -30,12 +30,14 @@ export default function Play() {
   const characterCard = useCardStore((s) => s.characterCard)
   const setCharacterCard = useCardStore((s) => s.setCharacterCard)
   const setObjective = useCardStore((s) => s.setObjective)
+  const resetCard = useCardStore((s) => s.reset)
   const deadlineAt = useTimerStore((s) => s.deadlineAt)
   const serverOffsetMs = useTimerStore((s) => s.serverOffsetMs)
   const setDeadline = useTimerStore((s) => s.setDeadline)
 
   useEffect(() => {
     if (!sessionId || (storeSessionId === sessionId && state && characterCard)) return
+    if (storeSessionId !== null && storeSessionId !== sessionId) resetCard()
     let cancelled = false
     getSession(sessionId)
       .then((snap) => {
