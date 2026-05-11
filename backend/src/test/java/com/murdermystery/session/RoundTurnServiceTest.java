@@ -387,6 +387,74 @@ class RoundTurnServiceTest {
         verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ROUND_TURNS_COMPLETE"), any());
     }
 
+    // ── autoSelectTurn ──
+
+    @Test
+    void autoSelect_picksRandomFromRemainingCandidates() {
+        Session session = roundSession(List.of("char-a", "char-b", "char-c"), 1);
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toy3Scenario()));
+        when(occupancyRepo.findBySessionIdAndRoundNumber(SESSION_ID, 1)).thenReturn(List.of());
+        when(occupancyRepo.existsBySessionIdAndRoundNumberAndPlayerId(SESSION_ID, 1, ALICE_ID)).thenReturn(false);
+
+        service.autoSelectTurn(SESSION_ID, 1, 0, 3);
+
+        // seeded Random(0): candidates=[library, kitchen, garden], nextInt(3)=0 → library
+        ArgumentCaptor<LocationOccupancy> captor = ArgumentCaptor.forClass(LocationOccupancy.class);
+        verify(occupancyRepo).save(captor.capture());
+        assertThat(captor.getValue().isAutoSelected()).isTrue();
+        assertThat(captor.getValue().getLocationId()).isEqualTo("library");
+    }
+
+    @Test
+    void autoSelect_idempotentWhenPlayerAlreadySelected() {
+        Session session = roundSession(List.of("char-a", "char-b", "char-c"), 1);
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(occupancyRepo.existsBySessionIdAndRoundNumberAndPlayerId(SESSION_ID, 1, ALICE_ID)).thenReturn(true);
+
+        service.autoSelectTurn(SESSION_ID, 1, 0, 3);
+
+        verify(occupancyRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void autoSelect_emitsLocationAutoSelectedNotLocationSelected() {
+        Session session = roundSession(List.of("char-a", "char-b", "char-c"), 1);
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toy3Scenario()));
+        when(occupancyRepo.findBySessionIdAndRoundNumber(SESSION_ID, 1)).thenReturn(List.of());
+        when(occupancyRepo.existsBySessionIdAndRoundNumberAndPlayerId(SESSION_ID, 1, ALICE_ID)).thenReturn(false);
+
+        service.autoSelectTurn(SESSION_ID, 1, 0, 3);
+
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("LOCATION_AUTO_SELECTED"), any());
+        verify(eventPublisher, never()).publish(any(), eq("LOCATION_SELECTED"), any());
+    }
+
+    @Test
+    void autoSelect_emitsRoundTurnsCompleteAfterLastTurn() {
+        // playerCount = 1, turnIndex = 0 → nextIndex = 1 >= playerCount → complete
+        Session s = new Session("ABCDEF", "toy-manor");
+        s.setPhase("in_progress");
+        s.setState("round");
+        s.setTurnOrder(List.of("char-a"));
+        s.setCurrentRoundNumber(1);
+        Player alice = new Player("alice", true, UUID.randomUUID());
+        setId(alice, ALICE_ID);
+        alice.setAssignedCharacterId("char-a");
+        s.addPlayer(alice);
+
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(s));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(toy3Scenario()));
+        when(occupancyRepo.findBySessionIdAndRoundNumber(SESSION_ID, 1)).thenReturn(List.of());
+        when(occupancyRepo.existsBySessionIdAndRoundNumberAndPlayerId(SESSION_ID, 1, ALICE_ID)).thenReturn(false);
+
+        service.autoSelectTurn(SESSION_ID, 1, 0, 1);
+
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ROUND_TURNS_COMPLETE"), any());
+    }
+
     @Test
     void startRoundTurns_candidateLocationsExcludeAlreadyOccupied() {
         // library is already taken — only kitchen and garden should be candidates
