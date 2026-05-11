@@ -152,7 +152,7 @@
   - [x] BE S2: `RoundTurnService` (차례 큐 + `TURN_STARTED` + 30s ScheduledExecutor) + `ClockConfig` + `RoundTurnServiceTest` (7 케이스) + Codex adversarial review 3개 fix (#1 future cancel, #4 rounds row guard, #6 bounds validation) 적용
   - [x] BE S3: `select-location` STOMP 핸들러 + `selectLocation` (7 가드 + grace 1s + ACL + `CLUE_DELIVERED` + `LOCATION_SELECTED`) + `RoundTurnServiceTest` selectLocation 7 케이스
   - [x] BE S4: autoSelectTurn 테스트 4 케이스 (random pick, idempotent, AUTO_SELECTED 이벤트, ROUND_TURNS_COMPLETE) 추가 — autoSelectTurn 구현은 S2에서 완료
-  - [ ] BE S5: `SessionViewResponse` 스냅샷 확장 (`currentTurn`, `locationOccupancy`, `me.myClues`)
+  - [x] BE S5: `SessionViewResponse` 스냅샷 확장 (`TurnView currentTurn`, `List<OccupancyView> locationOccupancy`, `MeView.myClues`) + `SessionService` 조회 로직 + `RoundTurnService.getTurnDeadline`
   - [ ] FE S6: 타입 + WS dispatch + store 분리 + `publishSelectLocation`
   - [ ] FE S7: `LocationGrid.tsx` (본인/타인/점유 분기 + 카운트다운) + e2e 3단말
   - [ ] BE: select 수신 시 `now < deadlineAt + 1s` grace 윈도우

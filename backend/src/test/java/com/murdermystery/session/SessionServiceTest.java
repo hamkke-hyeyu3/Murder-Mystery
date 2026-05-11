@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -28,6 +29,10 @@ class SessionServiceTest {
     private SessionRepository sessionRepo;
     private PlayerRepository playerRepo;
     private RoundRepository roundRepo;
+    private LocationOccupancyRepository occupancyRepo;
+    private ClueRepository clueRepo;
+    private ClueAclRepository clueAclRepo;
+    private RoundTurnService roundTurnService;
     private InviteCodeGenerator codeGen;
     private TransactionTemplate txTemplate;
     private SessionService service;
@@ -38,6 +43,10 @@ class SessionServiceTest {
         sessionRepo = mock(SessionRepository.class);
         playerRepo = mock(PlayerRepository.class);
         roundRepo = mock(RoundRepository.class);
+        occupancyRepo = mock(LocationOccupancyRepository.class);
+        clueRepo = mock(ClueRepository.class);
+        clueAclRepo = mock(ClueAclRepository.class);
+        roundTurnService = mock(RoundTurnService.class);
         codeGen = mock(InviteCodeGenerator.class);
         // execute callback immediately, no real transaction
         txTemplate = mock(TransactionTemplate.class);
@@ -46,7 +55,12 @@ class SessionServiceTest {
             return callback.doInTransaction(null);
         });
 
-        service = new SessionService(scenarioRepo, sessionRepo, playerRepo, roundRepo, codeGen, txTemplate);
+        service = new SessionService(scenarioRepo, sessionRepo, playerRepo, roundRepo,
+            occupancyRepo, clueRepo, clueAclRepo, roundTurnService, codeGen, txTemplate);
+
+        // safe defaults for snapshot fields introduced in S5
+        when(occupancyRepo.findBySessionIdAndRoundNumber(any(), anyInt())).thenReturn(List.of());
+        when(clueAclRepo.findBySessionIdAndPlayerId(any(), any())).thenReturn(List.of());
     }
 
     private Scenario toyManor() {

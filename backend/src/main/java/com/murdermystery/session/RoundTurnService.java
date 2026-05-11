@@ -374,6 +374,10 @@ public class RoundTurnService {
         return sessionId + ":" + roundNumber + ":" + turnIndex;
     }
 
+    public java.util.Optional<Instant> getTurnDeadline(UUID sessionId, int roundNumber, int turnIndex) {
+        return java.util.Optional.ofNullable(turnDeadlines.get(futureKey(sessionId, roundNumber, turnIndex)));
+    }
+
     // Package-private: set a fake deadline for unit tests that need to exercise grace-period logic
     void putDeadlineForTest(UUID sessionId, int roundNumber, int turnIndex, Instant deadline) {
         turnDeadlines.put(futureKey(sessionId, roundNumber, turnIndex), deadline);

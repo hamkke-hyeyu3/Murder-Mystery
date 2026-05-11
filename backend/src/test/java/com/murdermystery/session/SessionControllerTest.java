@@ -159,7 +159,7 @@ class SessionControllerTest {
             3, 2,
             List.of(new PlayerSummary("p1", "alice", true),
                     new PlayerSummary("p2", "bob", false)),
-            null, null, null, null, null
+            null, null, null, null, null, List.of(), null
         );
     }
 
@@ -174,14 +174,14 @@ class SessionControllerTest {
             "char-a", "알리스", 0, null, null, null, null, null, null, null, List.of()
         );
         SessionViewResponse.MeView me = new SessionViewResponse.MeView(
-            "p1", "alice", true, "char-a", character, objective, null
+            "p1", "alice", true, "char-a", character, objective, null, List.of()
         );
         return new SessionViewResponse(
             sessionId, "123456", "toy-manor", "in_progress",
             3, 3,
             List.of(new PlayerSummary("p1", "alice", true)),
             "round", 1, List.of("char-a", "char-b", "char-c"),
-            round, me
+            round, null, List.of(), me
         );
     }
 

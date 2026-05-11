@@ -10,9 +10,12 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class SessionService {
@@ -25,6 +28,10 @@ public class SessionService {
     private final SessionRepository sessionRepository;
     private final PlayerRepository playerRepository;
     private final RoundRepository roundRepository;
+    private final LocationOccupancyRepository occupancyRepository;
+    private final ClueRepository clueRepository;
+    private final ClueAclRepository clueAclRepository;
+    private final RoundTurnService roundTurnService;
     private final InviteCodeGenerator inviteCodeGenerator;
     private final TransactionTemplate transactionTemplate;
 
@@ -33,6 +40,10 @@ public class SessionService {
         SessionRepository sessionRepository,
         PlayerRepository playerRepository,
         RoundRepository roundRepository,
+        LocationOccupancyRepository occupancyRepository,
+        ClueRepository clueRepository,
+        ClueAclRepository clueAclRepository,
+        RoundTurnService roundTurnService,
         InviteCodeGenerator inviteCodeGenerator,
         TransactionTemplate transactionTemplate
     ) {
@@ -40,6 +51,10 @@ public class SessionService {
         this.sessionRepository = sessionRepository;
         this.playerRepository = playerRepository;
         this.roundRepository = roundRepository;
+        this.occupancyRepository = occupancyRepository;
+        this.clueRepository = clueRepository;
+        this.clueAclRepository = clueAclRepository;
+        this.roundTurnService = roundTurnService;
         this.inviteCodeGenerator = inviteCodeGenerator;
         this.transactionTemplate = transactionTemplate;
     }
@@ -56,13 +71,47 @@ public class SessionService {
             .toList();
 
         SessionViewResponse.RoundView roundView = null;
-        if (session.getCurrentRoundNumber() != null) {
-            roundView = roundRepository.findBySessionIdAndRoundNumber(sessionId, session.getCurrentRoundNumber())
+        SessionViewResponse.TurnView currentTurnView = null;
+        List<SessionViewResponse.OccupancyView> occupancyViews = List.of();
+
+        Integer roundNumber = session.getCurrentRoundNumber();
+        if (roundNumber != null) {
+            roundView = roundRepository.findBySessionIdAndRoundNumber(sessionId, roundNumber)
                 .map(r -> new SessionViewResponse.RoundView(
                     r.getRoundNumber(), r.getPrompt(), r.getCommonHint(),
                     r.getStartedAt().toEpochMilli(), r.getDeadlineAt().toEpochMilli()
                 ))
                 .orElse(null);
+
+            if ("round".equals(session.getState())) {
+                List<LocationOccupancy> taken = occupancyRepository.findBySessionIdAndRoundNumber(sessionId, roundNumber);
+                occupancyViews = taken.stream()
+                    .map(o -> new SessionViewResponse.OccupancyView(
+                        o.getLocationId(), o.getPlayerId().toString(), o.getCharacterId(), o.isAutoSelected()))
+                    .toList();
+
+                List<String> turnOrder = session.getTurnOrder();
+                int turnIndex = taken.size(); // next turn = number already completed
+                if (turnOrder != null && !turnOrder.isEmpty() && turnIndex < turnOrder.size()) {
+                    String characterId = TurnQueueCalculator.characterIdAt(turnOrder, roundNumber, turnIndex);
+                    Player currentTurnPlayer = session.getPlayers().stream()
+                        .filter(p -> characterId.equals(p.getAssignedCharacterId()))
+                        .findFirst().orElse(null);
+
+                    if (currentTurnPlayer != null) {
+                        List<String> occupiedLocations = taken.stream().map(LocationOccupancy::getLocationId).toList();
+                        List<String> candidates = new ArrayList<>(scenario.locationPool());
+                        candidates.removeAll(occupiedLocations);
+
+                        long deadlineAt = roundTurnService.getTurnDeadline(sessionId, roundNumber, turnIndex)
+                            .map(i -> i.toEpochMilli())
+                            .orElse(0L);
+
+                        currentTurnView = new SessionViewResponse.TurnView(
+                            turnIndex, currentTurnPlayer.getId().toString(), characterId, deadlineAt, candidates);
+                    }
+                }
+            }
         }
 
         SessionViewResponse.MeView meView = null;
@@ -75,14 +124,35 @@ public class SessionService {
                     : null;
 
                 SessionViewResponse.ObjectiveView objectiveView = null;
-                if (cardVisible && session.getCurrentRoundNumber() != null && me.getAssignedCharacterId() != null) {
+                if (cardVisible && roundNumber != null && me.getAssignedCharacterId() != null) {
                     String obj = ObjectiveResolver.resolve(
-                        scenario, me.getAssignedCharacterId(), session.getCurrentRoundNumber()
+                        scenario, me.getAssignedCharacterId(), roundNumber
                     ).orElse(null);
                     if (obj != null) {
                         objectiveView = new SessionViewResponse.ObjectiveView(
-                            session.getCurrentRoundNumber(), scenario.roundCount(), obj
+                            roundNumber, scenario.roundCount(), obj
                         );
+                    }
+                }
+
+                List<SessionViewResponse.ClueView> myClues = List.of();
+                if (cardVisible) {
+                    List<ClueAcl> acls = clueAclRepository.findBySessionIdAndPlayerId(sessionId, me.getId());
+                    if (!acls.isEmpty()) {
+                        List<UUID> clueIds = acls.stream().map(ClueAcl::getClueId).toList();
+                        Map<UUID, Clue> cluesById = clueRepository.findAllById(clueIds).stream()
+                            .collect(Collectors.toMap(Clue::getId, c -> c));
+                        myClues = acls.stream()
+                            .map(acl -> {
+                                Clue c = cluesById.get(acl.getClueId());
+                                if (c == null) return null;
+                                return new SessionViewResponse.ClueView(
+                                    c.getId().toString(), c.getItemId(), c.getTitle(),
+                                    c.getOriginLocationId(), c.getRoundNumberDiscovered(),
+                                    c.getDiscoveredAt().toEpochMilli(), acl.getSource());
+                            })
+                            .filter(java.util.Objects::nonNull)
+                            .toList();
                     }
                 }
 
@@ -91,7 +161,7 @@ public class SessionService {
                     ? me.getTutorialAckedAt().toEpochMilli() : null;
                 meView = new SessionViewResponse.MeView(
                     me.getId().toString(), me.getNickname(), me.isHost(),
-                    assignedCharacterId, characterView, objectiveView, tutorialAckedAtMs
+                    assignedCharacterId, characterView, objectiveView, tutorialAckedAtMs, myClues
                 );
             }
         }
@@ -100,7 +170,7 @@ public class SessionService {
             session.getId().toString(), session.getInviteCode(), session.getScenarioId(),
             session.getPhase(), required, players.size(), players,
             session.getState(), session.getCurrentRoundNumber(), session.getTurnOrder(),
-            roundView, meView
+            roundView, currentTurnView, occupancyViews, meView
         );
     }
 

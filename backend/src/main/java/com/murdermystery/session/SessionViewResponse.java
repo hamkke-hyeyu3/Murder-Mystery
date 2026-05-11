@@ -14,6 +14,8 @@ public record SessionViewResponse(
     Integer currentRoundNumber,
     List<String> turnOrder,
     RoundView round,
+    TurnView currentTurn,
+    List<OccupancyView> locationOccupancy,
     MeView me
 ) {
     public record RoundView(
@@ -24,6 +26,31 @@ public record SessionViewResponse(
         long deadlineAt
     ) {}
 
+    public record TurnView(
+        int turnIndex,
+        String playerId,
+        String characterId,
+        long deadlineAt,
+        List<String> candidateLocationIds
+    ) {}
+
+    public record OccupancyView(
+        String locationId,
+        String playerId,
+        String characterId,
+        boolean autoSelected
+    ) {}
+
+    public record ClueView(
+        String id,
+        String itemId,
+        String title,
+        String originLocationId,
+        int roundNumberDiscovered,
+        long discoveredAt,
+        String source
+    ) {}
+
     public record MeView(
         String playerId,
         String nickname,
@@ -31,7 +58,8 @@ public record SessionViewResponse(
         String assignedCharacterId,
         CharacterCardView character,
         ObjectiveView objective,
-        Long tutorialAckedAt
+        Long tutorialAckedAt,
+        List<ClueView> myClues
     ) {}
 
     public record CharacterCardView(
