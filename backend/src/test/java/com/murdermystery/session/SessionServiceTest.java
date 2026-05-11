@@ -26,6 +26,8 @@ class SessionServiceTest {
 
     private ScenarioRepository scenarioRepo;
     private SessionRepository sessionRepo;
+    private PlayerRepository playerRepo;
+    private RoundRepository roundRepo;
     private InviteCodeGenerator codeGen;
     private TransactionTemplate txTemplate;
     private SessionService service;
@@ -34,6 +36,8 @@ class SessionServiceTest {
     void setUp() {
         scenarioRepo = mock(ScenarioRepository.class);
         sessionRepo = mock(SessionRepository.class);
+        playerRepo = mock(PlayerRepository.class);
+        roundRepo = mock(RoundRepository.class);
         codeGen = mock(InviteCodeGenerator.class);
         // execute callback immediately, no real transaction
         txTemplate = mock(TransactionTemplate.class);
@@ -42,7 +46,7 @@ class SessionServiceTest {
             return callback.doInTransaction(null);
         });
 
-        service = new SessionService(scenarioRepo, sessionRepo, codeGen, txTemplate);
+        service = new SessionService(scenarioRepo, sessionRepo, playerRepo, roundRepo, codeGen, txTemplate);
     }
 
     private Scenario toyManor() {
@@ -155,7 +159,7 @@ class SessionServiceTest {
         UUID unknownId = UUID.randomUUID();
         when(sessionRepo.findById(unknownId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.getSession(unknownId))
+        assertThatThrownBy(() -> service.getSession(unknownId, null))
             .isInstanceOf(SessionNotFoundException.class);
     }
 
@@ -179,12 +183,57 @@ class SessionServiceTest {
         session.addPlayer(bob);
         when(sessionRepo.findById(session.getId())).thenReturn(Optional.of(session));
 
-        SessionViewResponse view = service.getSession(session.getId());
+        SessionViewResponse view = service.getSession(session.getId(), null);
 
         assertThat(view.inviteCode()).isEqualTo("123456");
         assertThat(view.requiredCharacterCount()).isEqualTo(3);
         assertThat(view.joinedCount()).isEqualTo(2);
         assertThat(view.players()).hasSize(2);
+        assertThat(view.state()).isNull();
+        assertThat(view.me()).isNull();
+    }
+
+    @Test
+    void getSession_inProgress_withDeviceId_returnsMeAndRound() {
+        var roundObjective = new com.murdermystery.scenario.RoundObjective(1, "진실을 밝혀라");
+        Scenario scenario = new Scenario(
+            "toy-manor", "Toy Manor", "summary", "🏚️", 60,
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective))),
+            List.of(), List.of(), List.of(), "c1", false, 3,
+            List.of(new com.murdermystery.scenario.Round("라운드 prompt", null, 60))
+        );
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        Session session = new Session("123456", "toy-manor");
+        session.setPhase("in_progress");
+        session.setState("round");
+        session.setCurrentRoundNumber(1);
+        session.setTurnOrder(List.of("c1"));
+
+        UUID deviceId = UUID.randomUUID();
+        Player alice = new Player("alice", true, deviceId);
+        alice.setAssignedCharacterId("c1");
+        session.addPlayer(alice);
+        when(sessionRepo.findById(session.getId())).thenReturn(Optional.of(session));
+        when(playerRepo.findBySessionIdAndDeviceId(session.getId(), deviceId)).thenReturn(Optional.of(alice));
+
+        java.time.Instant now = java.time.Instant.now();
+        java.time.Instant deadline = now.plusSeconds(60);
+        RoundEntity roundEntity = new RoundEntity(session.getId(), 1, "라운드 prompt", null, now, deadline);
+        when(roundRepo.findBySessionIdAndRoundNumber(session.getId(), 1)).thenReturn(Optional.of(roundEntity));
+
+        SessionViewResponse view = service.getSession(session.getId(), deviceId);
+
+        assertThat(view.state()).isEqualTo("round");
+        assertThat(view.currentRoundNumber()).isEqualTo(1);
+        assertThat(view.round()).isNotNull();
+        assertThat(view.round().prompt()).isEqualTo("라운드 prompt");
+        assertThat(view.me()).isNotNull();
+        assertThat(view.me().assignedCharacterId()).isEqualTo("c1");
+        assertThat(view.me().character()).isNotNull();
+        assertThat(view.me().character().name()).isEqualTo("앨리스");
+        assertThat(view.me().objective()).isNotNull();
+        assertThat(view.me().objective().objective()).isEqualTo("진실을 밝혀라");
     }
 
     @Test
@@ -199,5 +248,73 @@ class SessionServiceTest {
         var captor = org.mockito.ArgumentCaptor.forClass(Session.class);
         verify(sessionRepo).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getPlayers().get(0).getNickname()).isEqualTo("alice");
+    }
+
+    @Test
+    void getSession_introState_characterCardHidden() {
+        var roundObjective = new com.murdermystery.scenario.RoundObjective(1, "목표");
+        Scenario scenario = new Scenario(
+            "toy-manor", "Toy Manor", "summary", "🏚️", 60,
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective))),
+            List.of(), List.of(), List.of(), "c1", false, 3, null
+        );
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        Session session = new Session("123456", "toy-manor");
+        session.setPhase("in_progress");
+        session.setState("intro");  // intro state — card must not be exposed
+        session.setTurnOrder(List.of("c1"));
+
+        UUID deviceId = UUID.randomUUID();
+        Player alice = new Player("alice", true, deviceId);
+        alice.setAssignedCharacterId("c1");  // already assigned in DB
+        session.addPlayer(alice);
+        when(sessionRepo.findById(session.getId())).thenReturn(Optional.of(session));
+        when(playerRepo.findBySessionIdAndDeviceId(session.getId(), deviceId)).thenReturn(Optional.of(alice));
+
+        SessionViewResponse view = service.getSession(session.getId(), deviceId);
+
+        assertThat(view.state()).isEqualTo("intro");
+        assertThat(view.me()).isNotNull();
+        assertThat(view.me().assignedCharacterId()).isNull();  // character ID hidden during intro
+        assertThat(view.me().character()).isNull();            // card hidden during intro
+        assertThat(view.me().objective()).isNull();
+    }
+
+    @Test
+    void getSession_introState_withRoundNumber_objectiveAlsoHidden() {
+        var roundObjective = new com.murdermystery.scenario.RoundObjective(1, "목표");
+        Scenario scenario = new Scenario(
+            "toy-manor", "Toy Manor", "summary", "🏚️", 60,
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective))),
+            List.of(), List.of(), List.of(), "c1", false, 3,
+            List.of(new com.murdermystery.scenario.Round("라운드 prompt", null, 60))
+        );
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        Session session = new Session("123456", "toy-manor");
+        session.setPhase("in_progress");
+        session.setState("intro");
+        session.setCurrentRoundNumber(1);  // round already set but still in intro
+        session.setTurnOrder(List.of("c1"));
+
+        UUID deviceId = UUID.randomUUID();
+        Player alice = new Player("alice", true, deviceId);
+        alice.setAssignedCharacterId("c1");
+        session.addPlayer(alice);
+        when(sessionRepo.findById(session.getId())).thenReturn(Optional.of(session));
+        when(playerRepo.findBySessionIdAndDeviceId(session.getId(), deviceId)).thenReturn(Optional.of(alice));
+
+        java.time.Instant now = java.time.Instant.now();
+        RoundEntity roundEntity = new RoundEntity(session.getId(), 1, "라운드 prompt", null, now, now.plusSeconds(60));
+        when(roundRepo.findBySessionIdAndRoundNumber(session.getId(), 1)).thenReturn(Optional.of(roundEntity));
+
+        SessionViewResponse view = service.getSession(session.getId(), deviceId);
+
+        assertThat(view.state()).isEqualTo("intro");
+        assertThat(view.me()).isNotNull();
+        assertThat(view.me().assignedCharacterId()).isNull();
+        assertThat(view.me().character()).isNull();
+        assertThat(view.me().objective()).isNull();  // objective hidden despite currentRoundNumber=1
     }
 }

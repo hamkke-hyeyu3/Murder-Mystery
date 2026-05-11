@@ -67,7 +67,10 @@ export function useResumeSession({ skip = false }: { skip?: boolean } = {}) {
           phase: r.phase,
           players: r.players.map((p) => ({ playerId: p.playerId, nickname: p.nickname, isHost: p.isHost })),
         })
-        navigate(`/lobby/${r.inviteCode}`, { replace: true })
+        navigate(
+          r.phase === 'in_progress' ? `/play/${r.sessionId}` : `/lobby/${r.inviteCode}`,
+          { replace: true }
+        )
       } catch {
         // No resumable session; render the entry page normally.
       }

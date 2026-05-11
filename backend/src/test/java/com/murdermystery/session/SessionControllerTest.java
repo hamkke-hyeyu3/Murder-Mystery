@@ -158,14 +158,37 @@ class SessionControllerTest {
             sessionId, "123456", "toy-manor", "lobby",
             3, 2,
             List.of(new PlayerSummary("p1", "alice", true),
-                    new PlayerSummary("p2", "bob", false))
+                    new PlayerSummary("p2", "bob", false)),
+            null, null, null, null, null
+        );
+    }
+
+    private SessionViewResponse sampleInProgressViewResponse(String sessionId) {
+        SessionViewResponse.RoundView round = new SessionViewResponse.RoundView(
+            1, "자신을 소개해주세요", "공통 힌트", 1000L, 61000L
+        );
+        SessionViewResponse.ObjectiveView objective = new SessionViewResponse.ObjectiveView(
+            1, 3, "진실을 밝혀라"
+        );
+        SessionViewResponse.CharacterCardView character = new SessionViewResponse.CharacterCardView(
+            "char-a", "알리스", 0, null, null, null, null, null, null, null, List.of()
+        );
+        SessionViewResponse.MeView me = new SessionViewResponse.MeView(
+            "p1", "alice", true, "char-a", character, objective, null
+        );
+        return new SessionViewResponse(
+            sessionId, "123456", "toy-manor", "in_progress",
+            3, 3,
+            List.of(new PlayerSummary("p1", "alice", true)),
+            "round", 1, List.of("char-a", "char-b", "char-c"),
+            round, me
         );
     }
 
     @Test
     void get_happyPath_returnsAllFieldsIncludingCounts() throws Exception {
         UUID sessionId = UUID.randomUUID();
-        when(service.getSession(sessionId)).thenReturn(sampleViewResponse(sessionId.toString()));
+        when(service.getSession(eq(sessionId), any())).thenReturn(sampleViewResponse(sessionId.toString()));
 
         mvc.perform(get("/api/sessions/" + sessionId))
             .andExpect(status().isOk())
@@ -174,13 +197,36 @@ class SessionControllerTest {
             .andExpect(jsonPath("$.requiredCharacterCount").value(3))
             .andExpect(jsonPath("$.joinedCount").value(2))
             .andExpect(jsonPath("$.players").isArray())
-            .andExpect(jsonPath("$.players.length()").value(2));
+            .andExpect(jsonPath("$.players.length()").value(2))
+            .andExpect(jsonPath("$.state").doesNotExist())
+            .andExpect(jsonPath("$.round").doesNotExist())
+            .andExpect(jsonPath("$.me").doesNotExist());
+    }
+
+    @Test
+    void get_inProgress_withDeviceId_includesSnapshotFields() throws Exception {
+        UUID sessionId = UUID.randomUUID();
+        UUID deviceId = UUID.randomUUID();
+        when(service.getSession(eq(sessionId), eq(deviceId)))
+            .thenReturn(sampleInProgressViewResponse(sessionId.toString()));
+
+        mvc.perform(get("/api/sessions/" + sessionId)
+                .header("X-Device-Id", deviceId.toString()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.phase").value("in_progress"))
+            .andExpect(jsonPath("$.state").value("round"))
+            .andExpect(jsonPath("$.currentRoundNumber").value(1))
+            .andExpect(jsonPath("$.round.prompt").value("자신을 소개해주세요"))
+            .andExpect(jsonPath("$.round.deadlineAt").value(61000))
+            .andExpect(jsonPath("$.me.playerId").value("p1"))
+            .andExpect(jsonPath("$.me.character.characterId").value("char-a"))
+            .andExpect(jsonPath("$.me.objective.objective").value("진실을 밝혀라"));
     }
 
     @Test
     void get_unknownSessionId_returns404() throws Exception {
         UUID sessionId = UUID.randomUUID();
-        when(service.getSession(sessionId)).thenThrow(new SessionNotFoundException(sessionId.toString()));
+        when(service.getSession(eq(sessionId), any())).thenThrow(new SessionNotFoundException(sessionId.toString()));
 
         mvc.perform(get("/api/sessions/" + sessionId))
             .andExpect(status().isNotFound())

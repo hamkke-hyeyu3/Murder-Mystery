@@ -1,9 +1,7 @@
 package com.murdermystery.session;
 
 import com.murdermystery.scenario.Round;
-import com.murdermystery.scenario.RoundObjective;
 import com.murdermystery.scenario.Scenario;
-import com.murdermystery.scenario.ScenarioCharacter;
 import com.murdermystery.scenario.ScenarioRepository;
 import com.murdermystery.ws.event.ObjectiveUpdatedPayload;
 import com.murdermystery.ws.event.RoundStartedPayload;
@@ -16,8 +14,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 import java.util.UUID;
 
 @Service
@@ -95,22 +91,11 @@ public class RoundService {
 
             String inviteCode = session.getInviteCode();
             int totalRounds = scenario.roundCount();
-            Map<String, String> charObjectiveMap = new HashMap<>();
-            scenario.characters().stream()
-                .filter(c -> c.objectivesByRound() != null)
-                .forEach(c -> charObjectiveMap.put(
-                    c.id(),
-                    c.objectivesByRound().stream()
-                        .filter(o -> o.round() == roundNumber)
-                        .findFirst()
-                        .map(RoundObjective::text)
-                        .orElse(null)
-                ));
             List<PlayerObjective> playerObjectives = session.getPlayers().stream()
                 .filter(p -> p.getAssignedCharacterId() != null)
                 .map(p -> new PlayerObjective(
                     p.getId().toString(),
-                    charObjectiveMap.getOrDefault(p.getAssignedCharacterId(), null)
+                    ObjectiveResolver.resolve(scenario, p.getAssignedCharacterId(), roundNumber).orElse(null)
                 ))
                 .toList();
 

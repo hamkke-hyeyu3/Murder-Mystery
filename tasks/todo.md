@@ -219,8 +219,10 @@
 
 - [ ] **T-18** 재합류 슬롯 재바인딩 + 풀 스테이트 스냅샷 ⚠️ *최고 위험*
   - [ ] BE: `POST /api/sessions/{inviteCode}/join` — 5개 상태 분기 (lobby 신규·충돌, in_progress 기존·신규, ended)
-  - [ ] BE: `SESSION_SNAPSHOT` DTO 완전성 (character·clues·accessClues·missionResults·tutorialAcked·currentPrivateTalk·latestBanners)
-  - [ ] FE: 부팅 시 `mm:lastSession` 자동 재합류 시도 + stores hydrate + 호스트 권한 복원
+  - [x] BE: `GET /api/sessions/{id}` 스냅샷 확장 — state·currentRoundNumber·turnOrder·round(prompt/commonHint/deadlineAt)·me(character/objective/tutorialAckedAt) (T-08까지 구현; clues·missionResults·banners·currentPrivateTalk는 T-09~T-13 구현 시 점진 추가)
+  - [x] FE: `Play.tsx` 마운트 시 store 비면 `GET /api/sessions/{id}` 스냅샷 fetch + stores(session/card/timer) hydrate
+  - [x] FE: `useResumeSession` — phase=in_progress이면 `/play/:sessionId`로 직접 navigate (기존 lobby 우회)
+  - [ ] FE: 부팅 시 `mm:lastSession` 자동 재합류 시도 + stores hydrate + 호스트 권한 복원 (기존 by-device 경로와 통합 필요)
   - [ ] 검증: `RejoinServiceTest` 6 분기, `useAutoRejoin.test.ts`, 수동(브라우저 강제 종료 후 재진입)
   - **PR 리뷰 체크리스트:** 새 필드 추가 시 snapshot DTO에 동시 추가 확인
 

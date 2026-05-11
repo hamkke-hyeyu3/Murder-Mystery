@@ -48,8 +48,10 @@ public class SessionController {
     }
 
     @GetMapping("/{sessionId}")
-    public SessionViewResponse get(@PathVariable String sessionId) {
-        return sessionService.getSession(UUID.fromString(sessionId));
+    public SessionViewResponse get(
+            @PathVariable String sessionId,
+            @RequestHeader(value = "X-Device-Id", required = false) String deviceIdHeader) {
+        return sessionService.getSession(UUID.fromString(sessionId), parseDeviceId(deviceIdHeader));
     }
 
     @PostMapping("/{sessionId}/start")

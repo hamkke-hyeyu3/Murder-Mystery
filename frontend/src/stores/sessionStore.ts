@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { SessionViewResponse } from '@/types/session'
 
 export interface PlayerSummary {
   playerId: string
@@ -30,6 +31,7 @@ export interface SessionState {
 
 interface SessionActions {
   setSession: (patch: Partial<SessionState>) => void
+  hydrateFromSnapshot: (snap: SessionViewResponse) => void
   reset: () => void
 }
 
@@ -58,5 +60,28 @@ const initialState: SessionState = {
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({
   ...initialState,
   setSession: (patch) => set((state) => ({ ...state, ...patch })),
+  hydrateFromSnapshot: (snap) => set((state) => ({
+    ...state,
+    sessionId: snap.sessionId,
+    inviteCode: snap.inviteCode,
+    phase: snap.phase,
+    state: snap.state ?? state.state,
+    turnOrder: snap.turnOrder ?? state.turnOrder,
+    players: snap.players.map((p) => ({ playerId: p.playerId, nickname: p.nickname, isHost: p.isHost })),
+    joinedCount: snap.joinedCount,
+    requiredCharacterCount: snap.requiredCharacterCount,
+    ...(snap.me != null ? {
+      playerId: snap.me.playerId,
+      nickname: snap.me.nickname,
+      isHost: snap.me.isHost,
+      isHostConfirmed: true,
+      myTutorialAcked: snap.me.tutorialAckedAt != null,
+    } : {}),
+    ...(snap.round != null ? {
+      roundNumber: snap.round.roundNumber,
+      roundPrompt: snap.round.prompt,
+      roundCommonHint: snap.round.commonHint,
+    } : {}),
+  })),
   reset: () => set(initialState),
 }))

@@ -9,6 +9,7 @@ import Play from './Play'
 vi.mock('@/hooks/useSessionWebSocket')
 vi.mock('@/lib/sessionApi', () => ({
   postTutorialAck: vi.fn().mockResolvedValue({ acked: 1, total: 3, state: 'tutorial' }),
+  getSession: vi.fn(() => new Promise(() => {})),  // pending by default; override per test
 }))
 
 const mockUseSessionWebSocket = vi.mocked(useSessionWebSocket)

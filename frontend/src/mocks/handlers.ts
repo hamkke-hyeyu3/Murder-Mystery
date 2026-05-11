@@ -41,6 +41,11 @@ export const defaultSessionViewResponse: SessionViewResponse = {
   requiredCharacterCount: 3,
   joinedCount: 1,
   players: [{ playerId: 'player-default', nickname: 'alice', isHost: true }],
+  state: null,
+  currentRoundNumber: null,
+  turnOrder: null,
+  round: null,
+  me: null,
 }
 
 export const handlers = [

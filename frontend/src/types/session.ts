@@ -40,6 +40,30 @@ export type JoinSessionResponse = {
   players: PlayerSummaryDto[]
 }
 
+export type RoundView = {
+  roundNumber: number
+  prompt: string
+  commonHint: string | null
+  startedAt: number
+  deadlineAt: number
+}
+
+export type ObjectiveView = {
+  roundNumber: number
+  totalRounds: number
+  objective: string | null
+}
+
+export type MeView = {
+  playerId: string
+  nickname: string
+  isHost: boolean
+  assignedCharacterId: string | null
+  character: CharacterCardPayload | null
+  objective: ObjectiveView | null
+  tutorialAckedAt: number | null
+}
+
 export type SessionViewResponse = {
   sessionId: string
   inviteCode: string
@@ -48,6 +72,11 @@ export type SessionViewResponse = {
   requiredCharacterCount: number
   joinedCount: number
   players: PlayerSummaryDto[]
+  state?: string | null
+  currentRoundNumber?: number | null
+  turnOrder?: string[] | null
+  round?: RoundView | null
+  me?: MeView | null
 }
 
 export type ResumeResponse = {

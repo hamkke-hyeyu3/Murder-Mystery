@@ -1,4 +1,5 @@
-import { useParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
@@ -6,10 +7,11 @@ import { useTimerStore } from '@/stores/timerStore'
 import { Tutorial } from '@/components/Tutorial'
 import { RoundPanel } from '@/components/RoundPanel'
 import { CharacterCard } from '@/components/CharacterCard'
-import { postTutorialAck } from '@/lib/sessionApi'
+import { postTutorialAck, getSession } from '@/lib/sessionApi'
 
 export default function Play() {
   const { sessionId } = useParams<{ sessionId: string }>()
+  const navigate = useNavigate()
 
   const inviteCode = useSessionStore((s) => s.inviteCode)
   const nickname = useSessionStore((s) => s.nickname)
@@ -23,9 +25,30 @@ export default function Play() {
   const roundPrompt = useSessionStore((s) => s.roundPrompt)
   const roundCommonHint = useSessionStore((s) => s.roundCommonHint)
   const setSession = useSessionStore((s) => s.setSession)
+  const storeSessionId = useSessionStore((s) => s.sessionId)
+  const hydrateFromSnapshot = useSessionStore((s) => s.hydrateFromSnapshot)
   const characterCard = useCardStore((s) => s.characterCard)
+  const setCharacterCard = useCardStore((s) => s.setCharacterCard)
+  const setObjective = useCardStore((s) => s.setObjective)
   const deadlineAt = useTimerStore((s) => s.deadlineAt)
   const serverOffsetMs = useTimerStore((s) => s.serverOffsetMs)
+  const setDeadline = useTimerStore((s) => s.setDeadline)
+
+  useEffect(() => {
+    if (!sessionId || (storeSessionId === sessionId && state && characterCard)) return
+    let cancelled = false
+    getSession(sessionId)
+      .then((snap) => {
+        if (cancelled) return
+        if (!snap.me) { navigate('/'); return }
+        hydrateFromSnapshot(snap)
+        if (snap.me.character) setCharacterCard(snap.me.character)
+        if (snap.me.objective) setObjective(snap.me.objective)
+        if (snap.round) setDeadline(snap.round.deadlineAt)
+      })
+      .catch(() => { if (!cancelled) navigate('/') })
+    return () => { cancelled = true }
+  }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 

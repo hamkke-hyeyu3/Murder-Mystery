@@ -48,6 +48,11 @@ const matchingView: SessionViewResponse = {
   requiredCharacterCount: 3,
   joinedCount: 1,
   players: [{ playerId: 'player-001', nickname: 'alice', isHost: true }],
+  state: null,
+  currentRoundNumber: null,
+  turnOrder: null,
+  round: null,
+  me: null,
 }
 
 describe('useResumeSession', () => {
@@ -149,11 +154,13 @@ describe('useResumeSession', () => {
 
   it('unmount 후 응답 도착 시 store/navigate 둘 다 건드리지 않는다 (cancelled flag)', async () => {
     const paths: string[] = []
-    let resolveResume: ((res: HttpResponse) => void) | null = null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let resolveResume: ((res: HttpResponse<any>) => void) | null = null
     const handlerCalled = new Promise<void>((notifyCalled) => {
       server.use(
         http.get('/api/sessions/by-device', () =>
-          new Promise<HttpResponse>((resolve) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          new Promise<HttpResponse<any>>((resolve) => {
             resolveResume = resolve
             notifyCalled()
           })
@@ -175,5 +182,37 @@ describe('useResumeSession', () => {
 
     expect(useSessionStore.getState().sessionId).toBeNull()
     expect(paths).not.toContain('/lobby/012345')
+  })
+
+  it('phase=in_progress이면 /play/:sessionId로 navigate한다 (by-device)', async () => {
+    const paths: string[] = []
+    const inProgressResume: ResumeResponse = {
+      ...validResume,
+      phase: 'in_progress',
+    }
+    server.use(
+      http.get('/api/sessions/by-device', () => HttpResponse.json(inProgressResume)),
+    )
+
+    renderHook(() => useResumeSession(), { wrapper: makeWrapper((p) => paths.push(p)) })
+
+    await waitFor(() => expect(paths).toContain('/play/sess-001'))
+    expect(useSessionStore.getState().phase).toBe('in_progress')
+  })
+
+  it('phase=in_progress이면 /play/:sessionId로 navigate한다 (localStorage fallback)', async () => {
+    const paths: string[] = []
+    localStorage.setItem(LAST_SESSION_KEY, JSON.stringify(validLastSession))
+    const inProgressView: SessionViewResponse = {
+      ...matchingView,
+      phase: 'in_progress',
+    }
+    server.use(
+      http.get('/api/sessions/sess-001', () => HttpResponse.json(inProgressView)),
+    )
+
+    renderHook(() => useResumeSession(), { wrapper: makeWrapper((p) => paths.push(p)) })
+
+    await waitFor(() => expect(paths).toContain('/play/sess-001'))
   })
 })

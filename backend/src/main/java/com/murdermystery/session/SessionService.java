@@ -1,5 +1,8 @@
 package com.murdermystery.session;
 
+import com.murdermystery.scenario.Scenario;
+import com.murdermystery.scenario.ScenarioCharacter;
+import com.murdermystery.scenario.ScenarioLocation;
 import com.murdermystery.scenario.ScenarioRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,50 +10,130 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
 @Service
 public class SessionService {
 
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
     private static final int INVITE_CODE_RETRY_LIMIT = 5;
+    private static final Set<String> CARD_VISIBLE_STATES = Set.of("character_assignment", "tutorial", "round");
 
     private final ScenarioRepository scenarioRepository;
     private final SessionRepository sessionRepository;
+    private final PlayerRepository playerRepository;
+    private final RoundRepository roundRepository;
     private final InviteCodeGenerator inviteCodeGenerator;
     private final TransactionTemplate transactionTemplate;
 
     public SessionService(
         ScenarioRepository scenarioRepository,
         SessionRepository sessionRepository,
+        PlayerRepository playerRepository,
+        RoundRepository roundRepository,
         InviteCodeGenerator inviteCodeGenerator,
         TransactionTemplate transactionTemplate
     ) {
         this.scenarioRepository = scenarioRepository;
         this.sessionRepository = sessionRepository;
+        this.playerRepository = playerRepository;
+        this.roundRepository = roundRepository;
         this.inviteCodeGenerator = inviteCodeGenerator;
         this.transactionTemplate = transactionTemplate;
     }
 
-    public SessionViewResponse getSession(java.util.UUID sessionId) {
+    public SessionViewResponse getSession(UUID sessionId, UUID deviceId) {
         Session session = sessionRepository.findById(sessionId)
             .orElseThrow(() -> new SessionNotFoundException(sessionId.toString()));
-        int required = scenarioRepository.findById(session.getScenarioId())
-            .orElseThrow(() -> new IllegalStateException("scenario not found: " + session.getScenarioId()))
-            .characters().size();
-        java.util.List<PlayerSummary> players = session.getPlayers().stream()
+        Scenario scenario = scenarioRepository.findById(session.getScenarioId())
+            .orElseThrow(() -> new SessionNotFoundException("scenario not found: " + session.getScenarioId()));
+
+        int required = scenario.characters().size();
+        List<PlayerSummary> players = session.getPlayers().stream()
             .map(p -> new PlayerSummary(p.getId().toString(), p.getNickname(), p.isHost()))
             .toList();
+
+        SessionViewResponse.RoundView roundView = null;
+        if (session.getCurrentRoundNumber() != null) {
+            roundView = roundRepository.findBySessionIdAndRoundNumber(sessionId, session.getCurrentRoundNumber())
+                .map(r -> new SessionViewResponse.RoundView(
+                    r.getRoundNumber(), r.getPrompt(), r.getCommonHint(),
+                    r.getStartedAt().toEpochMilli(), r.getDeadlineAt().toEpochMilli()
+                ))
+                .orElse(null);
+        }
+
+        SessionViewResponse.MeView meView = null;
+        if (deviceId != null) {
+            Player me = playerRepository.findBySessionIdAndDeviceId(sessionId, deviceId).orElse(null);
+            if (me != null) {
+                boolean cardVisible = CARD_VISIBLE_STATES.contains(session.getState());
+                SessionViewResponse.CharacterCardView characterView = cardVisible
+                    ? buildCharacterCardView(scenario, me.getAssignedCharacterId(), session.getTurnOrder())
+                    : null;
+
+                SessionViewResponse.ObjectiveView objectiveView = null;
+                if (cardVisible && session.getCurrentRoundNumber() != null && me.getAssignedCharacterId() != null) {
+                    String obj = ObjectiveResolver.resolve(
+                        scenario, me.getAssignedCharacterId(), session.getCurrentRoundNumber()
+                    ).orElse(null);
+                    if (obj != null) {
+                        objectiveView = new SessionViewResponse.ObjectiveView(
+                            session.getCurrentRoundNumber(), scenario.roundCount(), obj
+                        );
+                    }
+                }
+
+                String assignedCharacterId = cardVisible ? me.getAssignedCharacterId() : null;
+                Long tutorialAckedAtMs = me.getTutorialAckedAt() != null
+                    ? me.getTutorialAckedAt().toEpochMilli() : null;
+                meView = new SessionViewResponse.MeView(
+                    me.getId().toString(), me.getNickname(), me.isHost(),
+                    assignedCharacterId, characterView, objectiveView, tutorialAckedAtMs
+                );
+            }
+        }
+
         return new SessionViewResponse(
-            session.getId().toString(),
-            session.getInviteCode(),
-            session.getScenarioId(),
-            session.getPhase(),
-            required,
-            players.size(),
-            players
+            session.getId().toString(), session.getInviteCode(), session.getScenarioId(),
+            session.getPhase(), required, players.size(), players,
+            session.getState(), session.getCurrentRoundNumber(), session.getTurnOrder(),
+            roundView, meView
         );
     }
 
-    public CreateSessionResponse createSession(String scenarioId, String hostNickname, java.util.UUID deviceId) {
+    private SessionViewResponse.CharacterCardView buildCharacterCardView(
+            Scenario scenario, String characterId, List<String> turnOrder) {
+        if (characterId == null || scenario == null || scenario.characters() == null) return null;
+
+        ScenarioCharacter ch = scenario.characters().stream()
+            .filter(c -> characterId.equals(c.id()))
+            .findFirst()
+            .orElse(null);
+        if (ch == null) return null;
+
+        int turnOrderIndex = (turnOrder != null) ? turnOrder.indexOf(characterId) : -1;
+
+        SessionViewResponse.LocationRef alibiLocation = null;
+        if (ch.alibiLocationId() != null && scenario.locations() != null) {
+            alibiLocation = scenario.locations().stream()
+                .filter(l -> ch.alibiLocationId().equals(l.id()))
+                .findFirst()
+                .map(l -> new SessionViewResponse.LocationRef(l.id(), l.name(), l.icon()))
+                .orElse(null);
+        }
+
+        return new SessionViewResponse.CharacterCardView(
+            characterId, ch.name(), turnOrderIndex,
+            ch.speechStyle(), ch.background(), ch.motive(),
+            ch.alibi(), ch.secret(), ch.relationships(),
+            alibiLocation, List.of()
+        );
+    }
+
+    public CreateSessionResponse createSession(String scenarioId, String hostNickname, UUID deviceId) {
         scenarioRepository.findById(scenarioId)
             .orElseThrow(() -> new IllegalArgumentException("unknown scenario: " + scenarioId));
 
