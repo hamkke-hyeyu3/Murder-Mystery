@@ -97,7 +97,10 @@ public class SessionStompController {
         if (rawRecipients == null || rawRecipients.isEmpty()) return;
         try {
             List<UUID> recipientIds = new ArrayList<>(rawRecipients.size());
-            for (String raw : rawRecipients) recipientIds.add(UUID.fromString(raw));
+            for (String raw : rawRecipients) {
+                if (raw == null) return;
+                recipientIds.add(UUID.fromString(raw));
+            }
             itemService.sharePartial(
                 UUID.fromString(sessionId),
                 UUID.fromString(sp.playerId()),
@@ -105,8 +108,8 @@ public class SessionStompController {
                 recipientIds,
                 sp.inviteCode()
             );
-        } catch (IllegalArgumentException | NullPointerException e) {
-            // malformed or null UUID in payload — ignore to prevent STOMP session kill
+        } catch (IllegalArgumentException e) {
+            // malformed UUID in payload — ignore to prevent STOMP session kill
         }
     }
 }
