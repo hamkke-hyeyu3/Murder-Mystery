@@ -32,6 +32,9 @@ public class Clue {
     @Column(name = "discovered_at", nullable = false)
     private Instant discoveredAt;
 
+    @Column(name = "current_owner_player_id", nullable = false)
+    private UUID currentOwnerPlayerId;
+
     protected Clue() {}
 
     public Clue(UUID sessionId, int roundNumberDiscovered, String itemId,
@@ -43,6 +46,7 @@ public class Clue {
         this.title = title;
         this.discoveredByPlayerId = discoveredByPlayerId;
         this.discoveredAt = discoveredAt;
+        this.currentOwnerPlayerId = discoveredByPlayerId;
     }
 
     public UUID getId() { return id; }
@@ -53,4 +57,6 @@ public class Clue {
     public String getTitle() { return title; }
     public UUID getDiscoveredByPlayerId() { return discoveredByPlayerId; }
     public Instant getDiscoveredAt() { return discoveredAt; }
+    public UUID getCurrentOwnerPlayerId() { return currentOwnerPlayerId; }
+    public void setCurrentOwnerPlayerId(UUID currentOwnerPlayerId) { this.currentOwnerPlayerId = currentOwnerPlayerId; }
 }
