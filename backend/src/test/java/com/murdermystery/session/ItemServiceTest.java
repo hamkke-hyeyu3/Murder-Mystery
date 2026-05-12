@@ -11,6 +11,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -381,6 +382,96 @@ class ItemServiceTest {
         service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "ABCDEF");
 
         verify(itemActionRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    // ── S4 sharePartial ─────────────────────────────────────────────────────────
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void sharePartial_happyPath_grantsAclsToRecipientsAndBroadcasts() {
+        // alice owns X, shares to [bob, charlie]; alice already has ACL
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, ALICE_ID))).thenReturn(Optional.of(mock(ClueAcl.class)));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, BOB_ID))).thenReturn(Optional.empty());
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, CHARLIE_ID))).thenReturn(Optional.empty());
+
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, List.of(BOB_ID, CHARLIE_ID), "ABCDEF");
+
+        verify(clueAclRepo, times(2)).save(any(ClueAcl.class)); // X-bob, X-charlie
+        verify(itemActionRepo).save(any(ItemAction.class));
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ITEM_SHARED_PARTIAL"), any());
+        ArgumentCaptor<CluePayload> clueCaptor = ArgumentCaptor.forClass(CluePayload.class);
+        verify(eventPublisher, times(2)).publishToPlayer(
+            eq("ABCDEF"), any(), eq(SESSION_ID.toString()), eq("CLUE_DELIVERED"), clueCaptor.capture());
+        assertThat(clueCaptor.getAllValues()).allMatch(p -> "share_partial".equals(p.source()));
+        verify(eventPublisher, never()).publishToPlayer(any(), eq(ALICE_ID.toString()),
+            any(), eq("CLUE_DELIVERED"), any());
+        // ownership unchanged
+        assertThat(xClue.getCurrentOwnerPlayerId()).isEqualTo(ALICE_ID);
+    }
+
+    @Test
+    void sharePartial_partialPriorAcl_grantsNewOnlyAndDeliversOnlyToNew() {
+        // bob already has ACL, charlie does not
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, ALICE_ID))).thenReturn(Optional.of(mock(ClueAcl.class)));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, BOB_ID))).thenReturn(Optional.of(mock(ClueAcl.class)));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, CHARLIE_ID))).thenReturn(Optional.empty());
+
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, List.of(BOB_ID, CHARLIE_ID), "ABCDEF");
+
+        verify(clueAclRepo, times(1)).save(any(ClueAcl.class)); // X-charlie only
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ITEM_SHARED_PARTIAL"), any());
+        verify(eventPublisher, times(1)).publishToPlayer(eq("ABCDEF"), eq(CHARLIE_ID.toString()),
+            any(), eq("CLUE_DELIVERED"), any());
+        verify(eventPublisher, never()).publishToPlayer(any(), eq(BOB_ID.toString()),
+            any(), eq("CLUE_DELIVERED"), any());
+    }
+
+    @Test
+    void sharePartial_actorNotOwner_noOp() {
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, BOB_ID); // bob owns X, not alice
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, List.of(BOB_ID, CHARLIE_ID), "ABCDEF");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void sharePartial_recipientsIncludeActor_filtersOutActor() {
+        // alice is in the recipient list — should be silently excluded
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, ALICE_ID))).thenReturn(Optional.of(mock(ClueAcl.class)));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, BOB_ID))).thenReturn(Optional.empty());
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, CHARLIE_ID))).thenReturn(Optional.empty());
+
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, List.of(ALICE_ID, BOB_ID, CHARLIE_ID), "ABCDEF");
+
+        verify(clueAclRepo, times(2)).save(any(ClueAcl.class)); // bob, charlie only
+        verify(eventPublisher, never()).publishToPlayer(any(), eq(ALICE_ID.toString()),
+            any(), eq("CLUE_DELIVERED"), any());
+    }
+
+    @Test
+    void sharePartial_emptyRecipients_noOp() {
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, List.of(), "ABCDEF");
+
+        verify(sessionRepo, never()).findByIdForUpdate(any());
+        verify(clueAclRepo, never()).save(any());
         verify(eventPublisher, never()).publish(any(), any(), any());
     }
 

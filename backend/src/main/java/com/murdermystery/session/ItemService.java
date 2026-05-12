@@ -3,13 +3,16 @@ package com.murdermystery.session;
 import com.murdermystery.ws.event.CluePayload;
 import com.murdermystery.ws.event.ItemExchangedPayload;
 import com.murdermystery.ws.event.ItemSharedFullPayload;
+import com.murdermystery.ws.event.ItemSharedPartialPayload;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -187,12 +190,105 @@ public class ItemService {
         }
     }
 
+    public void sharePartial(UUID sessionId, UUID actorId, UUID clueId,
+                             List<UUID> recipientPlayerIds, String inviteCode) {
+        if (recipientPlayerIds == null || recipientPlayerIds.isEmpty()) return;
+
+        SharePartialBundle bundle = transactionTemplate.execute(status -> {
+            Session session = sessionRepository.findByIdForUpdate(sessionId).orElse(null);
+            if (session == null
+                    || !"in_progress".equals(session.getPhase())
+                    || !"round".equals(session.getState())
+                    || !session.getInviteCode().equals(inviteCode)) {
+                return null;
+            }
+
+            Clue clue = clueRepository.findById(clueId).orElse(null);
+            if (clue == null) return null;
+            if (!clue.getSessionId().equals(sessionId)) return null;
+            if (!clue.getCurrentOwnerPlayerId().equals(actorId)) return null;
+
+            Set<UUID> sessionPlayerIds = new LinkedHashSet<>();
+            for (Player p : session.getPlayers()) sessionPlayerIds.add(p.getId());
+
+            // dedup + exclude actor + restrict to session members
+            Set<UUID> sanitizedSet = new LinkedHashSet<>();
+            for (UUID id : recipientPlayerIds) {
+                if (!id.equals(actorId) && sessionPlayerIds.contains(id)) sanitizedSet.add(id);
+            }
+            if (sanitizedSet.isEmpty()) return null;
+            List<UUID> sanitized = new ArrayList<>(sanitizedSet);
+
+            Instant now = clock.instant();
+            List<UUID> newAclRecipients = new ArrayList<>();
+
+            for (UUID recipientId : sanitized) {
+                if (clueAclRepository.findById(new ClueAclId(clueId, recipientId)).isEmpty()) {
+                    clueAclRepository.save(new ClueAcl(clueId, recipientId, now, "share_partial"));
+                    newAclRecipients.add(recipientId);
+                }
+            }
+
+            ItemAction action = itemActionRepository.save(new ItemAction(
+                sessionId, session.getCurrentRoundNumber(), "share_partial",
+                actorId, null, clueId, null, sanitized, now));
+
+            String actorNickname = session.getPlayers().stream()
+                .filter(p -> p.getId().equals(actorId))
+                .map(Player::getNickname)
+                .findFirst().orElse("");
+
+            List<ItemSharedPartialPayload.RecipientView> recipientViews = new ArrayList<>();
+            for (UUID rId : sanitized) {
+                String nick = session.getPlayers().stream()
+                    .filter(p -> p.getId().equals(rId))
+                    .map(Player::getNickname)
+                    .findFirst().orElse("");
+                recipientViews.add(new ItemSharedPartialPayload.RecipientView(rId.toString(), nick));
+            }
+
+            return new SharePartialBundle(actorNickname, session.getCurrentRoundNumber(),
+                action.getId(), now, newAclRecipients, recipientViews, clue);
+        });
+
+        if (bundle == null) return;
+
+        eventPublisher.publish(sessionId.toString(), "ITEM_SHARED_PARTIAL", new ItemSharedPartialPayload(
+            actorId.toString(), bundle.actorNickname(),
+            clueId.toString(), bundle.roundNumber(),
+            bundle.recipientViews(),
+            bundle.actionId().toString(), bundle.occurredAt().toEpochMilli()
+        ));
+
+        Clue clue = bundle.clue();
+        for (UUID recipientId : bundle.newAclRecipients()) {
+            try {
+                eventPublisher.publishToPlayer(
+                    inviteCode, recipientId.toString(), sessionId.toString(),
+                    "CLUE_DELIVERED", new CluePayload(
+                        clue.getId().toString(), clue.getItemId(), clue.getTitle(),
+                        clue.getOriginLocationId(), clue.getRoundNumberDiscovered(),
+                        clue.getDiscoveredAt().toEpochMilli(), "share_partial"));
+            } catch (Exception ignored) {
+                // ACL already committed — recipient recovers via snapshot on reconnect
+            }
+        }
+    }
+
     private record NewAcl(UUID clueId, UUID playerId) {}
 
     private record ShareFullBundle(
         String actorNickname, int roundNumber,
         UUID actionId, Instant occurredAt,
         List<UUID> newAclPlayerIds, Clue clue
+    ) {}
+
+    private record SharePartialBundle(
+        String actorNickname, int roundNumber,
+        UUID actionId, Instant occurredAt,
+        List<UUID> newAclRecipients,
+        List<ItemSharedPartialPayload.RecipientView> recipientViews,
+        Clue clue
     ) {}
 
     private record ExchangeBundle(

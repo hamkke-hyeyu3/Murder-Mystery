@@ -10,6 +10,8 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Controller
@@ -78,6 +80,29 @@ public class SessionStompController {
                 UUID.fromString(sessionId),
                 UUID.fromString(sp.playerId()),
                 UUID.fromString(request.clueId()),
+                sp.inviteCode()
+            );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID in payload — ignore to prevent STOMP session kill
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/item-share-partial")
+    public void itemSharePartial(@DestinationVariable String sessionId,
+                                 @Payload ItemSharePartialRequest request,
+                                 Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        if (request.clueId() == null) return;
+        List<String> rawRecipients = request.recipientPlayerIds();
+        if (rawRecipients == null || rawRecipients.isEmpty()) return;
+        try {
+            List<UUID> recipientIds = new ArrayList<>(rawRecipients.size());
+            for (String raw : rawRecipients) recipientIds.add(UUID.fromString(raw));
+            itemService.sharePartial(
+                UUID.fromString(sessionId),
+                UUID.fromString(sp.playerId()),
+                UUID.fromString(request.clueId()),
+                recipientIds,
                 sp.inviteCode()
             );
         } catch (IllegalArgumentException e) {
