@@ -64,4 +64,21 @@ public class SessionStompController {
             // malformed UUID in payload — ignore to prevent STOMP session kill
         }
     }
+
+    @MessageMapping("/session/{sessionId}/item-share-full")
+    public void itemShareFull(@DestinationVariable String sessionId,
+                              @Payload ItemShareFullRequest request,
+                              Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        try {
+            itemService.shareFull(
+                UUID.fromString(sessionId),
+                UUID.fromString(sp.playerId()),
+                UUID.fromString(request.clueId()),
+                sp.inviteCode()
+            );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID in payload — ignore to prevent STOMP session kill
+        }
+    }
 }

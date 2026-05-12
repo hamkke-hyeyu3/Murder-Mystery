@@ -32,6 +32,7 @@ class ItemServiceTest {
     private static final UUID SESSION_ID = UUID.randomUUID();
     private static final UUID ALICE_ID = UUID.randomUUID();
     private static final UUID BOB_ID = UUID.randomUUID();
+    private static final UUID CHARLIE_ID = UUID.randomUUID();
     private static final UUID X_CLUE_ID = UUID.randomUUID();
     private static final UUID Y_CLUE_ID = UUID.randomUUID();
     private static final Instant FIXED_NOW = Instant.parse("2026-01-01T10:00:00Z");
@@ -66,6 +67,23 @@ class ItemServiceTest {
         setId(bob, BOB_ID);
         s.addPlayer(alice);
         s.addPlayer(bob);
+        return s;
+    }
+
+    private Session threePlayerInProgressRoundSession() {
+        Session s = new Session("ABCDEF", "toy-manor");
+        s.setPhase("in_progress");
+        s.setState("round");
+        s.setCurrentRoundNumber(1);
+        Player alice = new Player("alice", true, UUID.randomUUID());
+        Player bob = new Player("bob", false, UUID.randomUUID());
+        Player charlie = new Player("charlie", false, UUID.randomUUID());
+        setId(alice, ALICE_ID);
+        setId(bob, BOB_ID);
+        setId(charlie, CHARLIE_ID);
+        s.addPlayer(alice);
+        s.addPlayer(bob);
+        s.addPlayer(charlie);
         return s;
     }
 
@@ -241,6 +259,128 @@ class ItemServiceTest {
         service.exchange(SESSION_ID, ALICE_ID, BOB_ID, X_CLUE_ID, Y_CLUE_ID, "XXXXXX");
 
         verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    // ── S3 shareFull ────────────────────────────────────────────────────────────
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shareFull_happyPath_threePlayerSession_grants2NewAclsAndBroadcasts() {
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, ALICE_ID))).thenReturn(Optional.of(mock(ClueAcl.class)));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, BOB_ID))).thenReturn(Optional.empty());
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, CHARLIE_ID))).thenReturn(Optional.empty());
+
+        service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "ABCDEF");
+
+        verify(clueAclRepo, times(2)).save(any(ClueAcl.class)); // X-bob, X-charlie
+        verify(itemActionRepo).save(any(ItemAction.class));
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ITEM_SHARED_FULL"), any());
+        ArgumentCaptor<CluePayload> clueCaptor = ArgumentCaptor.forClass(CluePayload.class);
+        verify(eventPublisher, times(2)).publishToPlayer(
+            eq("ABCDEF"), any(), eq(SESSION_ID.toString()), eq("CLUE_DELIVERED"), clueCaptor.capture());
+        assertThat(clueCaptor.getAllValues()).allMatch(p -> "share_all".equals(p.source()));
+        verify(eventPublisher, never()).publishToPlayer(any(), eq(ALICE_ID.toString()),
+            any(), eq("CLUE_DELIVERED"), any());
+    }
+
+    @Test
+    void shareFull_partialPriorAcl_grantsNewAclsOnlyAndDeliversOnlyToNew() {
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, ALICE_ID))).thenReturn(Optional.of(mock(ClueAcl.class)));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, BOB_ID))).thenReturn(Optional.of(mock(ClueAcl.class)));
+        when(clueAclRepo.findById(new ClueAclId(X_CLUE_ID, CHARLIE_ID))).thenReturn(Optional.empty());
+
+        service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "ABCDEF");
+
+        verify(clueAclRepo, times(1)).save(any(ClueAcl.class)); // X-charlie only
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ITEM_SHARED_FULL"), any());
+        verify(eventPublisher, times(1)).publishToPlayer(eq("ABCDEF"), eq(CHARLIE_ID.toString()),
+            any(), eq("CLUE_DELIVERED"), any());
+        verify(eventPublisher, never()).publishToPlayer(any(), eq(BOB_ID.toString()),
+            any(), eq("CLUE_DELIVERED"), any());
+    }
+
+    @Test
+    void shareFull_allHavePriorAcl_broadcastsButNoNewAclOrDelivery() {
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueAclRepo.findById(any())).thenReturn(Optional.of(mock(ClueAcl.class)));
+
+        service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "ABCDEF");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(itemActionRepo).save(any(ItemAction.class));
+        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ITEM_SHARED_FULL"), any());
+        verify(eventPublisher, never()).publishToPlayer(any(), any(), any(), eq("CLUE_DELIVERED"), any());
+    }
+
+    @Test
+    void shareFull_actorNotOwner_noOp() {
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, BOB_ID); // bob owns X, not alice
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+
+        service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "ABCDEF");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void shareFull_clueSessionMismatch_noOp() {
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = new Clue(UUID.randomUUID(), 1, "item-x", "loc-x", "title-x", ALICE_ID, FIXED_NOW);
+        try {
+            var f = Clue.class.getDeclaredField("id");
+            f.setAccessible(true);
+            f.set(xClue, X_CLUE_ID);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+
+        service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "ABCDEF");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void shareFull_inviteCodeMismatch_noOp() {
+        Session session = threePlayerInProgressRoundSession(); // inviteCode = "ABCDEF"
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+
+        service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "XXXXXX");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void shareFull_duplicateCall_secondCallIsNoOp() {
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueAclRepo.findById(any())).thenReturn(Optional.of(mock(ClueAcl.class)));
+        when(itemActionRepo.existsBySessionIdAndRoundNumberAndActionTypeAndActorPlayerIdAndActorClueId(
+            SESSION_ID, 1, "share_all", ALICE_ID, X_CLUE_ID)).thenReturn(true);
+
+        service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "ABCDEF");
+
+        verify(itemActionRepo, never()).save(any());
         verify(eventPublisher, never()).publish(any(), any(), any());
     }
 
