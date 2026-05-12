@@ -476,6 +476,21 @@ class ItemServiceTest {
     }
 
     @Test
+    void sharePartial_onlyActorInRecipients_sanitizeYieldsEmptyAndIsNoOp() {
+        // [ALICE_ID] → actor 제외 후 sanitizedSet 비어 → DB/이벤트 없음
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, List.of(ALICE_ID), "ABCDEF");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(itemActionRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
     void exchange_clueSessionIdMismatch_noOp() {
         Session session = inProgressRoundSession();
         when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
