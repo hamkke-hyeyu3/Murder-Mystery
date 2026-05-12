@@ -51,6 +51,8 @@ public class SessionStompController {
                              @Payload ItemExchangeRequest request,
                              Principal principal) {
         if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        if (request.partnerPlayerId() == null || request.requesterClueId() == null
+                || request.partnerClueId() == null) return;
         try {
             itemService.exchange(
                 UUID.fromString(sessionId),
@@ -60,8 +62,8 @@ public class SessionStompController {
                 UUID.fromString(request.partnerClueId()),
                 sp.inviteCode()
             );
-        } catch (IllegalArgumentException | NullPointerException e) {
-            // malformed or null UUID in payload — ignore to prevent STOMP session kill
+        } catch (IllegalArgumentException e) {
+            // malformed UUID in payload — ignore to prevent STOMP session kill
         }
     }
 
@@ -70,6 +72,7 @@ public class SessionStompController {
                               @Payload ItemShareFullRequest request,
                               Principal principal) {
         if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        if (request.clueId() == null) return;
         try {
             itemService.shareFull(
                 UUID.fromString(sessionId),
@@ -77,8 +80,8 @@ public class SessionStompController {
                 UUID.fromString(request.clueId()),
                 sp.inviteCode()
             );
-        } catch (IllegalArgumentException | NullPointerException e) {
-            // malformed or null UUID in payload — ignore to prevent STOMP session kill
+        } catch (IllegalArgumentException e) {
+            // malformed UUID in payload — ignore to prevent STOMP session kill
         }
     }
 }
