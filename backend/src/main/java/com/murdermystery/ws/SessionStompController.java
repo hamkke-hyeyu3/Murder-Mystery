@@ -1,6 +1,7 @@
 package com.murdermystery.ws;
 
 import com.murdermystery.config.StompPrincipal;
+import com.murdermystery.session.ItemService;
 import com.murdermystery.session.LeaveService;
 import com.murdermystery.session.RoundTurnService;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -16,10 +17,13 @@ public class SessionStompController {
 
     private final LeaveService leaveService;
     private final RoundTurnService roundTurnService;
+    private final ItemService itemService;
 
-    public SessionStompController(LeaveService leaveService, RoundTurnService roundTurnService) {
+    public SessionStompController(LeaveService leaveService, RoundTurnService roundTurnService,
+                                  ItemService itemService) {
         this.leaveService = leaveService;
         this.roundTurnService = roundTurnService;
+        this.itemService = itemService;
     }
 
     @MessageMapping("/session/{sessionId}/leave")
@@ -40,5 +44,24 @@ public class SessionStompController {
             request.roundNumber(),
             request.turnIndex()
         );
+    }
+
+    @MessageMapping("/session/{sessionId}/item-exchange")
+    public void itemExchange(@DestinationVariable String sessionId,
+                             @Payload ItemExchangeRequest request,
+                             Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        try {
+            itemService.exchange(
+                UUID.fromString(sessionId),
+                UUID.fromString(sp.playerId()),
+                UUID.fromString(request.partnerPlayerId()),
+                UUID.fromString(request.requesterClueId()),
+                UUID.fromString(request.partnerClueId()),
+                sp.inviteCode()
+            );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID in payload — ignore to prevent STOMP session kill
+        }
     }
 }
