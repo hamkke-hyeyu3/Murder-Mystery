@@ -44,4 +44,15 @@ class SessionStompControllerTest {
             principal)
         ).doesNotThrowAnyException();
     }
+
+    @Test
+    void itemShareFull_nullClueId_silentlyIgnored() {
+        // null clueId (missing JSON field) must not kill the STOMP session with NPE
+        StompPrincipal principal = new StompPrincipal("ABCDEF:00000000-0000-0000-0000-000000000001");
+        assertThatCode(() -> controller.itemShareFull(
+            "00000000-0000-0000-0000-000000000002",
+            new ItemShareFullRequest(null),
+            principal)
+        ).doesNotThrowAnyException();
+    }
 }

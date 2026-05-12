@@ -60,8 +60,8 @@ public class SessionStompController {
                 UUID.fromString(request.partnerClueId()),
                 sp.inviteCode()
             );
-        } catch (IllegalArgumentException e) {
-            // malformed UUID in payload — ignore to prevent STOMP session kill
+        } catch (IllegalArgumentException | NullPointerException e) {
+            // malformed or null UUID in payload — ignore to prevent STOMP session kill
         }
     }
 
@@ -77,8 +77,8 @@ public class SessionStompController {
                 UUID.fromString(request.clueId()),
                 sp.inviteCode()
             );
-        } catch (IllegalArgumentException e) {
-            // malformed UUID in payload — ignore to prevent STOMP session kill
+        } catch (IllegalArgumentException | NullPointerException e) {
+            // malformed or null UUID in payload — ignore to prevent STOMP session kill
         }
     }
 }
