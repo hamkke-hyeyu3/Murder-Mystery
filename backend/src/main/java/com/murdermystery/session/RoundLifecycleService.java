@@ -142,12 +142,7 @@ public class RoundLifecycleService {
             eventPublisher.publish(sessionId.toString(), "SESSION_STATE_CHANGED",
                 new SessionStateChangedPayload("vote", null));
         } else {
-            try {
-                roundServiceProvider.getObject().startRound(sessionId, roundNumber + 1);
-            } catch (Exception e) {
-                log.error("Failed to start round {} for session {} after round {} ended",
-                    roundNumber + 1, sessionId, roundNumber, e);
-            }
+            roundServiceProvider.getObject().startRound(sessionId, roundNumber + 1);
         }
     }
 
