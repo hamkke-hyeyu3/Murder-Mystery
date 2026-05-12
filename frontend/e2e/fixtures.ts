@@ -70,3 +70,46 @@ export async function getMyCharacterId(page: Page): Promise<string> {
   if (!id) throw new Error('data-character-id를 찾을 수 없음')
   return id
 }
+
+// ── LocationGrid helpers ─────────────────────────────────────────────
+
+/** location-grid가 나타날 때까지 대기 (TURN_STARTED 도착 후) */
+export async function waitForLocationGrid(page: Page): Promise<void> {
+  // 첫 차례가 올 때까지, 또는 이미 완료됐을 경우 complete 표시 대기
+  const locator = page.locator('[data-testid="location-grid"],[data-testid="location-grid-complete"]')
+  await locator.first().waitFor({ timeout: 15000 })
+}
+
+/** 이 페이지가 현재 자기 차례(활성 후보 버튼 존재)인지 반환 */
+export async function isMyTurn(page: Page): Promise<boolean> {
+  const grid = page.getByTestId('location-grid')
+  if (!(await grid.isVisible().catch(() => false))) return false
+  const count = await grid.locator('button:not([disabled])[data-testid^="location-cell-"]').count()
+  return count > 0
+}
+
+/**
+ * 자기 차례가 올 때까지 대기하고 첫 번째 활성 후보 셀을 클릭.
+ * 클릭한 locationId를 반환.
+ */
+export async function waitAndSelectLocation(page: Page): Promise<string> {
+  // 활성 버튼이 나타날 때까지 대기 (타인 차례 동안 자기 차례로 전환)
+  const btn = page.locator('button:not([disabled])[data-testid^="location-cell-"]').first()
+  await btn.waitFor({ timeout: 45000 })
+  const testId = (await btn.getAttribute('data-testid')) ?? ''
+  const locationId = testId.replace('location-cell-', '')
+  await btn.click()
+  return locationId
+}
+
+/** 지정된 locationId 셀에 점유자가 표시될 때까지 대기하고 닉네임을 반환 */
+export async function waitForLocationOccupied(page: Page, locationId: string): Promise<string> {
+  const cell = page.getByTestId(`location-cell-${locationId}`)
+  await expect(cell).toHaveAttribute('data-occupied-by', /.+/, { timeout: 10000 })
+  return (await cell.getAttribute('data-occupied-by')) ?? ''
+}
+
+/** 모든 차례 완료 표시 대기 */
+export async function waitForRoundTurnsComplete(page: Page): Promise<void> {
+  await page.getByTestId('location-grid-complete').waitFor({ timeout: 15000 })
+}

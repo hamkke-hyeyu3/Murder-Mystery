@@ -147,7 +147,7 @@
 
 ## 🔵 체크포인트 C — A4 라운드 루프 핵심
 
-- [ ] **T-09** 회전 턴 30초 + 점유 잠금 + 단서 ACL + 랜덤 자동 선택 ⚠️ *최고 위험*
+- [x] **T-09** 회전 턴 30초 + 점유 잠금 + 단서 ACL + 랜덤 자동 선택 ⚠️ *최고 위험*
   - [x] BE S1: `V7__round_turn.sql` + 엔티티(LocationOccupancy/Clue/ClueAcl) + `TurnQueueCalculator` + `TurnQueueCalculatorTest` (15 케이스)
   - [x] BE S2: `RoundTurnService` (차례 큐 + `TURN_STARTED` + 30s ScheduledExecutor) + `ClockConfig` + `RoundTurnServiceTest` (7 케이스) + Codex adversarial review 3개 fix (#1 future cancel, #4 rounds row guard, #6 bounds validation) 적용
   - [x] BE S3: `select-location` STOMP 핸들러 + `selectLocation` (7 가드 + grace 1s + ACL + `CLUE_DELIVERED` + `LOCATION_SELECTED`) + `RoundTurnServiceTest` selectLocation 7 케이스
@@ -157,7 +157,8 @@
   - [x] FE S7: `LocationGrid.tsx` (본인/타인/점유 분기 + 카운트다운 + 마감 비활성, 6 단위 케이스) + `Play.tsx` 통합(round 분기 + myClues hydration) — 119 FE 테스트 그린
   - [x] BE: select 수신 시 `now < deadlineAt + 1s` grace 윈도우 (S3에서 완료)
   - [x] review 적용 (S7 커밋 후): myClues 0-clue rejoin 버그 수정(`?.length`→`!== undefined`) + 타인-readonly 클릭 미호출 검증 + turnDeadlineAt=null 동작 고정 테스트
-  - [ ] 검증: `RoundTurnIntegrationTest` (3단말 select + autoSelect), `checkpoint-c-round-turn.spec.ts` e2e
+  - [x] BE: `RoundTurnIntegrationTest` (select→3 broadcast+1 private+DB verify, autoSelect 직접호출→AUTO_SELECTED×3) + `@AfterEach cancelPendingAutoSelectsForTest` timer cleanup — 2/2 그린
+  - [x] FE: `checkpoint-c-round-turn.spec.ts` e2e fixtures + `waitAndSelectLocation`/`waitForLocationOccupied`/`waitForRoundTurnsComplete` helpers
 
 - [ ] **T-10** monotonic 누적 + 라운드 자동 전환
   - ⚠️ **설계 주의:** `RoundService → RoundTurnService` 단방향 확립. T-10에서 라운드 종료 트리거를 RoundTurnService가 RoundService로 역호출하면 순환 의존 발생 → 별도 `RoundLifecycleService` 분리 또는 이벤트 역전 필요 (plan.md §위험 참조)

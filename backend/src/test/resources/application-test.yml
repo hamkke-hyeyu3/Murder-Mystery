@@ -8,3 +8,5 @@ spring:
 app:
   start:
     character-assignment-delay-ms: 100
+  tutorial:
+    enter-delay-ms: 100

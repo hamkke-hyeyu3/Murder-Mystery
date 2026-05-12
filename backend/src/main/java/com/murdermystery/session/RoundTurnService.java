@@ -383,6 +383,13 @@ public class RoundTurnService {
         turnDeadlines.put(futureKey(sessionId, roundNumber, turnIndex), deadline);
     }
 
+    // Package-private: cancel all pending auto-select futures; call from @AfterEach to prevent
+    // post-test timer firings when Spring context is shared across integration tests
+    void cancelPendingAutoSelectsForTest() {
+        pendingAutoSelects.forEach((key, future) -> future.cancel(false));
+        pendingAutoSelects.clear();
+    }
+
     private record TurnBundle(
         String inviteCode, UUID playerId, String nickname, String characterId,
         int playerCount, List<String> candidates, Instant deadlineAt
