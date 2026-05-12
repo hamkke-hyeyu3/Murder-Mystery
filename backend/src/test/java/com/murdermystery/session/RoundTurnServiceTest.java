@@ -47,6 +47,7 @@ class RoundTurnServiceTest {
     private SessionEventPublisher eventPublisher;
     private ScheduledExecutorService scheduler;
     private Clock clock;
+    private RoundLifecycleService roundLifecycleService;
     private RoundTurnService service;
 
     private final List<Runnable> capturedTasks = new ArrayList<>();
@@ -69,6 +70,7 @@ class RoundTurnServiceTest {
         txTemplate = mock(TransactionTemplate.class);
         eventPublisher = mock(SessionEventPublisher.class);
         scheduler = mock(ScheduledExecutorService.class);
+        roundLifecycleService = mock(RoundLifecycleService.class);
         capturedTasks.clear();
 
         clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
@@ -87,7 +89,7 @@ class RoundTurnServiceTest {
 
         service = new RoundTurnService(
             sessionRepo, roundRepo, scenarioRepo, occupancyRepo, clueRepo, clueAclRepo, playerRepo,
-            txTemplate, eventPublisher, scheduler, new Random(0), clock
+            txTemplate, eventPublisher, scheduler, new Random(0), clock, roundLifecycleService
         );
     }
 
@@ -384,7 +386,7 @@ class RoundTurnServiceTest {
 
         service.selectLocation(SESSION_ID, ALICE_ID, "ABCDEF", "library", 1, 0);
 
-        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ROUND_TURNS_COMPLETE"), any());
+        verify(roundLifecycleService).onTurnsComplete(SESSION_ID, 1);
     }
 
     // ── autoSelectTurn ──
@@ -452,7 +454,20 @@ class RoundTurnServiceTest {
 
         service.autoSelectTurn(SESSION_ID, 1, 0, 1);
 
-        verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ROUND_TURNS_COMPLETE"), any());
+        verify(roundLifecycleService).onTurnsComplete(SESSION_ID, 1);
+    }
+
+    @Test
+    void autoSelect_skipsWhenStateIsVote() {
+        // Simulates a stale scheduled future firing after the session has transitioned to vote.
+        Session session = roundSession(List.of("char-a", "char-b", "char-c"), 1);
+        session.setState("vote");  // time_limit fired first and transitioned to vote
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+
+        service.autoSelectTurn(SESSION_ID, 1, 0, 3);
+
+        verify(occupancyRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
     }
 
     @Test

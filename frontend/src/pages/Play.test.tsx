@@ -122,6 +122,15 @@ describe('Play', () => {
     })
   })
 
+  it("state='vote'일 때 vote-placeholder를 렌더한다", () => {
+    useSessionStore.getState().setSession({ state: 'vote' })
+
+    renderPlay()
+
+    expect(screen.getByTestId('vote-placeholder')).toBeInTheDocument()
+    expect(screen.queryByTestId('round-panel')).not.toBeInTheDocument()
+  })
+
   it("state='round'일 때 CharacterCard와 RoundPanel이 함께 렌더된다", () => {
     useSessionStore.getState().setSession({
       state: 'round',

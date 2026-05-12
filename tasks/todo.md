@@ -160,12 +160,13 @@
   - [x] BE: `RoundTurnIntegrationTest` (select→3 broadcast+1 private+DB verify, autoSelect 직접호출→AUTO_SELECTED×3) + `@AfterEach cancelPendingAutoSelectsForTest` timer cleanup — 2/2 그린
   - [x] FE: `checkpoint-c-round-turn.spec.ts` e2e fixtures + `waitAndSelectLocation`/`waitForLocationOccupied`/`waitForRoundTurnsComplete` helpers
 
-- [ ] **T-10** monotonic 누적 + 라운드 자동 전환
-  - ⚠️ **설계 주의:** `RoundService → RoundTurnService` 단방향 확립. T-10에서 라운드 종료 트리거를 RoundTurnService가 RoundService로 역호출하면 순환 의존 발생 → 별도 `RoundLifecycleService` 분리 또는 이벤트 역전 필요 (plan.md §위험 참조)
-  - [ ] BE: 라운드 종료 트리거 (모든 차례 완료 + `time_limit_sec` 만료)
-  - [ ] BE: `clue_acl` 절대 삭제 금지. k<N → `startRound(k+1)`, k=N → `phase='vote'`
-  - [ ] FE: 라운드 전환 애니메이션 + 단서 라운드 꼬리표 그룹
-  - [ ] 검증: `RoundLifecycleTest.cluesPersistAcrossRounds`, `_lastRoundTransitionsToVote`
+- [x] **T-10** monotonic 누적 + 라운드 자동 전환
+  - [x] BE: `RoundLifecycleService` 신규 — OR(turns_complete, time_limit) 종료 트리거, `ObjectProvider<RoundService>` 순환 의존 해소
+  - [x] BE: `clue_acl` 절대 삭제 금지. k<N → `startRound(k+1)`, k=N → `state='vote'`
+  - [x] BE: stale autoSelect future가 vote 상태에서 데이터 변조 못 하도록 `autoSelectTurn` 가드에 `state='round'` 체크 추가
+  - [x] FE: `MyCluesPanel.tsx` — 단서 라운드별 그룹, `VotePlaceholder.tsx`, `ROUND_ENDED` 핸들러 (배너 push + turn clear)
+  - [x] 검증: `RoundLifecycleIntegrationTest.cluesPersistAcrossRounds`, `lastRoundTransitionsToVote` + 단위 케이스 포함 전 테스트 그린
+  - ⚠️ **기술 부채:** `endedRounds` 가드는 JVM 메모리 전용 — JVM crash 후 재기동 시 `round.ended_at` 있으나 다음 라운드/vote 미진입 상태로 남을 수 있음. 단일 인스턴스 MVP에서 수용; 멀티 인스턴스·HA 전환 전에 startup reconciliation 필요.
 
 - [ ] **T-11** 아이템 교환·전체·부분 공유 + 전원 공개 배너
   - [ ] BE: `ItemService` (3종 행위 + `clue_acl` 추가 + `BANNER` broadcast)

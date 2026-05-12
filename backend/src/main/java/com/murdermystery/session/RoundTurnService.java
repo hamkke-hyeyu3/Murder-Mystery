@@ -5,7 +5,6 @@ import com.murdermystery.scenario.ScenarioRepository;
 import com.murdermystery.ws.event.CluePayload;
 import com.murdermystery.ws.event.LocationAutoSelectedPayload;
 import com.murdermystery.ws.event.LocationSelectedPayload;
-import com.murdermystery.ws.event.RoundTurnsCompletePayload;
 import com.murdermystery.ws.event.ServerTimeSyncPayload;
 import com.murdermystery.ws.event.TurnStartedPayload;
 import org.slf4j.Logger;
@@ -52,6 +51,7 @@ public class RoundTurnService {
     private final ScheduledExecutorService scheduler;
     private final Random random;
     private final Clock clock;
+    private final RoundLifecycleService roundLifecycleService;
 
     @Autowired
     public RoundTurnService(
@@ -65,11 +65,12 @@ public class RoundTurnService {
         TransactionTemplate transactionTemplate,
         SessionEventPublisher eventPublisher,
         ScheduledExecutorService gameScheduler,
-        Clock systemClock
+        Clock systemClock,
+        RoundLifecycleService roundLifecycleService
     ) {
         this(sessionRepository, roundRepository, scenarioRepository, occupancyRepository,
              clueRepository, clueAclRepository, playerRepository, transactionTemplate,
-             eventPublisher, gameScheduler, null, systemClock);
+             eventPublisher, gameScheduler, null, systemClock, roundLifecycleService);
     }
 
     RoundTurnService(
@@ -84,7 +85,8 @@ public class RoundTurnService {
         SessionEventPublisher eventPublisher,
         ScheduledExecutorService scheduler,
         Random random,
-        Clock clock
+        Clock clock,
+        RoundLifecycleService roundLifecycleService
     ) {
         this.sessionRepository = sessionRepository;
         this.roundRepository = roundRepository;
@@ -98,6 +100,7 @@ public class RoundTurnService {
         this.scheduler = scheduler;
         this.random = random;
         this.clock = clock;
+        this.roundLifecycleService = roundLifecycleService;
     }
 
     public void startRoundTurns(UUID sessionId, int roundNumber) {
@@ -190,6 +193,7 @@ public class RoundTurnService {
             Session session = sessionRepository.findByIdForUpdate(sessionId).orElse(null);
             if (session == null
                     || !"in_progress".equals(session.getPhase())
+                    || !"round".equals(session.getState())
                     || !Integer.valueOf(roundNumber).equals(session.getCurrentRoundNumber())) {
                 return null;
             }
@@ -262,8 +266,7 @@ public class RoundTurnService {
         if (nextIndex < playerCount) {
             startTurn(sessionId, roundNumber, nextIndex);
         } else {
-            eventPublisher.publish(sessionId.toString(), "ROUND_TURNS_COMPLETE",
-                new RoundTurnsCompletePayload(roundNumber));
+            roundLifecycleService.onTurnsComplete(sessionId, roundNumber);
         }
     }
 
@@ -348,8 +351,7 @@ public class RoundTurnService {
         if (nextIndex < bundle.playerCount()) {
             startTurn(sessionId, roundNumber, nextIndex);
         } else {
-            eventPublisher.publish(sessionId.toString(), "ROUND_TURNS_COMPLETE",
-                new RoundTurnsCompletePayload(roundNumber));
+            roundLifecycleService.onTurnsComplete(sessionId, roundNumber);
         }
     }
 

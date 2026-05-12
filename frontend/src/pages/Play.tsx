@@ -8,6 +8,8 @@ import { Tutorial } from '@/components/Tutorial'
 import { RoundPanel } from '@/components/RoundPanel'
 import { CharacterCard } from '@/components/CharacterCard'
 import { LocationGrid } from '@/components/LocationGrid'
+import { MyCluesPanel } from '@/components/MyCluesPanel'
+import { VotePlaceholder } from '@/components/VotePlaceholder'
 import { postTutorialAck, getSession } from '@/lib/sessionApi'
 
 export default function Play() {
@@ -80,6 +82,10 @@ export default function Play() {
     })
   }
 
+  if (effectiveState === 'vote') {
+    return <VotePlaceholder />
+  }
+
   if (effectiveState === 'tutorial') {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
@@ -105,6 +111,7 @@ export default function Play() {
           deadlineAt={roundDeadlineAt}
           serverOffsetMs={serverOffsetMs}
         />
+        <MyCluesPanel />
         <LocationGrid
           locations={scenarioLocations}
           candidateLocationIds={currentRoundCandidateLocationIds}

@@ -273,3 +273,9 @@ export type SessionEvent =
       occurredAt: string
       payload: { roundNumber: number }
     }
+  | {
+      type: 'ROUND_ENDED'
+      sessionId: string
+      occurredAt: string
+      payload: { roundNumber: number; reason: string; endedAt: number }
+    }

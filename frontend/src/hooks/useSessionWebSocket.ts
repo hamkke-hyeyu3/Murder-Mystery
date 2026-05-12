@@ -3,6 +3,7 @@ import { useStompClient } from '@/hooks/useStompClient'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useTimerStore } from '@/stores/timerStore'
+import { useTransientStore } from '@/stores/transientStore'
 import type { SessionEvent } from '@/types/session'
 
 interface UseSessionWebSocketOptions {
@@ -104,6 +105,19 @@ export function useSessionWebSocket({
             ],
           }))
         } else if (envelope.type === 'ROUND_TURNS_COMPLETE') {
+          useTimerStore.getState().setTurnDeadline(null)
+          setSession({
+            currentTurnIndex: null,
+            currentTurnPlayerId: null,
+            currentTurnCharacterId: null,
+            currentTurnDeadlineAt: null,
+            currentRoundCandidateLocationIds: [],
+          })
+        } else if (envelope.type === 'ROUND_ENDED') {
+          useTransientStore.getState().pushBanner({
+            id: `round-${envelope.payload.roundNumber}-ended`,
+            message: `라운드 ${envelope.payload.roundNumber} 종료`,
+          })
           useTimerStore.getState().setTurnDeadline(null)
           setSession({
             currentTurnIndex: null,

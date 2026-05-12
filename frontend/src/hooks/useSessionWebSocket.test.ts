@@ -6,6 +6,7 @@ import { useStompClient } from './useStompClient'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useTimerStore } from '@/stores/timerStore'
+import { useTransientStore } from '@/stores/transientStore'
 
 vi.mock('./useStompClient')
 
@@ -43,6 +44,7 @@ describe('useSessionWebSocket', () => {
 
     useSessionStore.getState().reset()
     useCardStore.getState().reset()
+    useTransientStore.getState().reset()
   })
 
   it('connected 시 올바른 토픽에 구독한다', () => {
@@ -326,6 +328,54 @@ describe('useSessionWebSocket', () => {
     })
 
     expect(useSessionStore.getState().roundCommonHint).toBe('부검 결과가 공개됐다.')
+  })
+
+  it('ROUND_ENDED 수신 시 배너를 push하고 currentTurn을 초기화한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    useSessionStore.getState().setSession({
+      currentTurnIndex: 0,
+      currentTurnPlayerId: 'player-bob',
+      currentTurnCharacterId: 'char-b',
+    })
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ROUND_ENDED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { roundNumber: 1, reason: 'turns_complete', endedAt: Date.now() },
+        }),
+      } as IMessage)
+    })
+
+    expect(useTransientStore.getState().banners).toContainEqual({
+      id: 'round-1-ended',
+      message: '라운드 1 종료',
+    })
+    const s = useSessionStore.getState()
+    expect(s.currentTurnIndex).toBeNull()
+    expect(s.currentTurnPlayerId).toBeNull()
+  })
+
+  it('ROUND_ENDED 수신 시 timerStore의 turnDeadlineAt을 null로 초기화한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    useTimerStore.getState().setTurnDeadline(Date.now() + 30_000)
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ROUND_ENDED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { roundNumber: 2, reason: 'time_limit', endedAt: Date.now() },
+        }),
+      } as IMessage)
+    })
+
+    expect(useTimerStore.getState().turnDeadlineAt).toBeNull()
   })
 
   it('OBJECTIVE_UPDATED private 수신 시 cardStore.currentObjective에 반영한다', () => {

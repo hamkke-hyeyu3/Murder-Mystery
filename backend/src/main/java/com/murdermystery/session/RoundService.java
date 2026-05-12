@@ -29,6 +29,7 @@ public class RoundService {
     private final TransactionTemplate transactionTemplate;
     private final SessionEventPublisher eventPublisher;
     private final RoundTurnService roundTurnService;
+    private final RoundLifecycleService roundLifecycleService;
 
     public RoundService(
         SessionRepository sessionRepository,
@@ -36,7 +37,8 @@ public class RoundService {
         ScenarioRepository scenarioRepository,
         TransactionTemplate transactionTemplate,
         SessionEventPublisher eventPublisher,
-        RoundTurnService roundTurnService
+        RoundTurnService roundTurnService,
+        RoundLifecycleService roundLifecycleService
     ) {
         this.sessionRepository = sessionRepository;
         this.roundRepository = roundRepository;
@@ -44,6 +46,7 @@ public class RoundService {
         this.transactionTemplate = transactionTemplate;
         this.eventPublisher = eventPublisher;
         this.roundTurnService = roundTurnService;
+        this.roundLifecycleService = roundLifecycleService;
     }
 
     public void startRound(UUID sessionId, int roundNumber) {
@@ -128,6 +131,8 @@ public class RoundService {
         }
 
         roundTurnService.startRoundTurns(sessionId, roundNumber);
+        roundLifecycleService.scheduleRoundDeadline(sessionId, roundNumber,
+            Instant.ofEpochMilli(entry.deadlineAt()));
     }
 
     private record RoundEntry(

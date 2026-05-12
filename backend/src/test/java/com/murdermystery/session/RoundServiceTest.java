@@ -32,6 +32,7 @@ class RoundServiceTest {
     private TransactionTemplate txTemplate;
     private SessionEventPublisher eventPublisher;
     private RoundTurnService roundTurnService;
+    private RoundLifecycleService roundLifecycleService;
     private RoundService service;
 
     private static final UUID SESSION_ID = UUID.randomUUID();
@@ -44,13 +45,15 @@ class RoundServiceTest {
         txTemplate = mock(TransactionTemplate.class);
         eventPublisher = mock(SessionEventPublisher.class);
         roundTurnService = mock(RoundTurnService.class);
+        roundLifecycleService = mock(RoundLifecycleService.class);
 
         when(txTemplate.execute(any())).thenAnswer(inv -> {
             var cb = inv.getArgument(0, org.springframework.transaction.support.TransactionCallback.class);
             return cb.doInTransaction(null);
         });
 
-        service = new RoundService(sessionRepo, roundRepo, scenarioRepo, txTemplate, eventPublisher, roundTurnService);
+        service = new RoundService(sessionRepo, roundRepo, scenarioRepo, txTemplate, eventPublisher,
+            roundTurnService, roundLifecycleService);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
@@ -352,5 +355,23 @@ class RoundServiceTest {
         assertThat(entityCaptor.getValue().getRoundNumber()).isEqualTo(1);
         assertThat(entityCaptor.getValue().getPrompt()).isEqualTo("프롬프트.");
         assertThat(session.getCurrentRoundNumber()).isEqualTo(1);
+    }
+
+    @Test
+    void startRound_schedulesRoundDeadlineAfterStartingTurns() {
+        Scenario scenario = scenarioWith(List.of(round(null, null, 300)));
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(roundSession()));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        service.startRound(SESSION_ID, 1);
+
+        ArgumentCaptor<Instant> deadlineCaptor = ArgumentCaptor.forClass(Instant.class);
+        verify(roundLifecycleService).scheduleRoundDeadline(eq(SESSION_ID), eq(1), deadlineCaptor.capture());
+        // deadline should be ~300s after start
+        long diffMs = deadlineCaptor.getValue().toEpochMilli() - Instant.now().toEpochMilli();
+        assertThat(diffMs).isBetween(290_000L, 310_000L);
+
+        // turns must be started before deadline is scheduled (InOrder not required, but verify both called)
+        verify(roundTurnService).startRoundTurns(SESSION_ID, 1);
     }
 }
