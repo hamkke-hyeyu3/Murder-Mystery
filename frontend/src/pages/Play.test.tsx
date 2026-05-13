@@ -22,6 +22,9 @@ beforeEach(() => {
     connected: false,
     publishLeave: vi.fn(),
     publishSelectLocation: vi.fn(),
+    publishItemExchange: vi.fn(),
+    publishItemShareFull: vi.fn(),
+    publishItemSharePartial: vi.fn(),
   })
 })
 

@@ -126,6 +126,24 @@ export function useSessionWebSocket({
             currentTurnDeadlineAt: null,
             currentRoundCandidateLocationIds: [],
           })
+        } else if (envelope.type === 'ITEM_EXCHANGED') {
+          const p = envelope.payload
+          useTransientStore.getState().pushBanner({
+            id: p.actionId,
+            message: `${p.actorNickname}님과 ${p.partnerNickname}님이 단서를 교환했습니다`,
+          })
+        } else if (envelope.type === 'ITEM_SHARED_FULL') {
+          const p = envelope.payload
+          useTransientStore.getState().pushBanner({
+            id: p.actionId,
+            message: `${p.actorNickname}님이 단서를 전체 공개했습니다`,
+          })
+        } else if (envelope.type === 'ITEM_SHARED_PARTIAL') {
+          const p = envelope.payload
+          useTransientStore.getState().pushBanner({
+            id: p.actionId,
+            message: `${p.actorNickname}님이 단서를 일부에게 공유했습니다 (총 ${p.recipients.length}명)`,
+          })
         }
       }
     )
@@ -166,5 +184,29 @@ export function useSessionWebSocket({
     })
   }
 
-  return { connected, publishLeave, publishSelectLocation }
+  const publishItemExchange = (partnerPlayerId: string, requesterClueId: string, partnerClueId: string) => {
+    if (!client.current || !sessionId) return
+    client.current.publish({
+      destination: `/app/session/${sessionId}/item-exchange`,
+      body: JSON.stringify({ partnerPlayerId, requesterClueId, partnerClueId }),
+    })
+  }
+
+  const publishItemShareFull = (clueId: string) => {
+    if (!client.current || !sessionId) return
+    client.current.publish({
+      destination: `/app/session/${sessionId}/item-share-full`,
+      body: JSON.stringify({ clueId }),
+    })
+  }
+
+  const publishItemSharePartial = (clueId: string, recipientPlayerIds: string[]) => {
+    if (!client.current || !sessionId) return
+    client.current.publish({
+      destination: `/app/session/${sessionId}/item-share-partial`,
+      body: JSON.stringify({ clueId, recipientPlayerIds }),
+    })
+  }
+
+  return { connected, publishLeave, publishSelectLocation, publishItemExchange, publishItemShareFull, publishItemSharePartial }
 }

@@ -279,3 +279,46 @@ export type SessionEvent =
       occurredAt: string
       payload: { roundNumber: number; reason: string; endedAt: number }
     }
+  | {
+      type: 'ITEM_EXCHANGED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        actorPlayerId: string
+        actorNickname: string
+        partnerPlayerId: string
+        partnerNickname: string
+        roundNumber: number
+        actorClueId: string
+        partnerClueId: string
+        actionId: string
+        occurredAt: number
+      }
+    }
+  | {
+      type: 'ITEM_SHARED_FULL'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        actorPlayerId: string
+        actorNickname: string
+        clueId: string
+        roundNumber: number
+        actionId: string
+        occurredAt: number
+      }
+    }
+  | {
+      type: 'ITEM_SHARED_PARTIAL'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        actorPlayerId: string
+        actorNickname: string
+        clueId: string
+        roundNumber: number
+        recipients: { playerId: string; nickname: string }[]
+        actionId: string
+        occurredAt: number
+      }
+    }

@@ -10,6 +10,7 @@ import { CharacterCard } from '@/components/CharacterCard'
 import { LocationGrid } from '@/components/LocationGrid'
 import { MyCluesPanel } from '@/components/MyCluesPanel'
 import { VotePlaceholder } from '@/components/VotePlaceholder'
+import { BannerStack } from '@/components/BannerStack'
 import { postTutorialAck, getSession } from '@/lib/sessionApi'
 
 export default function Play() {
@@ -89,6 +90,7 @@ export default function Play() {
   if (effectiveState === 'tutorial') {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <BannerStack />
         <CharacterCard />
         <Tutorial
           ackedCount={tutorialAckedCount ?? 0}
@@ -103,6 +105,7 @@ export default function Play() {
   if (effectiveState === 'round') {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <BannerStack />
         <CharacterCard />
         <RoundPanel
           roundNumber={roundNumber ?? 1}
@@ -132,6 +135,7 @@ export default function Play() {
 
   return (
     <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+      <BannerStack />
       {effectiveCard ? (
         <CharacterCard />
       ) : (

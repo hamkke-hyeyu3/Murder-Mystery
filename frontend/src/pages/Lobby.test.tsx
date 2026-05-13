@@ -23,7 +23,14 @@ let mockPublishLeave: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   mockPublishLeave = vi.fn()
-  mockUseSessionWebSocket.mockReturnValue({ connected: false, publishLeave: mockPublishLeave })
+  mockUseSessionWebSocket.mockReturnValue({
+    connected: false,
+    publishLeave: mockPublishLeave,
+    publishSelectLocation: vi.fn(),
+    publishItemExchange: vi.fn(),
+    publishItemShareFull: vi.fn(),
+    publishItemSharePartial: vi.fn(),
+  })
 })
 
 function renderLobby(inviteCode = '012345') {

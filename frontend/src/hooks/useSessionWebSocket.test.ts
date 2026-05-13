@@ -397,4 +397,128 @@ describe('useSessionWebSocket', () => {
     expect(obj?.totalRounds).toBe(3)
     expect(obj?.objective).toBe('자기소개를 하세요.')
   })
+
+  it('ITEM_EXCHANGED 수신 시 actionId로 배너를 push한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ITEM_EXCHANGED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            actorPlayerId: 'player-alice',
+            actorNickname: '앨리스',
+            partnerPlayerId: 'player-bob',
+            partnerNickname: '밥',
+            roundNumber: 1,
+            actorClueId: 'clue-a',
+            partnerClueId: 'clue-b',
+            actionId: 'action-ex-1',
+            occurredAt: Date.now(),
+          },
+        }),
+      } as IMessage)
+    })
+
+    expect(useTransientStore.getState().banners).toContainEqual(
+      expect.objectContaining({ id: 'action-ex-1', message: '앨리스님과 밥님이 단서를 교환했습니다' })
+    )
+  })
+
+  it('ITEM_SHARED_FULL 수신 시 actionId로 배너를 push한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ITEM_SHARED_FULL',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            actorPlayerId: 'player-alice',
+            actorNickname: '앨리스',
+            clueId: 'clue-a',
+            roundNumber: 1,
+            actionId: 'action-sf-1',
+            occurredAt: Date.now(),
+          },
+        }),
+      } as IMessage)
+    })
+
+    expect(useTransientStore.getState().banners).toContainEqual(
+      expect.objectContaining({ id: 'action-sf-1', message: '앨리스님이 단서를 전체 공개했습니다' })
+    )
+  })
+
+  it('ITEM_SHARED_PARTIAL 수신 시 recipients 수 포함한 배너를 push한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ITEM_SHARED_PARTIAL',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            actorPlayerId: 'player-alice',
+            actorNickname: '앨리스',
+            clueId: 'clue-a',
+            roundNumber: 1,
+            recipients: [
+              { playerId: 'player-bob', nickname: '밥' },
+              { playerId: 'player-charlie', nickname: '찰리' },
+            ],
+            actionId: 'action-sp-1',
+            occurredAt: Date.now(),
+          },
+        }),
+      } as IMessage)
+    })
+
+    expect(useTransientStore.getState().banners).toContainEqual(
+      expect.objectContaining({ id: 'action-sp-1', message: '앨리스님이 단서를 일부에게 공유했습니다 (총 2명)' })
+    )
+  })
+
+  it('publishItemExchange 호출 시 올바른 destination/payload로 publish한다', () => {
+    const { result } = renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      result.current.publishItemExchange('player-bob', 'clue-a', 'clue-b')
+    })
+
+    expect(mockPublish).toHaveBeenCalledWith({
+      destination: '/app/session/sess-001/item-exchange',
+      body: JSON.stringify({ partnerPlayerId: 'player-bob', requesterClueId: 'clue-a', partnerClueId: 'clue-b' }),
+    })
+  })
+
+  it('publishItemShareFull 호출 시 올바른 destination/payload로 publish한다', () => {
+    const { result } = renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      result.current.publishItemShareFull('clue-a')
+    })
+
+    expect(mockPublish).toHaveBeenCalledWith({
+      destination: '/app/session/sess-001/item-share-full',
+      body: JSON.stringify({ clueId: 'clue-a' }),
+    })
+  })
+
+  it('publishItemSharePartial 호출 시 올바른 destination/payload로 publish한다', () => {
+    const { result } = renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      result.current.publishItemSharePartial('clue-a', ['player-bob', 'player-charlie'])
+    })
+
+    expect(mockPublish).toHaveBeenCalledWith({
+      destination: '/app/session/sess-001/item-share-partial',
+      body: JSON.stringify({ clueId: 'clue-a', recipientPlayerIds: ['player-bob', 'player-charlie'] }),
+    })
+  })
 })
