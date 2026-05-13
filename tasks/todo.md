@@ -174,7 +174,7 @@
   - [x] BE S3: `ItemService.shareFull` + STOMP `/item-share-full` + `ItemServiceTest` +7케이스(중복방지 가드 포함) — `8d1aef9`
   - [x] BE S4: `ItemService.sharePartial` + STOMP `/item-share-partial` + `ItemServiceTest` +6케이스(sanitize-후-empty 포함) — `f3c3913`
   - [x] BE S5: `ItemIntegrationTest` (exchange·shareFull·sharePartial e2e DB verify) — `290cdd3`
-  - [x] FE S6: types(ITEM_EXCHANGED/SHARED_FULL/SHARED_PARTIAL) + useSessionWebSocket(3 이벤트 dispatch + 3 publish 헬퍼) + BannerStack(자동 dismiss + × 버튼) — `d0a5a23`
+  - [x] FE S6: types(ITEM_EXCHANGED/SHARED_FULL/SHARED_PARTIAL) + useSessionWebSocket(3 이벤트 dispatch + 3 publish 헬퍼) + BannerStack(자동 dismiss + × 버튼) — `9957838`
   - [ ] FE S7–S8: 단서 long-press → 행위 메뉴 + share_partial multi-select + 배너 토스트 큐
   - [ ] 검증: 체크포인트 C 완료 조건 — 아이템 3행위 데모
 
