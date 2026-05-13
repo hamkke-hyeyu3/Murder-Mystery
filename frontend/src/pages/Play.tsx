@@ -70,6 +70,7 @@ export default function Play() {
     return () => { cancelled = true }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // publishItemExchange/ShareFull/SharePartial은 S7에서 액션 시트 UI 연결 예정
   const { publishSelectLocation } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 
   const handleTutorialAck = async () => {

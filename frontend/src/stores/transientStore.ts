@@ -24,7 +24,11 @@ const initialState: TransientState = {
 
 export const useTransientStore = create<TransientState & TransientActions>((set) => ({
   ...initialState,
-  pushBanner: (banner) => set((state) => ({ banners: [...state.banners, banner] })),
+  pushBanner: (banner) =>
+    set((state) => {
+      if (state.banners.some((b) => b.id === banner.id)) return state
+      return { banners: [...state.banners, banner] }
+    }),
   dismissBanner: (id) =>
     set((state) => ({ banners: state.banners.filter((b) => b.id !== id) })),
   setInlineError: (inlineError) => set({ inlineError }),

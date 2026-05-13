@@ -54,4 +54,15 @@ describe('BannerStack', () => {
 
     expect(screen.queryByTestId('banner-b1')).toBeNull()
   })
+
+  it('같은 id로 중복 push해도 배너가 하나만 표시된다', () => {
+    useTransientStore.getState().pushBanner({ id: 'b1', message: '첫 push' })
+    useTransientStore.getState().pushBanner({ id: 'b1', message: '중복 push' })
+
+    render(<BannerStack />)
+
+    const items = screen.getAllByTestId('banner-b1')
+    expect(items).toHaveLength(1)
+    expect(screen.getByText('첫 push')).toBeInTheDocument()
+  })
 })
