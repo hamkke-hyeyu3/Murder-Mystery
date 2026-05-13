@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
@@ -123,6 +123,84 @@ describe('Play', () => {
     await waitFor(() => {
       expect(useCardStore.getState().clues).toHaveLength(0)
     })
+  })
+
+  it("state='round'일 때 단서 long-press → 전체공유 시 publishItemShareFull 이 호출된다", async () => {
+    vi.useFakeTimers()
+    const publishItemShareFull = vi.fn()
+    mockUseSessionWebSocket.mockReturnValue({
+      connected: false,
+      publishLeave: vi.fn(),
+      publishSelectLocation: vi.fn(),
+      publishItemExchange: vi.fn(),
+      publishItemShareFull,
+      publishItemSharePartial: vi.fn(),
+    })
+    useSessionStore.getState().setSession({
+      state: 'round',
+      roundNumber: 1,
+      roundPrompt: '자기소개',
+      roundCommonHint: null,
+      players: [{ playerId: 'player-me', nickname: 'Alice', isHost: true }],
+    })
+    useSessionStore.getState().setSession({ playerId: 'player-me' })
+    useCardStore.getState().setClues([
+      { id: 'clue-share', itemId: 'item-1', title: '단서A', originLocationId: 'loc-1',
+        roundNumberDiscovered: 1, discoveredAt: 1000, source: 'discovery' },
+    ])
+
+    const { getByTestId } = renderPlay()
+
+    const item = getByTestId('clue-item-clue-share')
+    fireEvent.pointerDown(item, { clientX: 0, clientY: 0 })
+    await act(async () => { vi.advanceTimersByTime(500) })
+
+    const shareFullBtn = getByTestId('action-share-full')
+    fireEvent.click(shareFullBtn)
+
+    expect(publishItemShareFull).toHaveBeenCalledWith('clue-share')
+    vi.useRealTimers()
+  })
+
+  it("state='round'일 때 단서 long-press → 부분공유 시 publishItemSharePartial 이 호출된다", async () => {
+    vi.useFakeTimers()
+    const publishItemSharePartial = vi.fn()
+    mockUseSessionWebSocket.mockReturnValue({
+      connected: false,
+      publishLeave: vi.fn(),
+      publishSelectLocation: vi.fn(),
+      publishItemExchange: vi.fn(),
+      publishItemShareFull: vi.fn(),
+      publishItemSharePartial,
+    })
+    useSessionStore.getState().setSession({
+      state: 'round',
+      roundNumber: 1,
+      roundPrompt: '자기소개',
+      roundCommonHint: null,
+      players: [
+        { playerId: 'player-me', nickname: 'Alice', isHost: true },
+        { playerId: 'player-bob', nickname: 'Bob', isHost: false },
+      ],
+    })
+    useSessionStore.getState().setSession({ playerId: 'player-me' })
+    useCardStore.getState().setClues([
+      { id: 'clue-partial', itemId: 'item-2', title: '단서B', originLocationId: 'loc-1',
+        roundNumberDiscovered: 1, discoveredAt: 1000, source: 'discovery' },
+    ])
+
+    const { getByTestId } = renderPlay()
+
+    const item = getByTestId('clue-item-clue-partial')
+    fireEvent.pointerDown(item, { clientX: 0, clientY: 0 })
+    await act(async () => { vi.advanceTimersByTime(500) })
+
+    fireEvent.click(getByTestId('action-share-partial'))
+    fireEvent.click(getByTestId('recipient-player-bob'))
+    fireEvent.click(getByTestId('confirm-share-partial'))
+
+    expect(publishItemSharePartial).toHaveBeenCalledWith('clue-partial', ['player-bob'])
+    vi.useRealTimers()
   })
 
   it("state='vote'일 때 vote-placeholder를 렌더한다", () => {

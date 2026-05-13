@@ -70,8 +70,7 @@ export default function Play() {
     return () => { cancelled = true }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // publishItemExchange/ShareFull/SharePartial은 S7에서 액션 시트 UI 연결 예정
-  const { publishSelectLocation } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
+  const { publishSelectLocation, publishItemShareFull, publishItemSharePartial } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 
   const handleTutorialAck = async () => {
     if (!sessionId) return
@@ -120,7 +119,12 @@ export default function Play() {
           deadlineAt={roundDeadlineAt}
           serverOffsetMs={serverOffsetMs}
         />
-        <MyCluesPanel />
+        <MyCluesPanel
+          players={players}
+          myPlayerId={playerId}
+          onShareFull={publishItemShareFull}
+          onSharePartial={publishItemSharePartial}
+        />
         <LocationGrid
           locations={scenarioLocations}
           candidateLocationIds={currentRoundCandidateLocationIds}
