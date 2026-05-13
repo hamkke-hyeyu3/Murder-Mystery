@@ -75,14 +75,17 @@ export function MyCluesPanel({ players, myPlayerId, onShareFull, onSharePartial 
           </section>
         ))}
       </div>
-      <ClueActionSheet
-        clue={activeClue}
-        players={players}
-        myPlayerId={myPlayerId}
-        onClose={() => setActiveClue(null)}
-        onShareFull={onShareFull}
-        onSharePartial={onSharePartial}
-      />
+      {activeClue && (
+        <ClueActionSheet
+          key={activeClue.id}
+          clue={activeClue}
+          players={players}
+          myPlayerId={myPlayerId}
+          onClose={() => setActiveClue(null)}
+          onShareFull={onShareFull}
+          onSharePartial={onSharePartial}
+        />
+      )}
     </>
   )
 }

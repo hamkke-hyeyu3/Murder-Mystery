@@ -79,6 +79,32 @@ describe('MyCluesPanel', () => {
     expect(screen.getByTestId('clue-action-sheet')).toBeInTheDocument()
   })
 
+  it('시트를 닫았다가 같은 단서를 다시 열면 menu 모드로 초기화된다', () => {
+    vi.useFakeTimers()
+    useCardStore.getState().setClues([makeClue('a', 1)])
+    render(<MyCluesPanel {...defaultProps} />)
+
+    const item = screen.getByTestId('clue-item-a')
+
+    // 1차 오픈 → 부분 공유 모드로 전환
+    fireEvent.pointerDown(item, { clientX: 0, clientY: 0 })
+    act(() => { vi.advanceTimersByTime(500) })
+    expect(screen.getByTestId('clue-action-sheet')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('action-share-partial'))
+    expect(screen.getByTestId('confirm-share-partial')).toBeInTheDocument()
+
+    // 시트 닫기
+    fireEvent.click(screen.getByTestId('action-cancel'))
+    expect(screen.queryByTestId('clue-action-sheet')).toBeNull()
+
+    // 2차 오픈 → menu 모드여야 한다
+    fireEvent.pointerDown(item, { clientX: 0, clientY: 0 })
+    act(() => { vi.advanceTimersByTime(500) })
+    expect(screen.getByTestId('clue-action-sheet')).toBeInTheDocument()
+    expect(screen.getByTestId('action-share-full')).toBeInTheDocument()
+    expect(screen.queryByTestId('confirm-share-partial')).toBeNull()
+  })
+
   it('단서 짧은 탭(200ms) 시 ClueActionSheet 가 열리지 않는다', () => {
     vi.useFakeTimers()
     useCardStore.getState().setClues([makeClue('a', 1)])
