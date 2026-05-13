@@ -84,7 +84,12 @@ export default function Play() {
   }
 
   if (effectiveState === 'vote') {
-    return <VotePlaceholder />
+    return (
+      <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <BannerStack />
+        <VotePlaceholder />
+      </div>
+    )
   }
 
   if (effectiveState === 'tutorial') {
