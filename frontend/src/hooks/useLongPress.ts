@@ -1,11 +1,14 @@
-import { useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 
 export function useLongPress(onLongPress: () => void, delayMs = 500) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startXRef = useRef(0)
   const startYRef = useRef(0)
   const onLongPressRef = useRef(onLongPress)
-  onLongPressRef.current = onLongPress
+
+  useLayoutEffect(() => {
+    onLongPressRef.current = onLongPress
+  })
 
   const cancel = () => {
     if (timerRef.current !== null) {
