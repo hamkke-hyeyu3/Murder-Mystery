@@ -28,21 +28,6 @@ beforeEach(() => {
 })
 
 describe('ClueActionSheet', () => {
-  it('clue=null 이면 아무것도 렌더하지 않는다', () => {
-    const { container } = render(
-      <ClueActionSheet
-        clue={null}
-        players={players}
-        myPlayerId="player-me"
-        onClose={vi.fn()}
-        onShareFull={vi.fn()}
-        onSharePartial={vi.fn()}
-      />
-    )
-    expect(screen.queryByTestId('clue-action-sheet')).toBeNull()
-    expect(container.firstChild).toBeNull()
-  })
-
   it('clue 있으면 3개 행위 버튼이 모두 노출된다', () => {
     render(
       <ClueActionSheet

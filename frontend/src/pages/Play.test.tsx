@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
@@ -26,6 +26,10 @@ beforeEach(() => {
     publishItemShareFull: vi.fn(),
     publishItemSharePartial: vi.fn(),
   })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 function renderPlay(sessionId = 'sess-001') {
@@ -159,7 +163,6 @@ describe('Play', () => {
     fireEvent.click(shareFullBtn)
 
     expect(publishItemShareFull).toHaveBeenCalledWith('clue-share')
-    vi.useRealTimers()
   })
 
   it("state='round'일 때 단서 long-press → 부분공유 시 publishItemSharePartial 이 호출된다", async () => {
@@ -200,7 +203,6 @@ describe('Play', () => {
     fireEvent.click(getByTestId('confirm-share-partial'))
 
     expect(publishItemSharePartial).toHaveBeenCalledWith('clue-partial', ['player-bob'])
-    vi.useRealTimers()
   })
 
   it("state='vote'일 때 vote-placeholder를 렌더한다", () => {

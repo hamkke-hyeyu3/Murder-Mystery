@@ -4,6 +4,8 @@ export function useLongPress(onLongPress: () => void, delayMs = 500) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const startXRef = useRef(0)
   const startYRef = useRef(0)
+  const onLongPressRef = useRef(onLongPress)
+  onLongPressRef.current = onLongPress
 
   const cancel = () => {
     if (timerRef.current !== null) {
@@ -15,7 +17,7 @@ export function useLongPress(onLongPress: () => void, delayMs = 500) {
   const onPointerDown = (e: React.PointerEvent) => {
     startXRef.current = e.clientX
     startYRef.current = e.clientY
-    timerRef.current = setTimeout(onLongPress, delayMs)
+    timerRef.current = setTimeout(() => onLongPressRef.current(), delayMs)
   }
 
   const onPointerUp = () => cancel()

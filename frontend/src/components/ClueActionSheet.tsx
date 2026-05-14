@@ -4,7 +4,7 @@ import type { ClueView } from '@/types/session'
 import type { PlayerSummary } from '@/stores/sessionStore'
 
 interface Props {
-  clue: ClueView | null
+  clue: ClueView
   players: PlayerSummary[]
   myPlayerId: string | null
   onClose: () => void
@@ -15,8 +15,6 @@ interface Props {
 export function ClueActionSheet({ clue, players, myPlayerId, onClose, onShareFull, onSharePartial }: Props) {
   const [mode, setMode] = useState<'menu' | 'partial'>('menu')
   const [selected, setSelected] = useState<string[]>([])
-
-  if (!clue) return null
 
   const others = players.filter((p) => p.playerId !== myPlayerId)
 

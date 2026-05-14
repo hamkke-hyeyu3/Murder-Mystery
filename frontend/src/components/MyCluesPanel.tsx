@@ -32,7 +32,6 @@ function ClueItem({
   const longPress = useLongPress(onLongPress)
   return (
     <li
-      key={clue.id}
       data-testid={`clue-item-${clue.id}`}
       className="text-sm select-none cursor-pointer"
       {...longPress}
