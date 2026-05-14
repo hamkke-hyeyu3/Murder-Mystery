@@ -174,7 +174,7 @@ class SessionControllerTest {
             "char-a", "알리스", 0, null, null, null, null, null, null, null, List.of()
         );
         SessionViewResponse.MeView me = new SessionViewResponse.MeView(
-            "p1", "alice", true, "char-a", character, objective, null, List.of()
+            "p1", "alice", true, "char-a", character, objective, null, List.of(), List.of()
         );
         return new SessionViewResponse(
             sessionId, "123456", "toy-manor", "in_progress",

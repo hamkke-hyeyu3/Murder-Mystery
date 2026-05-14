@@ -61,6 +61,7 @@ class SessionServiceTest {
         // safe defaults for snapshot fields introduced in S5
         when(occupancyRepo.findBySessionIdAndRoundNumber(any(), anyInt())).thenReturn(List.of());
         when(clueAclRepo.findBySessionIdAndPlayerId(any(), any())).thenReturn(List.of());
+        when(clueRepo.findBySessionId(any())).thenReturn(List.of());
     }
 
     private Scenario toyManor() {
@@ -330,5 +331,80 @@ class SessionServiceTest {
         assertThat(view.me().assignedCharacterId()).isNull();
         assertThat(view.me().character()).isNull();
         assertThat(view.me().objective()).isNull();  // objective hidden despite currentRoundNumber=1
+    }
+
+    @Test
+    void getSession_round_allOwnedCluesContainsAllSessionClues() {
+        Scenario scenario = new Scenario(
+            "toy-manor", "Toy Manor", "summary", "🏚️", 60,
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, null)),
+            List.of(), List.of(), List.of(), "c1", false, 3, null
+        );
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        Session session = new Session("123456", "toy-manor");
+        session.setPhase("in_progress");
+        session.setState("round");
+        session.setCurrentRoundNumber(1);
+        session.setTurnOrder(List.of("c1"));
+
+        UUID deviceId = UUID.randomUUID();
+        Player alice = new Player("alice", true, deviceId);
+        alice.setAssignedCharacterId("c1");
+        session.addPlayer(alice);
+        when(sessionRepo.findById(session.getId())).thenReturn(Optional.of(session));
+        when(playerRepo.findBySessionIdAndDeviceId(session.getId(), deviceId)).thenReturn(Optional.of(alice));
+
+        UUID bobId = UUID.randomUUID();
+        UUID charlieId = UUID.randomUUID();
+        java.time.Instant now = java.time.Instant.now();
+        Clue clue1 = new Clue(session.getId(), 1, "i1", "loc1", "단서A", alice.getId(), now);
+        Clue clue2 = new Clue(session.getId(), 1, "i2", "loc1", "단서B", bobId, now);
+        clue2.setCurrentOwnerPlayerId(bobId);
+        Clue clue3 = new Clue(session.getId(), 1, "i3", "loc1", "단서C", charlieId, now);
+        clue3.setCurrentOwnerPlayerId(charlieId);
+        when(clueRepo.findBySessionId(session.getId())).thenReturn(List.of(clue1, clue2, clue3));
+
+        SessionViewResponse view = service.getSession(session.getId(), deviceId);
+
+        assertThat(view.me()).isNotNull();
+        assertThat(view.me().allOwnedClues()).hasSize(3);
+        assertThat(view.me().allOwnedClues())
+            .extracting(SessionViewResponse.OwnedClueView::ownerPlayerId)
+            .containsExactlyInAnyOrder(
+                alice.getId().toString(),
+                bobId.toString(),
+                charlieId.toString()
+            );
+        assertThat(view.me().allOwnedClues())
+            .extracting(SessionViewResponse.OwnedClueView::title)
+            .containsExactlyInAnyOrder("단서A", "단서B", "단서C");
+    }
+
+    @Test
+    void getSession_nonCardVisibleState_allOwnedCluesEmpty() {
+        Scenario scenario = new Scenario(
+            "toy-manor", "Toy Manor", "summary", "🏚️", 60,
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, null)),
+            List.of(), List.of(), List.of(), "c1", false, 3, null
+        );
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
+
+        Session session = new Session("123456", "toy-manor");
+        session.setPhase("in_progress");
+        session.setState("intro");
+        session.setTurnOrder(List.of("c1"));
+
+        UUID deviceId = UUID.randomUUID();
+        Player alice = new Player("alice", true, deviceId);
+        alice.setAssignedCharacterId("c1");
+        session.addPlayer(alice);
+        when(sessionRepo.findById(session.getId())).thenReturn(Optional.of(session));
+        when(playerRepo.findBySessionIdAndDeviceId(session.getId(), deviceId)).thenReturn(Optional.of(alice));
+
+        SessionViewResponse view = service.getSession(session.getId(), deviceId);
+
+        assertThat(view.me()).isNotNull();
+        assertThat(view.me().allOwnedClues()).isEmpty();
     }
 }

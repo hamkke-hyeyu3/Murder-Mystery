@@ -8,6 +8,7 @@ import type { PlayerSummary } from '@/stores/sessionStore'
 interface MyCluesPanelProps {
   players: PlayerSummary[]
   myPlayerId: string | null
+  onExchange: (partnerPlayerId: string, requesterClueId: string, partnerClueId: string) => void
   onShareFull: (clueId: string) => void
   onSharePartial: (clueId: string, recipientPlayerIds: string[]) => void
 }
@@ -41,8 +42,9 @@ function ClueItem({
   )
 }
 
-export function MyCluesPanel({ players, myPlayerId, onShareFull, onSharePartial }: MyCluesPanelProps) {
+export function MyCluesPanel({ players, myPlayerId, onExchange, onShareFull, onSharePartial }: MyCluesPanelProps) {
   const clues = useCardStore((s) => s.clues)
+  const ownedClues = useCardStore((s) => s.ownedClues)
   const [activeClue, setActiveClue] = useState<ClueView | null>(null)
 
   if (clues.length === 0) {
@@ -80,7 +82,9 @@ export function MyCluesPanel({ players, myPlayerId, onShareFull, onSharePartial 
           clue={activeClue}
           players={players}
           myPlayerId={myPlayerId}
+          ownedClues={ownedClues}
           onClose={() => setActiveClue(null)}
+          onExchange={onExchange}
           onShareFull={onShareFull}
           onSharePartial={onSharePartial}
         />

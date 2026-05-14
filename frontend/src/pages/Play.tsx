@@ -35,6 +35,7 @@ export default function Play() {
   const setCharacterCard = useCardStore((s) => s.setCharacterCard)
   const setObjective = useCardStore((s) => s.setObjective)
   const setClues = useCardStore((s) => s.setClues)
+  const setOwnedClues = useCardStore((s) => s.setOwnedClues)
   const resetCard = useCardStore((s) => s.reset)
   const currentTurnIndex = useSessionStore((s) => s.currentTurnIndex)
   const currentTurnPlayerId = useSessionStore((s) => s.currentTurnPlayerId)
@@ -63,6 +64,7 @@ export default function Play() {
         if (snap.me.character) setCharacterCard(snap.me.character)
         if (snap.me.objective) setObjective(snap.me.objective)
         if (snap.me.myClues !== undefined) setClues(snap.me.myClues)
+        if (snap.me.allOwnedClues !== undefined) setOwnedClues(snap.me.allOwnedClues)
         if (snap.round) setRoundDeadline(snap.round.deadlineAt)
         if (snap.currentTurn) useTimerStore.getState().setTurnDeadline(snap.currentTurn.deadlineAt)
       })
@@ -70,7 +72,7 @@ export default function Play() {
     return () => { cancelled = true }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { publishSelectLocation, publishItemShareFull, publishItemSharePartial } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
+  const { publishSelectLocation, publishItemExchange, publishItemShareFull, publishItemSharePartial } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 
   const handleTutorialAck = async () => {
     if (!sessionId) return
@@ -122,6 +124,7 @@ export default function Play() {
         <MyCluesPanel
           players={players}
           myPlayerId={playerId}
+          onExchange={publishItemExchange}
           onShareFull={publishItemShareFull}
           onSharePartial={publishItemSharePartial}
         />

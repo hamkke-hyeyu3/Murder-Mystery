@@ -161,12 +161,22 @@ public class SessionService {
                     }
                 }
 
+                List<SessionViewResponse.OwnedClueView> allOwnedClues = List.of();
+                if (cardVisible) {
+                    allOwnedClues = clueRepository.findBySessionId(sessionId).stream()
+                        .map(c -> new SessionViewResponse.OwnedClueView(
+                            c.getId().toString(), c.getItemId(), c.getTitle(),
+                            c.getCurrentOwnerPlayerId().toString(), c.getRoundNumberDiscovered()))
+                        .toList();
+                }
+
                 String assignedCharacterId = cardVisible ? me.getAssignedCharacterId() : null;
                 Long tutorialAckedAtMs = me.getTutorialAckedAt() != null
                     ? me.getTutorialAckedAt().toEpochMilli() : null;
                 meView = new SessionViewResponse.MeView(
                     me.getId().toString(), me.getNickname(), me.isHost(),
-                    assignedCharacterId, characterView, objectiveView, tutorialAckedAtMs, myClues
+                    assignedCharacterId, characterView, objectiveView, tutorialAckedAtMs,
+                    myClues, allOwnedClues
                 );
             }
         }

@@ -79,6 +79,14 @@ export type ClueView = {
   source: string
 }
 
+export type OwnedClueView = {
+  id: string
+  itemId: string
+  title: string
+  ownerPlayerId: string
+  roundNumberDiscovered: number
+}
+
 export type MeView = {
   playerId: string
   nickname: string
@@ -88,6 +96,7 @@ export type MeView = {
   objective: ObjectiveView | null
   tutorialAckedAt: number | null
   myClues: ClueView[]
+  allOwnedClues?: OwnedClueView[]
 }
 
 export type ScenarioLocationView = {

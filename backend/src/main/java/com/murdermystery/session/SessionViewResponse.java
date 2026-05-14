@@ -60,7 +60,16 @@ public record SessionViewResponse(
         CharacterCardView character,
         ObjectiveView objective,
         Long tutorialAckedAt,
-        List<ClueView> myClues
+        List<ClueView> myClues,
+        List<OwnedClueView> allOwnedClues
+    ) {}
+
+    public record OwnedClueView(
+        String id,
+        String itemId,
+        String title,
+        String ownerPlayerId,
+        int roundNumberDiscovered
     ) {}
 
     public record CharacterCardView(

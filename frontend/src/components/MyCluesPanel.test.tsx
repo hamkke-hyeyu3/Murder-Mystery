@@ -25,6 +25,7 @@ const defaultPlayers: PlayerSummary[] = [
 const defaultProps = {
   players: defaultPlayers,
   myPlayerId: 'player-me',
+  onExchange: vi.fn(),
   onShareFull: vi.fn(),
   onSharePartial: vi.fn(),
 }
