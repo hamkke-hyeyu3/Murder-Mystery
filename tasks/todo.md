@@ -176,7 +176,7 @@
   - [x] BE S5: `ItemIntegrationTest` (exchange·shareFull·sharePartial e2e DB verify) — `290cdd3`
   - [x] FE S6: types(ITEM_EXCHANGED/SHARED_FULL/SHARED_PARTIAL) + useSessionWebSocket(3 이벤트 dispatch + 3 publish 헬퍼) + BannerStack(자동 dismiss + × 버튼) — `95c35e8`
   - [x] FE S7–S8: 단서 long-press → 행위 메뉴 + share_partial multi-select + 배너 토스트 큐 (교환 disabled → 후속 sub-task 분리) — `e6c8a56`
-  - [x] FE S9(후속): 교환 UX — BE SessionView allOwnedClues 확장 + exchange picker 구현 — `2858999`
+  - [x] FE S9(후속): 교환 UX — BE SessionView allOwnedClues 확장 + exchange picker 구현 — `cabcac3`
   - [ ] 검증: 체크포인트 C 완료 조건 — 아이템 3행위 데모
 
 - [ ] **T-12** 1:1 밀담 신청·수락·거절 + 동시 한 쌍 + 배너
