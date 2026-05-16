@@ -427,6 +427,39 @@ describe('useSessionWebSocket', () => {
     )
   })
 
+  it('ITEM_EXCHANGED 수신 시 ownedClues 소유권이 swap된다', () => {
+    useCardStore.getState().setOwnedClues([
+      { id: 'clue-a', itemId: 'item-a', title: '단서A', ownerPlayerId: 'player-alice', roundNumberDiscovered: 1 },
+      { id: 'clue-b', itemId: 'item-b', title: '단서B', ownerPlayerId: 'player-bob', roundNumberDiscovered: 1 },
+    ])
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ITEM_EXCHANGED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            actorPlayerId: 'player-alice',
+            actorNickname: '앨리스',
+            partnerPlayerId: 'player-bob',
+            partnerNickname: '밥',
+            roundNumber: 1,
+            actorClueId: 'clue-a',
+            partnerClueId: 'clue-b',
+            actionId: 'action-ex-2',
+            occurredAt: Date.now(),
+          },
+        }),
+      } as IMessage)
+    })
+
+    const ownedClues = useCardStore.getState().ownedClues
+    expect(ownedClues.find((c) => c.id === 'clue-a')?.ownerPlayerId).toBe('player-bob')
+    expect(ownedClues.find((c) => c.id === 'clue-b')?.ownerPlayerId).toBe('player-alice')
+  })
+
   it('ITEM_SHARED_FULL 수신 시 actionId로 배너를 push한다', () => {
     renderHook(() => useSessionWebSocket(defaultOptions))
 
