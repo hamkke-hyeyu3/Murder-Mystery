@@ -358,11 +358,10 @@ class SessionServiceTest {
         UUID bobId = UUID.randomUUID();
         UUID charlieId = UUID.randomUUID();
         java.time.Instant now = java.time.Instant.now();
+        // Clue constructor sets currentOwnerPlayerId = discoveredByPlayerId, so no extra set needed
         Clue clue1 = new Clue(session.getId(), 1, "i1", "loc1", "단서A", alice.getId(), now);
         Clue clue2 = new Clue(session.getId(), 1, "i2", "loc1", "단서B", bobId, now);
-        clue2.setCurrentOwnerPlayerId(bobId);
         Clue clue3 = new Clue(session.getId(), 1, "i3", "loc1", "단서C", charlieId, now);
-        clue3.setCurrentOwnerPlayerId(charlieId);
         when(clueRepo.findBySessionId(session.getId())).thenReturn(List.of(clue1, clue2, clue3));
 
         SessionViewResponse view = service.getSession(session.getId(), deviceId);

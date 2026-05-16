@@ -58,9 +58,14 @@ describe('ClueActionSheet', () => {
     expect(screen.getByTestId('action-exchange')).toBeInTheDocument()
   })
 
-  it('[교환] 버튼은 활성화 상태다', () => {
-    renderSheet()
+  it('[교환] 버튼은 내 소유 단서가 있으면 활성화 상태다', () => {
+    renderSheet({ ownedClues: [makeOwnedClue('my-c1', 'player-me')] })
     expect(screen.getByTestId('action-exchange')).not.toBeDisabled()
+  })
+
+  it('[교환] 버튼은 내 소유 단서가 없으면 disabled 다', () => {
+    renderSheet({ ownedClues: [] })
+    expect(screen.getByTestId('action-exchange')).toBeDisabled()
   })
 
   it('[전체 공유] 클릭 시 onShareFull(clueId) 와 onClose 가 호출된다', () => {
@@ -110,11 +115,34 @@ describe('ClueActionSheet', () => {
 
   // exchange flow
   it('[교환] 클릭 시 partner picker 가 노출된다', () => {
-    renderSheet()
+    renderSheet({ ownedClues: [makeOwnedClue('my-c1', 'player-me')] })
     fireEvent.click(screen.getByTestId('action-exchange'))
     expect(screen.getByTestId('exchange-partner-player-bob')).toBeInTheDocument()
     expect(screen.getByTestId('exchange-partner-player-charlie')).toBeInTheDocument()
     expect(screen.queryByTestId('exchange-partner-player-me')).toBeNull()
+  })
+
+  it('[교환] exchange-partner에서 뒤로 클릭 시 menu 로 돌아간다', () => {
+    renderSheet({ ownedClues: [makeOwnedClue('my-c1', 'player-me')] })
+    fireEvent.click(screen.getByTestId('action-exchange'))
+    expect(screen.getByTestId('exchange-partner-player-bob')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('exchange-back'))
+    expect(screen.getByTestId('action-share-full')).toBeInTheDocument()
+    expect(screen.queryByTestId('exchange-partner-player-bob')).toBeNull()
+  })
+
+  it('[교환] exchange-clue에서 뒤로 클릭 시 exchange-partner 로 돌아간다', () => {
+    const ownedClues: OwnedClueView[] = [
+      makeOwnedClue('my-c1', 'player-me'),
+      makeOwnedClue('bob-c1', 'player-bob'),
+    ]
+    renderSheet({ ownedClues })
+    fireEvent.click(screen.getByTestId('action-exchange'))
+    fireEvent.click(screen.getByTestId('exchange-partner-player-bob'))
+    expect(screen.getByTestId('exchange-my-clue-my-c1')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('exchange-clue-back'))
+    expect(screen.getByTestId('exchange-partner-player-bob')).toBeInTheDocument()
+    expect(screen.queryByTestId('exchange-my-clue-my-c1')).toBeNull()
   })
 
   it('partner 가 단서를 소유하지 않은 경우 해당 버튼이 disabled 다', () => {

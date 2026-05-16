@@ -162,7 +162,7 @@ public class SessionService {
                 }
 
                 List<SessionViewResponse.OwnedClueView> allOwnedClues = List.of();
-                if (cardVisible) {
+                if ("round".equals(session.getState())) {
                     allOwnedClues = clueRepository.findBySessionId(sessionId).stream()
                         .map(c -> new SessionViewResponse.OwnedClueView(
                             c.getId().toString(), c.getItemId(), c.getTitle(),

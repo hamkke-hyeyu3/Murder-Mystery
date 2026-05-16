@@ -132,13 +132,16 @@ export function useSessionWebSocket({
             id: p.actionId,
             message: `${p.actorNickname}님과 ${p.partnerNickname}님이 단서를 교환했습니다`,
           })
-          useCardStore.setState((state) => ({
-            ownedClues: state.ownedClues.map((c) => {
-              if (c.id === p.actorClueId) return { ...c, ownerPlayerId: p.partnerPlayerId }
-              if (c.id === p.partnerClueId) return { ...c, ownerPlayerId: p.actorPlayerId }
-              return c
-            }),
-          }))
+          useCardStore.setState((state) => {
+            if (state.ownedClues.length === 0) return state
+            return {
+              ownedClues: state.ownedClues.map((c) => {
+                if (c.id === p.actorClueId) return { ...c, ownerPlayerId: p.partnerPlayerId }
+                if (c.id === p.partnerClueId) return { ...c, ownerPlayerId: p.actorPlayerId }
+                return c
+              }),
+            }
+          })
         } else if (envelope.type === 'ITEM_SHARED_FULL') {
           const p = envelope.payload
           useTransientStore.getState().pushBanner({

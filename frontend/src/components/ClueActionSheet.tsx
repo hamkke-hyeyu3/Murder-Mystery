@@ -83,7 +83,12 @@ export function ClueActionSheet({ clue, players, myPlayerId, ownedClues, onClose
             <Button data-testid="action-share-partial" variant="outline" onClick={handleEnterPartial}>
               부분 공유
             </Button>
-            <Button data-testid="action-exchange" variant="outline" onClick={() => setMode('exchange-partner')}>
+            <Button
+              data-testid="action-exchange"
+              variant="outline"
+              disabled={myOwnedClues.length === 0}
+              onClick={() => setMode('exchange-partner')}
+            >
               교환
             </Button>
             <Button data-testid="action-cancel" variant="ghost" onClick={onClose}>
@@ -145,8 +150,8 @@ export function ClueActionSheet({ clue, players, myPlayerId, ownedClues, onClose
                 )
               })}
             </ul>
-            <Button data-testid="action-cancel" variant="ghost" onClick={onClose}>
-              취소
+            <Button data-testid="exchange-back" variant="ghost" onClick={() => setMode('menu')}>
+              뒤로
             </Button>
           </>
         )}
@@ -206,8 +211,8 @@ export function ClueActionSheet({ clue, players, myPlayerId, ownedClues, onClose
             >
               교환 확정
             </Button>
-            <Button data-testid="action-cancel" variant="ghost" onClick={onClose}>
-              취소
+            <Button data-testid="exchange-clue-back" variant="ghost" onClick={() => setMode('exchange-partner')}>
+              뒤로
             </Button>
           </>
         )}
