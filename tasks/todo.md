@@ -181,7 +181,7 @@
   - ⚠️ **기술 부채:** `ItemService.exchange`는 현재 1-step(requester 단독 swap). 스펙은 2-step — 1단계: 교환 제안(picker 열기), 2단계: partner 수락 시 실행. T-12 이후 별도 task로 수정 필요 (`EXCHANGE_REQUESTED` private → `EXCHANGE_ACCEPTED/DECLINED`).
   - [x] **리뷰 R1**: BE 멱등성·@Version·DB unique·DoS 가드·헬퍼 추출·projection — `8f4959c`
   - [x] **리뷰 R2**: BE WS SUBSCRIBE 구독 권한 가드 (C-3) — `acc8b2e`
-  - [x] **리뷰 R3**: FE publish 가드·useLongPress 강화·sheet 자동 닫힘·self-exchange 가드·배너 cap — TBD
+  - [x] **리뷰 R3**: FE publish 가드·useLongPress 강화·sheet 자동 닫힘·self-exchange 가드·배너 cap — `4f1a414`
 
 - [ ] **T-12** 1:1 밀담 신청·수락·거절 + 동시 한 쌍 + 배너
   - [ ] BE: `PrivateTalkService` (신청 private only → 수락 broadcast → 거절·timeout 무반응)
