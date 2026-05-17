@@ -176,7 +176,7 @@ export async function getFirstClueId(page: Page): Promise<string> {
  * ClueActionSheet exchange-partner 모드를 잠시 진입해서 exchange-partner-{playerId} 버튼의 testid를 읽음.
  * ownerClueId: 진입에 필요한 내가 소유한 단서 ID (long-press 대상).
  */
-export async function getPlayerIdByNickname(
+export async function lookupPlayerIdViaExchangeSheet(
   page: Page,
   nickname: string,
   ownerClueId: string,

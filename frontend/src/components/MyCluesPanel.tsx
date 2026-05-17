@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState } from 'react'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useLongPress } from '@/hooks/useLongPress'
@@ -24,14 +24,14 @@ function groupByRound(clues: ClueView[]): Map<number, ClueView[]> {
   return map
 }
 
-function ClueItem({
+const ClueItem = memo(function ClueItem({
   clue,
   onLongPress,
 }: {
   clue: ClueView
-  onLongPress: () => void
+  onLongPress: (c: ClueView) => void
 }) {
-  const longPress = useLongPress(onLongPress)
+  const longPress = useLongPress(() => onLongPress(clue))
   return (
     <li
       data-testid={`clue-item-${clue.id}`}
@@ -41,7 +41,7 @@ function ClueItem({
       {clue.title}
     </li>
   )
-}
+})
 
 export function MyCluesPanel({ players, myPlayerId, onExchange, onShareFull, onSharePartial }: MyCluesPanelProps) {
   const clues = useCardStore((s) => s.clues)
@@ -52,6 +52,8 @@ export function MyCluesPanel({ players, myPlayerId, onExchange, onShareFull, onS
   useEffect(() => {
     setActiveClue(null)
   }, [roundNumber])
+
+  const handleLongPress = useCallback((c: ClueView) => setActiveClue(c), [])
 
   if (clues.length === 0) {
     return (
@@ -75,7 +77,7 @@ export function MyCluesPanel({ players, myPlayerId, onExchange, onShareFull, onS
                 <ClueItem
                   key={clue.id}
                   clue={clue}
-                  onLongPress={() => setActiveClue(clue)}
+                  onLongPress={handleLongPress}
                 />
               ))}
             </ul>

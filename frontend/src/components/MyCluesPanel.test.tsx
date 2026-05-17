@@ -111,7 +111,7 @@ describe('MyCluesPanel', () => {
   it('라운드가 변경되면 열린 ClueActionSheet 가 닫힌다', () => {
     vi.useFakeTimers()
     useCardStore.getState().setClues([makeClue('a', 1)])
-    const { rerender } = render(<MyCluesPanel {...defaultProps} />)
+    render(<MyCluesPanel {...defaultProps} />)
 
     fireEvent.pointerDown(screen.getByTestId('clue-item-a'), { clientX: 0, clientY: 0 })
     act(() => { vi.advanceTimersByTime(500) })

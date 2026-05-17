@@ -10,7 +10,7 @@ import {
   waitAndSelectLocation,
   waitForRoundTurnsComplete,
   getFirstClueId,
-  getPlayerIdByNickname,
+  lookupPlayerIdViaExchangeSheet,
   shareFullClue,
   sharePartialClue,
   longPressClue,
@@ -66,7 +66,7 @@ test('3 단말 아이템 3행위 — shareFull / sharePartial / exchange', async
 
     // ── Action 2: sharePartial ────────────────────────────────────────
     // Bob이 Charlie에게만 공유 (Alice 제외) → 3 단말 배너 수신 (recipients 1명)
-    const charliePlayerId = await getPlayerIdByNickname(bobPage, `Charlie-${ts}`, bobClueId)
+    const charliePlayerId = await lookupPlayerIdViaExchangeSheet(bobPage, `Charlie-${ts}`, bobClueId)
     await sharePartialClue(bobPage, bobClueId, [charliePlayerId])
     await Promise.all(
       allPages.map((p) =>
@@ -77,7 +77,7 @@ test('3 단말 아이템 3행위 — shareFull / sharePartial / exchange', async
     // ── Action 3: exchange ────────────────────────────────────────────
     // Charlie ↔ Alice 단서 교환
     // reload 덕분에 Charlie의 ownedClues에 Alice의 R1 단서가 포함돼 exchange-partner 활성화
-    const alicePlayerId = await getPlayerIdByNickname(charliePage, `Alice-${ts}`, charlieClueId)
+    const alicePlayerId = await lookupPlayerIdViaExchangeSheet(charliePage, `Alice-${ts}`, charlieClueId)
     await longPressClue(charliePage, charlieClueId)
     await charliePage.getByTestId('action-exchange').click()
     await exchangeClue(charliePage, alicePlayerId, charlieClueId, aliceClueId)

@@ -13,6 +13,10 @@ interface UseSessionWebSocketOptions {
   playerId: string | null
 }
 
+type EventHandlers = {
+  [K in SessionEvent['type']]?: (e: Extract<SessionEvent, { type: K }>) => void
+}
+
 export function useSessionWebSocket({
   sessionId,
   inviteCode,
@@ -32,151 +36,174 @@ export function useSessionWebSocket({
   useEffect(() => {
     if (!connected || !client.current || !client.current.connected || !sessionId) return
 
-    const topicSub = client.current.subscribe(
-      `/topic/session/${sessionId}/event`,
-      (msg) => {
-        const envelope = JSON.parse(msg.body) as SessionEvent
-        if (envelope.type === 'PLAYER_JOINED') {
-          const { playerId: joinedId, nickname: joinedNickname, isHost: joinedIsHost } = envelope.payload
-          useSessionStore.setState((state) => {
-            if (state.players.some((p) => p.playerId === joinedId)) return state
-            return { ...state, players: [...state.players, { playerId: joinedId, nickname: joinedNickname, isHost: joinedIsHost }] }
-          })
-        } else if (envelope.type === 'PLAYER_LEFT') {
-          const leftId = envelope.payload.playerId
-          if (!leftId) return
-          useSessionStore.setState((state) => ({
+    const handleLocationOccupancy = (
+      payload: { locationId: string; playerId: string; characterId: string },
+      autoSelected: boolean
+    ) => {
+      useSessionStore.setState((state) => ({
+        ...state,
+        locationOccupancy: [
+          ...state.locationOccupancy.filter((o) => o.locationId !== payload.locationId),
+          {
+            locationId: payload.locationId,
+            playerId: payload.playerId,
+            characterId: payload.characterId,
+            autoSelected,
+          },
+        ],
+      }))
+    }
+
+    const topicHandlers: EventHandlers = {
+      PLAYER_JOINED: (e) => {
+        const { playerId: joinedId, nickname: joinedNickname, isHost: joinedIsHost } = e.payload
+        useSessionStore.setState((state) => {
+          if (state.players.some((p) => p.playerId === joinedId)) return state
+          return {
             ...state,
-            players: state.players.filter((p) => p.playerId !== leftId),
-            leftPlayerIds: [...state.leftPlayerIds, leftId],
-          }))
-        } else if (envelope.type === 'LOBBY_COUNT_CHANGED') {
-          setSession({
-            joinedCount: envelope.payload.joined,
-            requiredCharacterCount: envelope.payload.required,
-          })
-        } else if (envelope.type === 'SESSION_STATE_CHANGED') {
-          setSession({
-            phase: 'in_progress',
-            state: envelope.payload.state,
-            ...(envelope.payload.turnOrder ? { turnOrder: envelope.payload.turnOrder } : {}),
-          })
-        } else if (envelope.type === 'TUTORIAL_ACKED') {
-          const patch: Parameters<typeof setSession>[0] = {
-            tutorialAckedCount: envelope.payload.acked,
-            tutorialTotalCount: envelope.payload.total,
+            players: [...state.players, { playerId: joinedId, nickname: joinedNickname, isHost: joinedIsHost }],
           }
-          if (envelope.payload.playerId === playerId) {
-            patch.myTutorialAcked = true
+        })
+      },
+      PLAYER_LEFT: (e) => {
+        const leftId = e.payload.playerId
+        if (!leftId) return
+        useSessionStore.setState((state) => ({
+          ...state,
+          players: state.players.filter((p) => p.playerId !== leftId),
+          leftPlayerIds: [...state.leftPlayerIds, leftId],
+        }))
+      },
+      LOBBY_COUNT_CHANGED: (e) => {
+        setSession({ joinedCount: e.payload.joined, requiredCharacterCount: e.payload.required })
+      },
+      SESSION_STATE_CHANGED: (e) => {
+        setSession({
+          phase: 'in_progress',
+          state: e.payload.state,
+          ...(e.payload.turnOrder ? { turnOrder: e.payload.turnOrder } : {}),
+        })
+      },
+      TUTORIAL_ACKED: (e) => {
+        const patch: Parameters<typeof setSession>[0] = {
+          tutorialAckedCount: e.payload.acked,
+          tutorialTotalCount: e.payload.total,
+        }
+        if (e.payload.playerId === playerId) patch.myTutorialAcked = true
+        setSession(patch)
+      },
+      SERVER_TIME_SYNC: (e) => {
+        useTimerStore.getState().setServerOffset(e.payload.serverNow - Date.now())
+      },
+      ROUND_STARTED: (e) => {
+        setSession({
+          state: 'round',
+          roundNumber: e.payload.roundNumber,
+          roundPrompt: e.payload.prompt,
+          roundCommonHint: e.payload.commonHint,
+        })
+        useTimerStore.getState().setRoundDeadline(e.payload.deadlineAt)
+      },
+      TURN_STARTED: (e) => {
+        const p = e.payload
+        setSession({
+          currentTurnIndex: p.turnIndex,
+          currentTurnPlayerId: p.playerId,
+          currentTurnCharacterId: p.characterId,
+          currentTurnDeadlineAt: p.deadlineAt,
+          currentRoundCandidateLocationIds: p.candidateLocationIds,
+        })
+        useTimerStore.getState().setTurnDeadline(p.deadlineAt)
+      },
+      LOCATION_SELECTED: (e) => handleLocationOccupancy(e.payload, false),
+      LOCATION_AUTO_SELECTED: (e) => handleLocationOccupancy(e.payload, true),
+      ROUND_TURNS_COMPLETE: () => {
+        useTimerStore.getState().setTurnDeadline(null)
+        setSession({
+          currentTurnIndex: null,
+          currentTurnPlayerId: null,
+          currentTurnCharacterId: null,
+          currentTurnDeadlineAt: null,
+          currentRoundCandidateLocationIds: [],
+        })
+      },
+      ROUND_ENDED: (e) => {
+        useTransientStore.getState().pushBanner({
+          id: `round-${e.payload.roundNumber}-ended`,
+          message: `라운드 ${e.payload.roundNumber} 종료`,
+        })
+        useTimerStore.getState().setTurnDeadline(null)
+        setSession({
+          currentTurnIndex: null,
+          currentTurnPlayerId: null,
+          currentTurnCharacterId: null,
+          currentTurnDeadlineAt: null,
+          currentRoundCandidateLocationIds: [],
+        })
+      },
+      ITEM_EXCHANGED: (e) => {
+        const p = e.payload
+        useTransientStore.getState().pushBanner({
+          id: p.actionId,
+          message: `${p.actorNickname}님과 ${p.partnerNickname}님이 단서를 교환했습니다`,
+        })
+        useCardStore.setState((state) => {
+          if (state.ownedClues.length === 0) return state
+          return {
+            ownedClues: state.ownedClues.map((c) => {
+              if (c.id === p.actorClueId) return { ...c, ownerPlayerId: p.partnerPlayerId }
+              if (c.id === p.partnerClueId) return { ...c, ownerPlayerId: p.actorPlayerId }
+              return c
+            }),
           }
-          setSession(patch)
-        } else if (envelope.type === 'SERVER_TIME_SYNC') {
-          useTimerStore.getState().setServerOffset(envelope.payload.serverNow - Date.now())
-        } else if (envelope.type === 'ROUND_STARTED') {
-          setSession({
-            state: 'round',
-            roundNumber: envelope.payload.roundNumber,
-            roundPrompt: envelope.payload.prompt,
-            roundCommonHint: envelope.payload.commonHint,
-          })
-          useTimerStore.getState().setRoundDeadline(envelope.payload.deadlineAt)
-        } else if (envelope.type === 'TURN_STARTED') {
-          const p = envelope.payload
-          setSession({
-            currentTurnIndex: p.turnIndex,
-            currentTurnPlayerId: p.playerId,
-            currentTurnCharacterId: p.characterId,
-            currentTurnDeadlineAt: p.deadlineAt,
-            currentRoundCandidateLocationIds: p.candidateLocationIds,
-          })
-          useTimerStore.getState().setTurnDeadline(p.deadlineAt)
-        } else if (envelope.type === 'LOCATION_SELECTED' || envelope.type === 'LOCATION_AUTO_SELECTED') {
-          const p = envelope.payload
-          useSessionStore.setState((state) => ({
-            ...state,
-            locationOccupancy: [
-              ...state.locationOccupancy.filter((o) => o.locationId !== p.locationId),
-              {
-                locationId: p.locationId,
-                playerId: p.playerId,
-                characterId: p.characterId,
-                autoSelected: envelope.type === 'LOCATION_AUTO_SELECTED',
-              },
-            ],
-          }))
-        } else if (envelope.type === 'ROUND_TURNS_COMPLETE') {
-          useTimerStore.getState().setTurnDeadline(null)
-          setSession({
-            currentTurnIndex: null,
-            currentTurnPlayerId: null,
-            currentTurnCharacterId: null,
-            currentTurnDeadlineAt: null,
-            currentRoundCandidateLocationIds: [],
-          })
-        } else if (envelope.type === 'ROUND_ENDED') {
-          useTransientStore.getState().pushBanner({
-            id: `round-${envelope.payload.roundNumber}-ended`,
-            message: `라운드 ${envelope.payload.roundNumber} 종료`,
-          })
-          useTimerStore.getState().setTurnDeadline(null)
-          setSession({
-            currentTurnIndex: null,
-            currentTurnPlayerId: null,
-            currentTurnCharacterId: null,
-            currentTurnDeadlineAt: null,
-            currentRoundCandidateLocationIds: [],
-          })
-        } else if (envelope.type === 'ITEM_EXCHANGED') {
-          const p = envelope.payload
-          useTransientStore.getState().pushBanner({
-            id: p.actionId,
-            message: `${p.actorNickname}님과 ${p.partnerNickname}님이 단서를 교환했습니다`,
-          })
+        })
+      },
+      ITEM_SHARED_FULL: (e) => {
+        const p = e.payload
+        useTransientStore.getState().pushBanner({
+          id: p.actionId,
+          message: `${p.actorNickname}님이 단서를 전체 공개했습니다`,
+        })
+      },
+      ITEM_SHARED_PARTIAL: (e) => {
+        const p = e.payload
+        useTransientStore.getState().pushBanner({
+          id: p.actionId,
+          message: `${p.actorNickname}님이 단서를 일부에게 공유했습니다 (총 ${p.recipients.length}명)`,
+        })
+      },
+    }
+
+    const privateHandlers: EventHandlers = {
+      CHARACTER_CARD_DEALT: (e) => setCharacterCard(e.payload),
+      OBJECTIVE_UPDATED: (e) => setObjective(e.payload),
+      CLUE_DELIVERED: (e) => {
+        addClue(e.payload)
+        if (e.payload.source === 'location' && playerId) {
+          const { id, itemId, title, roundNumberDiscovered } = e.payload
           useCardStore.setState((state) => {
-            if (state.ownedClues.length === 0) return state
+            if (state.ownedClues.some((c) => c.id === id)) return state
             return {
-              ownedClues: state.ownedClues.map((c) => {
-                if (c.id === p.actorClueId) return { ...c, ownerPlayerId: p.partnerPlayerId }
-                if (c.id === p.partnerClueId) return { ...c, ownerPlayerId: p.actorPlayerId }
-                return c
-              }),
+              ownedClues: [...state.ownedClues, { id, itemId, title, ownerPlayerId: playerId, roundNumberDiscovered }],
             }
           })
-        } else if (envelope.type === 'ITEM_SHARED_FULL') {
-          const p = envelope.payload
-          useTransientStore.getState().pushBanner({
-            id: p.actionId,
-            message: `${p.actorNickname}님이 단서를 전체 공개했습니다`,
-          })
-        } else if (envelope.type === 'ITEM_SHARED_PARTIAL') {
-          const p = envelope.payload
-          useTransientStore.getState().pushBanner({
-            id: p.actionId,
-            message: `${p.actorNickname}님이 단서를 일부에게 공유했습니다 (총 ${p.recipients.length}명)`,
-          })
         }
-      }
+      },
+    }
+
+    const dispatch = (handlers: EventHandlers, envelope: SessionEvent) => {
+      const handler = (handlers as Record<string, (e: SessionEvent) => void>)[envelope.type]
+      handler?.(envelope)
+    }
+
+    const topicSub = client.current.subscribe(
+      `/topic/session/${sessionId}/event`,
+      (msg) => dispatch(topicHandlers, JSON.parse(msg.body) as SessionEvent)
     )
 
     const privateSub = client.current.subscribe(
       `/user/queue/session/${sessionId}/private`,
-      (msg) => {
-        const envelope = JSON.parse(msg.body) as SessionEvent
-        if (envelope.type === 'CHARACTER_CARD_DEALT') {
-          setCharacterCard(envelope.payload)
-        } else if (envelope.type === 'OBJECTIVE_UPDATED') {
-          setObjective(envelope.payload)
-        } else if (envelope.type === 'CLUE_DELIVERED') {
-          addClue(envelope.payload)
-          if (envelope.payload.source === 'location' && playerId) {
-            const { id, itemId, title, roundNumberDiscovered } = envelope.payload
-            useCardStore.setState((state) => {
-              if (state.ownedClues.some((c) => c.id === id)) return state
-              return { ownedClues: [...state.ownedClues, { id, itemId, title, ownerPlayerId: playerId, roundNumberDiscovered }] }
-            })
-          }
-        }
-      }
+      (msg) => dispatch(privateHandlers, JSON.parse(msg.body) as SessionEvent)
     )
 
     return () => {
