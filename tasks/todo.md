@@ -168,7 +168,7 @@
   - [x] 검증: `RoundLifecycleIntegrationTest.cluesPersistAcrossRounds`, `lastRoundTransitionsToVote` + 단위 케이스 포함 전 테스트 그린
   - ⚠️ **기술 부채:** `endedRounds` 가드는 JVM 메모리 전용 — JVM crash 후 재기동 시 `round.ended_at` 있으나 다음 라운드/vote 미진입 상태로 남을 수 있음. 단일 인스턴스 MVP에서 수용; 멀티 인스턴스·HA 전환 전에 startup reconciliation 필요.
 
-- [ ] **T-11** 아이템 교환·전체·부분 공유 + 전원 공개 배너
+- [x] **T-11** 아이템 교환·전체·부분 공유 + 전원 공개 배너
   - [x] DB: `V9__items.sql` (`item_actions`, `clues.current_owner_player_id`) — S1 `e6c4233`
   - [x] BE S2: `ItemService.exchange` + STOMP `/item-exchange` + `ItemServiceTest` 11케이스 — `b3e7de6`
   - [x] BE S3: `ItemService.shareFull` + STOMP `/item-share-full` + `ItemServiceTest` +7케이스(중복방지 가드 포함) — `8d1aef9`
