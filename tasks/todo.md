@@ -183,7 +183,7 @@
   - [x] **리뷰 R2**: BE WS SUBSCRIBE 구독 권한 가드 (C-3) — `acc8b2e`
   - [x] **리뷰 R3**: FE publish 가드·useLongPress 강화·sheet 자동 닫힘·self-exchange 가드·배너 cap — `4f1a414`
   - [x] **리뷰 R4**: FE ClueActionSheet 모드 분리·핸들러 맵·ClueItem memo·fixtures 리네임 — `ae83951`
-  - [x] **리뷰 R5**: FE 이벤트 빈 구멍 3건·useLongPress·BE exchange 권한 위반 통합테스트 — TBD
+  - [x] **리뷰 R5**: FE 이벤트 빈 구멍 3건·useLongPress·BE exchange 권한 위반 통합테스트 — `6df97e1`
 
 - [ ] **T-12** 1:1 밀담 신청·수락·거절 + 동시 한 쌍 + 배너
   - [ ] BE: `PrivateTalkService` (신청 private only → 수락 broadcast → 거절·timeout 무반응)
