@@ -206,55 +206,36 @@ export function useSessionWebSocket({
       (msg) => dispatch(privateHandlers, JSON.parse(msg.body) as SessionEvent)
     )
 
-    return () => {
-      try { topicSub.unsubscribe() } catch (e) {
-        if (process.env.NODE_ENV !== 'production') console.error('[ws] unsubscribe failed', e)
-      }
-      try { privateSub.unsubscribe() } catch (e) {
+    const safeUnsubscribe = (sub: { unsubscribe: () => void }) => {
+      try { sub.unsubscribe() } catch (e) {
         if (process.env.NODE_ENV !== 'production') console.error('[ws] unsubscribe failed', e)
       }
     }
+
+    return () => {
+      safeUnsubscribe(topicSub)
+      safeUnsubscribe(privateSub)
+    }
   }, [connected, sessionId, playerId, setSession, setCharacterCard, setObjective, addClue])
 
-  const publishLeave = () => {
+  const sendToSession = (path: string, body: string = '') => {
     if (!client.current?.connected || !sessionId) return
-    client.current.publish({
-      destination: `/app/session/${sessionId}/leave`,
-      body: '',
-    })
+    client.current.publish({ destination: `/app/session/${sessionId}/${path}`, body })
   }
 
-  const publishSelectLocation = (locationId: string, roundNumber: number, turnIndex: number) => {
-    if (!client.current?.connected || !sessionId) return
-    client.current.publish({
-      destination: `/app/session/${sessionId}/select-location`,
-      body: JSON.stringify({ locationId, roundNumber, turnIndex }),
-    })
-  }
+  const publishLeave = () => sendToSession('leave')
 
-  const publishItemExchange = (partnerPlayerId: string, requesterClueId: string, partnerClueId: string) => {
-    if (!client.current?.connected || !sessionId) return
-    client.current.publish({
-      destination: `/app/session/${sessionId}/item-exchange`,
-      body: JSON.stringify({ partnerPlayerId, requesterClueId, partnerClueId }),
-    })
-  }
+  const publishSelectLocation = (locationId: string, roundNumber: number, turnIndex: number) =>
+    sendToSession('select-location', JSON.stringify({ locationId, roundNumber, turnIndex }))
 
-  const publishItemShareFull = (clueId: string) => {
-    if (!client.current?.connected || !sessionId) return
-    client.current.publish({
-      destination: `/app/session/${sessionId}/item-share-full`,
-      body: JSON.stringify({ clueId }),
-    })
-  }
+  const publishItemExchange = (partnerPlayerId: string, requesterClueId: string, partnerClueId: string) =>
+    sendToSession('item-exchange', JSON.stringify({ partnerPlayerId, requesterClueId, partnerClueId }))
 
-  const publishItemSharePartial = (clueId: string, recipientPlayerIds: string[]) => {
-    if (!client.current?.connected || !sessionId) return
-    client.current.publish({
-      destination: `/app/session/${sessionId}/item-share-partial`,
-      body: JSON.stringify({ clueId, recipientPlayerIds }),
-    })
-  }
+  const publishItemShareFull = (clueId: string) =>
+    sendToSession('item-share-full', JSON.stringify({ clueId }))
+
+  const publishItemSharePartial = (clueId: string, recipientPlayerIds: string[]) =>
+    sendToSession('item-share-partial', JSON.stringify({ clueId, recipientPlayerIds }))
 
   return { connected, publishLeave, publishSelectLocation, publishItemExchange, publishItemShareFull, publishItemSharePartial }
 }

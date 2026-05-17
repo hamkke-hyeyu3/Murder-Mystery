@@ -79,15 +79,15 @@ public class ItemService {
                 Instant now = clock.instant();
                 List<NewAcl> newAcls = new ArrayList<>();
 
-                UUID[][] pairs = {
-                    {requesterClueId, requesterId},
-                    {requesterClueId, partnerPlayerId},
-                    {partnerClueId, requesterId},
-                    {partnerClueId, partnerPlayerId}
-                };
-                for (UUID[] pair : pairs) {
-                    if (grantAclIfAbsent(pair[0], pair[1], now, ACTION_EXCHANGE)) {
-                        newAcls.add(new NewAcl(pair[0], pair[1]));
+                List<NewAcl> candidates = List.of(
+                    new NewAcl(requesterClueId, requesterId),
+                    new NewAcl(requesterClueId, partnerPlayerId),
+                    new NewAcl(partnerClueId, requesterId),
+                    new NewAcl(partnerClueId, partnerPlayerId)
+                );
+                for (NewAcl candidate : candidates) {
+                    if (grantAclIfAbsent(candidate.clueId(), candidate.playerId(), now, ACTION_EXCHANGE)) {
+                        newAcls.add(candidate);
                     }
                 }
 
