@@ -1,6 +1,8 @@
 package com.murdermystery.config;
 
 import com.murdermystery.session.PlayerRepository;
+import com.murdermystery.session.Session;
+import com.murdermystery.session.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.Message;
@@ -11,6 +13,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,13 +23,17 @@ import static org.mockito.Mockito.*;
 class StompAuthInterceptorTest {
 
     private PlayerRepository playerRepository;
+    private SessionRepository sessionRepository;
     private StompAuthInterceptor interceptor;
 
     @BeforeEach
     void setUp() {
         playerRepository = mock(PlayerRepository.class);
-        interceptor = new StompAuthInterceptor(playerRepository);
+        sessionRepository = mock(SessionRepository.class);
+        interceptor = new StompAuthInterceptor(playerRepository, sessionRepository);
     }
+
+    // ── CONNECT ─────────────────────────────────────────────────────────────────
 
     private Message<byte[]> connectMessage(Map<String, String> headers) {
         StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.CONNECT);
@@ -128,15 +135,74 @@ class StompAuthInterceptorTest {
     }
 
     @Test
-    void nonConnectCommand_passesThroughWithoutValidation() {
-        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+    void nonSessionCommand_passesThroughWithoutValidation() {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
         accessor.setLeaveMutable(true);
-        Message<byte[]> message = MessageBuilder.createMessage(
-            new byte[0], accessor.getMessageHeaders());
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
 
         Message<?> result = interceptor.preSend(message, mock(MessageChannel.class));
 
         assertThat(result).isSameAs(message);
         verify(playerRepository, never()).existsByIdAndNicknameAndSession_InviteCode(any(), any(), any());
+        verify(sessionRepository, never()).findById(any());
+    }
+
+    // ── SUBSCRIBE ────────────────────────────────────────────────────────────────
+
+    private Message<byte[]> subscribeMessage(String destination, StompPrincipal principal) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setLeaveMutable(true);
+        accessor.setDestination(destination);
+        accessor.setUser(principal);
+        return MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+    }
+
+    private Session sessionWithInviteCode(UUID sessionId, String inviteCode) {
+        Session s = mock(Session.class);
+        when(s.getInviteCode()).thenReturn(inviteCode);
+        when(sessionRepository.findById(sessionId)).thenReturn(Optional.of(s));
+        return s;
+    }
+
+    @Test
+    void subscribe_ownSessionTopic_allowed() {
+        UUID sessionId = UUID.randomUUID();
+        sessionWithInviteCode(sessionId, "ABCDEF");
+        StompPrincipal principal = new StompPrincipal("ABCDEF:" + UUID.randomUUID());
+        Message<byte[]> msg = subscribeMessage("/topic/session/" + sessionId + "/event", principal);
+
+        assertThat(interceptor.preSend(msg, mock(MessageChannel.class))).isSameAs(msg);
+    }
+
+    @Test
+    void subscribe_otherSessionTopic_drops() {
+        UUID mySession = UUID.randomUUID();
+        UUID otherSession = UUID.randomUUID();
+        sessionWithInviteCode(otherSession, "XYZABC");
+        StompPrincipal principal = new StompPrincipal("ABCDEF:" + UUID.randomUUID());
+        Message<byte[]> msg = subscribeMessage("/topic/session/" + otherSession + "/event", principal);
+
+        assertThat(interceptor.preSend(msg, mock(MessageChannel.class))).isNull();
+        verify(sessionRepository).findById(otherSession);
+    }
+
+    @Test
+    void subscribe_anonUser_drops() {
+        UUID sessionId = UUID.randomUUID();
+        sessionWithInviteCode(sessionId, "ABCDEF");
+        StompPrincipal anon = new StompPrincipal("anon-" + UUID.randomUUID());
+        Message<byte[]> msg = subscribeMessage("/topic/session/" + sessionId + "/event", anon);
+
+        assertThat(interceptor.preSend(msg, mock(MessageChannel.class))).isNull();
+    }
+
+    @Test
+    void subscribe_nonSessionTopic_passthrough() {
+        // Destinations outside /topic/session/ must not be guarded (e.g. SockJS heartbeat topics)
+        StompPrincipal principal = new StompPrincipal("ABCDEF:" + UUID.randomUUID());
+        Message<byte[]> msg = subscribeMessage("/topic/other/channel", principal);
+
+        assertThat(interceptor.preSend(msg, mock(MessageChannel.class))).isSameAs(msg);
+        verify(sessionRepository, never()).findById(any());
     }
 }

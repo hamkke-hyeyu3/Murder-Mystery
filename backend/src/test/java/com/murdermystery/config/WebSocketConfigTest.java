@@ -1,6 +1,7 @@
 package com.murdermystery.config;
 
 import com.murdermystery.session.PlayerRepository;
+import com.murdermystery.session.SessionRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -14,7 +15,7 @@ import static org.mockito.Mockito.*;
 class WebSocketConfigTest {
 
     private final StompAuthInterceptor authInterceptor =
-        new StompAuthInterceptor(mock(PlayerRepository.class));
+        new StompAuthInterceptor(mock(PlayerRepository.class), mock(SessionRepository.class));
     private final WebSocketConfig config =
         new WebSocketConfig(new StompHandshakeHandler(), authInterceptor, "http://localhost:5173");
 
