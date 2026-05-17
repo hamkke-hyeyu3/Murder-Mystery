@@ -357,12 +357,11 @@ class SessionServiceTest {
 
         UUID bobId = UUID.randomUUID();
         UUID charlieId = UUID.randomUUID();
-        java.time.Instant now = java.time.Instant.now();
-        // Clue constructor sets currentOwnerPlayerId = discoveredByPlayerId, so no extra set needed
-        Clue clue1 = new Clue(session.getId(), 1, "i1", "loc1", "단서A", alice.getId(), now);
-        Clue clue2 = new Clue(session.getId(), 1, "i2", "loc1", "단서B", bobId, now);
-        Clue clue3 = new Clue(session.getId(), 1, "i3", "loc1", "단서C", charlieId, now);
-        when(clueRepo.findBySessionId(session.getId())).thenReturn(List.of(clue1, clue2, clue3));
+        // Build lightweight projections that match what findOwnedClueProjectionsBySessionId returns
+        ClueRepository.OwnedClueProjection p1 = projectionOf(UUID.randomUUID(), "i1", "단서A", alice.getId(), 1);
+        ClueRepository.OwnedClueProjection p2 = projectionOf(UUID.randomUUID(), "i2", "단서B", bobId, 1);
+        ClueRepository.OwnedClueProjection p3 = projectionOf(UUID.randomUUID(), "i3", "단서C", charlieId, 1);
+        when(clueRepo.findOwnedClueProjectionsBySessionId(session.getId())).thenReturn(List.of(p1, p2, p3));
 
         SessionViewResponse view = service.getSession(session.getId(), deviceId);
 
@@ -405,5 +404,15 @@ class SessionServiceTest {
 
         assertThat(view.me()).isNotNull();
         assertThat(view.me().allOwnedClues()).isEmpty();
+    }
+
+    private ClueRepository.OwnedClueProjection projectionOf(UUID id, String itemId, String title, UUID ownerId, int round) {
+        return new ClueRepository.OwnedClueProjection() {
+            public UUID getId() { return id; }
+            public String getItemId() { return itemId; }
+            public String getTitle() { return title; }
+            public UUID getCurrentOwnerPlayerId() { return ownerId; }
+            public int getRoundNumberDiscovered() { return round; }
+        };
     }
 }

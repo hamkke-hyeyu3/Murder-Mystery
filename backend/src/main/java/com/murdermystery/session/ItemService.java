@@ -4,6 +4,7 @@ import com.murdermystery.ws.event.CluePayload;
 import com.murdermystery.ws.event.ItemExchangedPayload;
 import com.murdermystery.ws.event.ItemSharedFullPayload;
 import com.murdermystery.ws.event.ItemSharedPartialPayload;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -17,6 +18,13 @@ import java.util.UUID;
 
 @Service
 public class ItemService {
+
+    private static final String PHASE_IN_PROGRESS = "in_progress";
+    private static final String STATE_ROUND = "round";
+    private static final String ACTION_EXCHANGE = "exchange";
+    private static final String ACTION_SHARE_ALL = "share_all";
+    private static final String ACTION_SHARE_PARTIAL = "share_partial";
+    private static final int MAX_PARTIAL_RECIPIENTS = 32;
 
     private final SessionRepository sessionRepository;
     private final ClueRepository clueRepository;
@@ -41,65 +49,66 @@ public class ItemService {
 
     public void exchange(UUID sessionId, UUID requesterId, UUID partnerPlayerId,
                          UUID requesterClueId, UUID partnerClueId, String inviteCode) {
+        if (requesterId == null || partnerPlayerId == null
+                || requesterClueId == null || partnerClueId == null) return;
         if (requesterId.equals(partnerPlayerId) || requesterClueId.equals(partnerClueId)) return;
 
-        ExchangeBundle bundle = transactionTemplate.execute(status -> {
-            Session session = sessionRepository.findByIdForUpdate(sessionId).orElse(null);
-            if (session == null
-                    || !"in_progress".equals(session.getPhase())
-                    || !"round".equals(session.getState())
-                    || !session.getInviteCode().equals(inviteCode)) {
-                return null;
-            }
-
-            Clue requesterClue = clueRepository.findById(requesterClueId).orElse(null);
-            Clue partnerClue = clueRepository.findById(partnerClueId).orElse(null);
-            if (requesterClue == null || partnerClue == null) return null;
-
-            if (!requesterClue.getSessionId().equals(sessionId) || !partnerClue.getSessionId().equals(sessionId)) return null;
-            if (!requesterClue.getCurrentOwnerPlayerId().equals(requesterId)) return null;
-            if (!partnerClue.getCurrentOwnerPlayerId().equals(partnerPlayerId)) return null;
-
-            Instant now = clock.instant();
-            List<NewAcl> newAcls = new ArrayList<>();
-
-            UUID[][] pairs = {
-                {requesterClueId, requesterId},
-                {requesterClueId, partnerPlayerId},
-                {partnerClueId, requesterId},
-                {partnerClueId, partnerPlayerId}
-            };
-            for (UUID[] pair : pairs) {
-                UUID cId = pair[0];
-                UUID pId = pair[1];
-                if (clueAclRepository.findById(new ClueAclId(cId, pId)).isEmpty()) {
-                    clueAclRepository.save(new ClueAcl(cId, pId, now, "exchange"));
-                    newAcls.add(new NewAcl(cId, pId));
+        ExchangeBundle bundle;
+        try {
+            bundle = transactionTemplate.execute(status -> {
+                Session session = sessionRepository.findByIdForUpdate(sessionId).orElse(null);
+                if (session == null
+                        || !PHASE_IN_PROGRESS.equals(session.getPhase())
+                        || !STATE_ROUND.equals(session.getState())
+                        || !session.getInviteCode().equals(inviteCode)) {
+                    return null;
                 }
-            }
 
-            requesterClue.setCurrentOwnerPlayerId(partnerPlayerId);
-            partnerClue.setCurrentOwnerPlayerId(requesterId);
-            clueRepository.save(requesterClue);
-            clueRepository.save(partnerClue);
+                Clue requesterClue = clueRepository.findById(requesterClueId).orElse(null);
+                Clue partnerClue = clueRepository.findById(partnerClueId).orElse(null);
+                if (requesterClue == null || partnerClue == null) return null;
 
-            ItemAction action = itemActionRepository.save(new ItemAction(
-                sessionId, session.getCurrentRoundNumber(), "exchange",
-                requesterId, partnerPlayerId, requesterClueId, partnerClueId, null, now));
+                if (!requesterClue.getSessionId().equals(sessionId) || !partnerClue.getSessionId().equals(sessionId)) return null;
+                if (!requesterClue.getCurrentOwnerPlayerId().equals(requesterId)) return null;
+                if (!partnerClue.getCurrentOwnerPlayerId().equals(partnerPlayerId)) return null;
 
-            String actorNickname = session.getPlayers().stream()
-                .filter(p -> p.getId().equals(requesterId))
-                .map(Player::getNickname)
-                .findFirst().orElse("");
-            String partnerNickname = session.getPlayers().stream()
-                .filter(p -> p.getId().equals(partnerPlayerId))
-                .map(Player::getNickname)
-                .findFirst().orElse("");
+                // idempotency: same two-clue pair already exchanged this round
+                if (itemActionRepository.existsExchange(sessionId, session.getCurrentRoundNumber(),
+                        requesterClueId, partnerClueId)) return null;
 
-            return new ExchangeBundle(
-                actorNickname, partnerNickname, session.getCurrentRoundNumber(),
-                action.getId(), now, newAcls, requesterClue, partnerClue);
-        });
+                Instant now = clock.instant();
+                List<NewAcl> newAcls = new ArrayList<>();
+
+                UUID[][] pairs = {
+                    {requesterClueId, requesterId},
+                    {requesterClueId, partnerPlayerId},
+                    {partnerClueId, requesterId},
+                    {partnerClueId, partnerPlayerId}
+                };
+                for (UUID[] pair : pairs) {
+                    if (grantAclIfAbsent(pair[0], pair[1], now, ACTION_EXCHANGE)) {
+                        newAcls.add(new NewAcl(pair[0], pair[1]));
+                    }
+                }
+
+                requesterClue.setCurrentOwnerPlayerId(partnerPlayerId);
+                partnerClue.setCurrentOwnerPlayerId(requesterId);
+                clueRepository.save(requesterClue);
+                clueRepository.save(partnerClue);
+
+                ItemAction action = itemActionRepository.save(new ItemAction(
+                    sessionId, session.getCurrentRoundNumber(), ACTION_EXCHANGE,
+                    requesterId, partnerPlayerId, requesterClueId, partnerClueId, null, now));
+
+                return new ExchangeBundle(
+                    nicknameOf(session, requesterId), nicknameOf(session, partnerPlayerId),
+                    session.getCurrentRoundNumber(), action.getId(), now, newAcls,
+                    requesterClue, partnerClue);
+            });
+        } catch (DataIntegrityViolationException e) {
+            // concurrent duplicate exchange — DB unique index fired; treat as no-op
+            return;
+        }
 
         if (bundle == null) return;
 
@@ -118,53 +127,51 @@ public class ItemService {
                 "CLUE_DELIVERED", new CluePayload(
                     clue.getId().toString(), clue.getItemId(), clue.getTitle(),
                     clue.getOriginLocationId(), clue.getRoundNumberDiscovered(),
-                    clue.getDiscoveredAt().toEpochMilli(), "exchange"));
+                    clue.getDiscoveredAt().toEpochMilli(), ACTION_EXCHANGE));
         }
     }
 
     public void shareFull(UUID sessionId, UUID actorId, UUID clueId, String inviteCode) {
-        ShareFullBundle bundle = transactionTemplate.execute(status -> {
-            Session session = sessionRepository.findByIdForUpdate(sessionId).orElse(null);
-            if (session == null
-                    || !"in_progress".equals(session.getPhase())
-                    || !"round".equals(session.getState())
-                    || !session.getInviteCode().equals(inviteCode)) {
-                return null;
-            }
-
-            Clue clue = clueRepository.findById(clueId).orElse(null);
-            if (clue == null) return null;
-            if (!clue.getSessionId().equals(sessionId)) return null;
-            if (!clue.getCurrentOwnerPlayerId().equals(actorId)) return null;
-
-            if (itemActionRepository.existsBySessionIdAndRoundNumberAndActionTypeAndActorPlayerIdAndActorClueId(
-                    sessionId, session.getCurrentRoundNumber(), "share_all", actorId, clueId)) {
-                return null;
-            }
-
-            Instant now = clock.instant();
-            List<UUID> newAclPlayerIds = new ArrayList<>();
-
-            for (Player player : session.getPlayers()) {
-                UUID playerId = player.getId();
-                if (clueAclRepository.findById(new ClueAclId(clueId, playerId)).isEmpty()) {
-                    clueAclRepository.save(new ClueAcl(clueId, playerId, now, "share_all"));
-                    newAclPlayerIds.add(playerId);
+        ShareFullBundle bundle;
+        try {
+            bundle = transactionTemplate.execute(status -> {
+                Session session = sessionRepository.findByIdForUpdate(sessionId).orElse(null);
+                if (session == null
+                        || !PHASE_IN_PROGRESS.equals(session.getPhase())
+                        || !STATE_ROUND.equals(session.getState())
+                        || !session.getInviteCode().equals(inviteCode)) {
+                    return null;
                 }
-            }
 
-            ItemAction action = itemActionRepository.save(new ItemAction(
-                sessionId, session.getCurrentRoundNumber(), "share_all",
-                actorId, null, clueId, null, null, now));
+                Clue clue = clueRepository.findById(clueId).orElse(null);
+                if (clue == null) return null;
+                if (!clue.getSessionId().equals(sessionId)) return null;
+                if (!clue.getCurrentOwnerPlayerId().equals(actorId)) return null;
 
-            String actorNickname = session.getPlayers().stream()
-                .filter(p -> p.getId().equals(actorId))
-                .map(Player::getNickname)
-                .findFirst().orElse("");
+                if (itemActionRepository.existsShareAll(sessionId, session.getCurrentRoundNumber(), clueId)) {
+                    return null;
+                }
 
-            return new ShareFullBundle(actorNickname, session.getCurrentRoundNumber(),
-                action.getId(), now, newAclPlayerIds, clue);
-        });
+                Instant now = clock.instant();
+                List<UUID> newAclPlayerIds = new ArrayList<>();
+
+                for (Player player : session.getPlayers()) {
+                    if (grantAclIfAbsent(clueId, player.getId(), now, ACTION_SHARE_ALL)) {
+                        newAclPlayerIds.add(player.getId());
+                    }
+                }
+
+                ItemAction action = itemActionRepository.save(new ItemAction(
+                    sessionId, session.getCurrentRoundNumber(), ACTION_SHARE_ALL,
+                    actorId, null, clueId, null, null, now));
+
+                return new ShareFullBundle(nicknameOf(session, actorId), session.getCurrentRoundNumber(),
+                    action.getId(), now, newAclPlayerIds, clue);
+            });
+        } catch (DataIntegrityViolationException e) {
+            // concurrent duplicate share_all — DB unique index fired; treat as no-op
+            return;
+        }
 
         if (bundle == null) return;
 
@@ -183,7 +190,7 @@ public class ItemService {
                     "CLUE_DELIVERED", new CluePayload(
                         clue.getId().toString(), clue.getItemId(), clue.getTitle(),
                         clue.getOriginLocationId(), clue.getRoundNumberDiscovered(),
-                        clue.getDiscoveredAt().toEpochMilli(), "share_all"));
+                        clue.getDiscoveredAt().toEpochMilli(), ACTION_SHARE_ALL));
             } catch (Exception ignored) {
                 // ACL already committed — recipient recovers via snapshot on reconnect
             }
@@ -193,12 +200,13 @@ public class ItemService {
     public void sharePartial(UUID sessionId, UUID actorId, UUID clueId,
                              List<UUID> recipientPlayerIds, String inviteCode) {
         if (recipientPlayerIds == null || recipientPlayerIds.isEmpty()) return;
+        if (recipientPlayerIds.size() > MAX_PARTIAL_RECIPIENTS) return;
 
         SharePartialBundle bundle = transactionTemplate.execute(status -> {
             Session session = sessionRepository.findByIdForUpdate(sessionId).orElse(null);
             if (session == null
-                    || !"in_progress".equals(session.getPhase())
-                    || !"round".equals(session.getState())
+                    || !PHASE_IN_PROGRESS.equals(session.getPhase())
+                    || !STATE_ROUND.equals(session.getState())
                     || !session.getInviteCode().equals(inviteCode)) {
                 return null;
             }
@@ -223,31 +231,21 @@ public class ItemService {
             List<UUID> newAclRecipients = new ArrayList<>();
 
             for (UUID recipientId : sanitized) {
-                if (clueAclRepository.findById(new ClueAclId(clueId, recipientId)).isEmpty()) {
-                    clueAclRepository.save(new ClueAcl(clueId, recipientId, now, "share_partial"));
+                if (grantAclIfAbsent(clueId, recipientId, now, ACTION_SHARE_PARTIAL)) {
                     newAclRecipients.add(recipientId);
                 }
             }
 
             ItemAction action = itemActionRepository.save(new ItemAction(
-                sessionId, session.getCurrentRoundNumber(), "share_partial",
+                sessionId, session.getCurrentRoundNumber(), ACTION_SHARE_PARTIAL,
                 actorId, null, clueId, null, sanitized, now));
-
-            String actorNickname = session.getPlayers().stream()
-                .filter(p -> p.getId().equals(actorId))
-                .map(Player::getNickname)
-                .findFirst().orElse("");
 
             List<ItemSharedPartialPayload.RecipientView> recipientViews = new ArrayList<>();
             for (UUID rId : sanitized) {
-                String nick = session.getPlayers().stream()
-                    .filter(p -> p.getId().equals(rId))
-                    .map(Player::getNickname)
-                    .findFirst().orElse("");
-                recipientViews.add(new ItemSharedPartialPayload.RecipientView(rId.toString(), nick));
+                recipientViews.add(new ItemSharedPartialPayload.RecipientView(rId.toString(), nicknameOf(session, rId)));
             }
 
-            return new SharePartialBundle(actorNickname, session.getCurrentRoundNumber(),
+            return new SharePartialBundle(nicknameOf(session, actorId), session.getCurrentRoundNumber(),
                 action.getId(), now, newAclRecipients, recipientViews, clue);
         });
 
@@ -268,11 +266,25 @@ public class ItemService {
                     "CLUE_DELIVERED", new CluePayload(
                         clue.getId().toString(), clue.getItemId(), clue.getTitle(),
                         clue.getOriginLocationId(), clue.getRoundNumberDiscovered(),
-                        clue.getDiscoveredAt().toEpochMilli(), "share_partial"));
+                        clue.getDiscoveredAt().toEpochMilli(), ACTION_SHARE_PARTIAL));
             } catch (Exception ignored) {
                 // ACL already committed — recipient recovers via snapshot on reconnect
             }
         }
+    }
+
+    private String nicknameOf(Session session, UUID playerId) {
+        return session.getPlayers().stream()
+            .filter(p -> p.getId().equals(playerId))
+            .map(Player::getNickname)
+            .findFirst().orElse("");
+    }
+
+    // Returns true if a new ACL row was inserted, false if it already existed.
+    private boolean grantAclIfAbsent(UUID clueId, UUID playerId, Instant now, String source) {
+        if (clueAclRepository.findById(new ClueAclId(clueId, playerId)).isPresent()) return false;
+        clueAclRepository.save(new ClueAcl(clueId, playerId, now, source));
+        return true;
     }
 
     private record NewAcl(UUID clueId, UUID playerId) {}

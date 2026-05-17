@@ -376,8 +376,7 @@ class ItemServiceTest {
         Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
         when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
         when(clueAclRepo.findById(any())).thenReturn(Optional.of(mock(ClueAcl.class)));
-        when(itemActionRepo.existsBySessionIdAndRoundNumberAndActionTypeAndActorPlayerIdAndActorClueId(
-            SESSION_ID, 1, "share_all", ALICE_ID, X_CLUE_ID)).thenReturn(true);
+        when(itemActionRepo.existsShareAll(SESSION_ID, 1, X_CLUE_ID)).thenReturn(true);
 
         service.shareFull(SESSION_ID, ALICE_ID, X_CLUE_ID, "ABCDEF");
 
@@ -509,6 +508,84 @@ class ItemServiceTest {
         service.exchange(SESSION_ID, ALICE_ID, BOB_ID, X_CLUE_ID, Y_CLUE_ID, "ABCDEF");
 
         verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void exchange_duplicateCall_secondCallIsNoOp() {
+        Session session = inProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        Clue yClue = clueOf(Y_CLUE_ID, BOB_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueRepo.findById(Y_CLUE_ID)).thenReturn(Optional.of(yClue));
+        when(itemActionRepo.existsExchange(SESSION_ID, 1, X_CLUE_ID, Y_CLUE_ID)).thenReturn(true);
+
+        service.exchange(SESSION_ID, ALICE_ID, BOB_ID, X_CLUE_ID, Y_CLUE_ID, "ABCDEF");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(clueRepo, never()).save(any());
+        verify(itemActionRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void exchange_partnerNotInSession_noOp() {
+        // CHARLIE_ID is not in the 2-player session; Y clue belongs to BOB.
+        // Requester claims CHARLIE as partner — ownership check fails (BOB_ID != CHARLIE_ID).
+        Session session = inProgressRoundSession(); // only alice + bob
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        Clue xClue = clueOf(X_CLUE_ID, ALICE_ID);
+        Clue yClue = clueOf(Y_CLUE_ID, BOB_ID);
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+        when(clueRepo.findById(Y_CLUE_ID)).thenReturn(Optional.of(yClue));
+
+        service.exchange(SESSION_ID, ALICE_ID, CHARLIE_ID, X_CLUE_ID, Y_CLUE_ID, "ABCDEF");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void sharePartial_inviteCodeMismatch_noOp() {
+        Session session = threePlayerInProgressRoundSession(); // inviteCode = "ABCDEF"
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, List.of(BOB_ID), "XXXXXX");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void sharePartial_clueSessionMismatch_noOp() {
+        Session session = threePlayerInProgressRoundSession();
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        // clue belongs to a different session
+        Clue xClue = new Clue(UUID.randomUUID(), 1, "item-x", "loc-x", "title-x", ALICE_ID, FIXED_NOW);
+        try {
+            var f = Clue.class.getDeclaredField("id");
+            f.setAccessible(true);
+            f.set(xClue, X_CLUE_ID);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        when(clueRepo.findById(X_CLUE_ID)).thenReturn(Optional.of(xClue));
+
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, List.of(BOB_ID), "ABCDEF");
+
+        verify(clueAclRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void sharePartial_recipientCountExceeds32_noOp() {
+        List<UUID> tooMany = new java.util.ArrayList<>();
+        for (int i = 0; i < 33; i++) tooMany.add(UUID.randomUUID());
+
+        service.sharePartial(SESSION_ID, ALICE_ID, X_CLUE_ID, tooMany, "ABCDEF");
+
+        verify(sessionRepo, never()).findByIdForUpdate(any());
         verify(eventPublisher, never()).publish(any(), any(), any());
     }
 }

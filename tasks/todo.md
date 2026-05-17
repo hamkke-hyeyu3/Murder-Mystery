@@ -178,6 +178,8 @@
   - [x] FE S7–S8: 단서 long-press → 행위 메뉴 + share_partial multi-select + 배너 토스트 큐 (교환 disabled → 후속 sub-task 분리) — `e6c8a56`
   - [x] FE S9(후속): 교환 UX — BE SessionView allOwnedClues 확장 + exchange picker 구현 — `cabcac3`
   - [x] 검증: 체크포인트 C 완료 조건 — 아이템 3행위 데모
+  - ⚠️ **기술 부채:** `ItemService.exchange`는 현재 1-step(requester 단독 swap). 스펙은 2-step — 1단계: 교환 제안(picker 열기), 2단계: partner 수락 시 실행. T-12 이후 별도 task로 수정 필요 (`EXCHANGE_REQUESTED` private → `EXCHANGE_ACCEPTED/DECLINED`).
+  - [x] **리뷰 R1**: BE 멱등성·@Version·DB unique·DoS 가드·헬퍼 추출·projection — `TBD`
 
 - [ ] **T-12** 1:1 밀담 신청·수락·거절 + 동시 한 쌍 + 배너
   - [ ] BE: `PrivateTalkService` (신청 private only → 수락 broadcast → 거절·timeout 무반응)

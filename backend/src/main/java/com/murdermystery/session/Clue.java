@@ -11,6 +11,9 @@ public class Clue {
     @Id
     private UUID id = UUID.randomUUID();
 
+    @Version
+    private long version;
+
     @Column(name = "session_id", nullable = false)
     private UUID sessionId;
 
@@ -59,4 +62,5 @@ public class Clue {
     public Instant getDiscoveredAt() { return discoveredAt; }
     public UUID getCurrentOwnerPlayerId() { return currentOwnerPlayerId; }
     public void setCurrentOwnerPlayerId(UUID currentOwnerPlayerId) { this.currentOwnerPlayerId = currentOwnerPlayerId; }
+    public long getVersion() { return version; }
 }
