@@ -176,6 +176,21 @@ describe('ClueActionSheet', () => {
     expect(screen.getByTestId('confirm-exchange')).toBeDisabled()
   })
 
+  it('내 단서와 상대 단서가 동일한 id이면 교환 확정 버튼이 disabled 다', () => {
+    // 동일 id가 양쪽에 나타나는 경우는 서버 race 시 가능 — UX 가드
+    const sharedId = 'shared-clue'
+    const ownedClues: OwnedClueView[] = [
+      makeOwnedClue(sharedId, 'player-me'),
+      makeOwnedClue(sharedId, 'player-bob'),
+    ]
+    renderSheet({ ownedClues })
+    fireEvent.click(screen.getByTestId('action-exchange'))
+    fireEvent.click(screen.getByTestId('exchange-partner-player-bob'))
+    fireEvent.click(screen.getByTestId(`exchange-my-clue-${sharedId}`))
+    fireEvent.click(screen.getByTestId(`exchange-partner-clue-${sharedId}`))
+    expect(screen.getByTestId('confirm-exchange')).toBeDisabled()
+  })
+
   it('양쪽 단서 선택 후 확정 시 onExchange(partnerPlayerId, requesterClueId, partnerClueId) 호출', () => {
     const onExchange = vi.fn()
     const onClose = vi.fn()

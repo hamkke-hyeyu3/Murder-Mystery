@@ -27,7 +27,7 @@ export const useTransientStore = create<TransientState & TransientActions>((set)
   pushBanner: (banner) =>
     set((state) => {
       if (state.banners.some((b) => b.id === banner.id)) return state
-      return { banners: [...state.banners, banner] }
+      return { banners: [...state.banners, banner].slice(-10) }
     }),
   dismissBanner: (id) =>
     set((state) => ({ banners: state.banners.filter((b) => b.id !== id) })),

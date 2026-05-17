@@ -639,4 +639,25 @@ describe('useSessionWebSocket', () => {
       body: JSON.stringify({ clueId: 'clue-a', recipientPlayerIds: ['player-bob', 'player-charlie'] }),
     })
   })
+
+  it('disconnected 상태에서 publishItemExchange 호출 시 publish가 실행되지 않는다', () => {
+    mockUseStompClient.mockReturnValue({
+      client: { current: { subscribe: mockSubscribe, publish: mockPublish, connected: false } as never },
+      connected: false,
+    })
+
+    const { result } = renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      result.current.publishItemExchange('player-bob', 'clue-a', 'clue-b')
+    })
+
+    expect(mockPublish).not.toHaveBeenCalled()
+  })
+
+  it('sessionId가 null이면 구독을 등록하지 않는다', () => {
+    renderHook(() => useSessionWebSocket({ ...defaultOptions, sessionId: null }))
+
+    expect(mockSubscribe).not.toHaveBeenCalled()
+  })
 })

@@ -25,6 +25,7 @@ export function ClueActionSheet({ clue, players, myPlayerId, ownedClues, onClose
 
   const others = players.filter((p) => p.playerId !== myPlayerId)
 
+  // client filter is UX-only; server enforces ownership
   const myOwnedClues = ownedClues.filter((c) => c.ownerPlayerId === myPlayerId)
 
   const toggleRecipient = (playerId: string) => {
@@ -58,6 +59,7 @@ export function ClueActionSheet({ clue, players, myPlayerId, ownedClues, onClose
 
   const handleConfirmExchange = () => {
     if (!partnerPlayerId || !requesterClueId || !partnerClueId) return
+    if (requesterClueId === partnerClueId) return
     onExchange(partnerPlayerId, requesterClueId, partnerClueId)
     onClose()
   }
@@ -206,7 +208,7 @@ export function ClueActionSheet({ clue, players, myPlayerId, ownedClues, onClose
             <Button
               data-testid="confirm-exchange"
               variant="default"
-              disabled={!requesterClueId || !partnerClueId}
+              disabled={!requesterClueId || !partnerClueId || requesterClueId === partnerClueId}
               onClick={handleConfirmExchange}
             >
               교환 확정

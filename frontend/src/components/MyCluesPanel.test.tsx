@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useCardStore } from '@/stores/cardStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import { MyCluesPanel } from './MyCluesPanel'
 import type { ClueView } from '@/types/session'
 import type { PlayerSummary } from '@/stores/sessionStore'
@@ -32,6 +33,7 @@ const defaultProps = {
 
 beforeEach(() => {
   useCardStore.getState().reset()
+  useSessionStore.getState().reset()
 })
 
 afterEach(() => {
@@ -104,6 +106,22 @@ describe('MyCluesPanel', () => {
     expect(screen.getByTestId('clue-action-sheet')).toBeInTheDocument()
     expect(screen.getByTestId('action-share-full')).toBeInTheDocument()
     expect(screen.queryByTestId('confirm-share-partial')).toBeNull()
+  })
+
+  it('라운드가 변경되면 열린 ClueActionSheet 가 닫힌다', () => {
+    vi.useFakeTimers()
+    useCardStore.getState().setClues([makeClue('a', 1)])
+    const { rerender } = render(<MyCluesPanel {...defaultProps} />)
+
+    fireEvent.pointerDown(screen.getByTestId('clue-item-a'), { clientX: 0, clientY: 0 })
+    act(() => { vi.advanceTimersByTime(500) })
+    expect(screen.getByTestId('clue-action-sheet')).toBeInTheDocument()
+
+    act(() => {
+      useSessionStore.getState().setSession({ roundNumber: 2 })
+    })
+
+    expect(screen.queryByTestId('clue-action-sheet')).toBeNull()
   })
 
   it('단서 짧은 탭(200ms) 시 ClueActionSheet 가 열리지 않는다', () => {

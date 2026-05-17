@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCardStore } from '@/stores/cardStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import { useLongPress } from '@/hooks/useLongPress'
 import { ClueActionSheet } from '@/components/ClueActionSheet'
 import type { ClueView } from '@/types/session'
@@ -45,7 +46,12 @@ function ClueItem({
 export function MyCluesPanel({ players, myPlayerId, onExchange, onShareFull, onSharePartial }: MyCluesPanelProps) {
   const clues = useCardStore((s) => s.clues)
   const ownedClues = useCardStore((s) => s.ownedClues)
+  const roundNumber = useSessionStore((s) => s.roundNumber)
   const [activeClue, setActiveClue] = useState<ClueView | null>(null)
+
+  useEffect(() => {
+    setActiveClue(null)
+  }, [roundNumber])
 
   if (clues.length === 0) {
     return (

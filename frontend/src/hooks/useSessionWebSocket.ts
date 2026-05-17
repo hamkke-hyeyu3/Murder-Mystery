@@ -180,13 +180,17 @@ export function useSessionWebSocket({
     )
 
     return () => {
-      topicSub.unsubscribe()
-      privateSub.unsubscribe()
+      try { topicSub.unsubscribe() } catch (e) {
+        if (process.env.NODE_ENV !== 'production') console.error('[ws] unsubscribe failed', e)
+      }
+      try { privateSub.unsubscribe() } catch (e) {
+        if (process.env.NODE_ENV !== 'production') console.error('[ws] unsubscribe failed', e)
+      }
     }
   }, [connected, sessionId, playerId, setSession, setCharacterCard, setObjective, addClue])
 
   const publishLeave = () => {
-    if (!client.current || !sessionId) return
+    if (!client.current?.connected || !sessionId) return
     client.current.publish({
       destination: `/app/session/${sessionId}/leave`,
       body: '',
@@ -194,7 +198,7 @@ export function useSessionWebSocket({
   }
 
   const publishSelectLocation = (locationId: string, roundNumber: number, turnIndex: number) => {
-    if (!client.current || !sessionId) return
+    if (!client.current?.connected || !sessionId) return
     client.current.publish({
       destination: `/app/session/${sessionId}/select-location`,
       body: JSON.stringify({ locationId, roundNumber, turnIndex }),
@@ -202,7 +206,7 @@ export function useSessionWebSocket({
   }
 
   const publishItemExchange = (partnerPlayerId: string, requesterClueId: string, partnerClueId: string) => {
-    if (!client.current || !sessionId) return
+    if (!client.current?.connected || !sessionId) return
     client.current.publish({
       destination: `/app/session/${sessionId}/item-exchange`,
       body: JSON.stringify({ partnerPlayerId, requesterClueId, partnerClueId }),
@@ -210,7 +214,7 @@ export function useSessionWebSocket({
   }
 
   const publishItemShareFull = (clueId: string) => {
-    if (!client.current || !sessionId) return
+    if (!client.current?.connected || !sessionId) return
     client.current.publish({
       destination: `/app/session/${sessionId}/item-share-full`,
       body: JSON.stringify({ clueId }),
@@ -218,7 +222,7 @@ export function useSessionWebSocket({
   }
 
   const publishItemSharePartial = (clueId: string, recipientPlayerIds: string[]) => {
-    if (!client.current || !sessionId) return
+    if (!client.current?.connected || !sessionId) return
     client.current.publish({
       destination: `/app/session/${sessionId}/item-share-partial`,
       body: JSON.stringify({ clueId, recipientPlayerIds }),
