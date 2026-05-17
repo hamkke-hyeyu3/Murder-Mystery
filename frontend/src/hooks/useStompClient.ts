@@ -35,6 +35,7 @@ export function useStompClient({ inviteCode, nickname, playerId }: UseStompClien
     client.activate()
 
     return () => {
+      setConnected(false)
       void client.deactivate()
       clientRef.current = null
     }

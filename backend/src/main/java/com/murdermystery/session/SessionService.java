@@ -123,7 +123,7 @@ public class SessionService {
         if (deviceId != null) {
             Player me = playerRepository.findBySessionIdAndDeviceId(sessionId, deviceId).orElse(null);
             if (me != null) {
-                boolean cardVisible = CARD_VISIBLE_STATES.contains(session.getState());
+                boolean cardVisible = session.getState() != null && CARD_VISIBLE_STATES.contains(session.getState());
                 SessionViewResponse.CharacterCardView characterView = cardVisible
                     ? buildCharacterCardView(scenario, me.getAssignedCharacterId(), session.getTurnOrder())
                     : null;

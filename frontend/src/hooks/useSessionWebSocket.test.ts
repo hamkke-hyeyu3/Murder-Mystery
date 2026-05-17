@@ -38,7 +38,7 @@ describe('useSessionWebSocket', () => {
     })
 
     mockUseStompClient.mockReturnValue({
-      client: { current: { subscribe: mockSubscribe, publish: mockPublish } as never },
+      client: { current: { subscribe: mockSubscribe, publish: mockPublish, connected: true } as never },
       connected: true,
     })
 
@@ -396,6 +396,91 @@ describe('useSessionWebSocket', () => {
     expect(obj?.roundNumber).toBe(1)
     expect(obj?.totalRounds).toBe(3)
     expect(obj?.objective).toBe('자기소개를 하세요.')
+  })
+
+  it('CLUE_DELIVERED source=location 수신 시 ownedClues에 본인 소유 단서를 추가한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      privateCallback!({
+        body: JSON.stringify({
+          type: 'CLUE_DELIVERED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            id: 'clue-a',
+            itemId: 'item-a',
+            title: '찢어진 편지 조각',
+            originLocationId: 'library',
+            roundNumberDiscovered: 1,
+            discoveredAt: Date.now(),
+            source: 'location',
+          },
+        }),
+      } as IMessage)
+    })
+
+    const ownedClues = useCardStore.getState().ownedClues
+    expect(ownedClues).toContainEqual({
+      id: 'clue-a',
+      itemId: 'item-a',
+      title: '찢어진 편지 조각',
+      ownerPlayerId: 'player-alice',
+      roundNumberDiscovered: 1,
+    })
+  })
+
+  it('CLUE_DELIVERED source=location 중복 수신 시 ownedClues에 한 번만 추가한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    const msg = {
+      body: JSON.stringify({
+        type: 'CLUE_DELIVERED',
+        sessionId: 'sess-001',
+        occurredAt: '2026-05-10T00:00:00Z',
+        payload: {
+          id: 'clue-dup',
+          itemId: 'item-dup',
+          title: '중복 단서',
+          originLocationId: 'hall',
+          roundNumberDiscovered: 1,
+          discoveredAt: Date.now(),
+          source: 'location',
+        },
+      }),
+    } as IMessage
+
+    act(() => { privateCallback!(msg) })
+    act(() => { privateCallback!(msg) })
+
+    const ownedClues = useCardStore.getState().ownedClues
+    expect(ownedClues.filter((c) => c.id === 'clue-dup')).toHaveLength(1)
+  })
+
+  it('CLUE_DELIVERED source=share_all 수신 시 ownedClues에 추가하지 않는다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      privateCallback!({
+        body: JSON.stringify({
+          type: 'CLUE_DELIVERED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            id: 'clue-b',
+            itemId: 'item-b',
+            title: '작은 유리병',
+            originLocationId: 'kitchen',
+            roundNumberDiscovered: 1,
+            discoveredAt: Date.now(),
+            source: 'share_all',
+          },
+        }),
+      } as IMessage)
+    })
+
+    const ownedClues = useCardStore.getState().ownedClues
+    expect(ownedClues.find((c) => c.id === 'clue-b')).toBeUndefined()
   })
 
   it('ITEM_EXCHANGED 수신 시 actionId로 배너를 push한다', () => {

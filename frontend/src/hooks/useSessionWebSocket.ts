@@ -30,7 +30,7 @@ export function useSessionWebSocket({
   const addClue = useCardStore((s) => s.addClue)
 
   useEffect(() => {
-    if (!connected || !client.current || !sessionId) return
+    if (!connected || !client.current || !client.current.connected || !sessionId) return
 
     const topicSub = client.current.subscribe(
       `/topic/session/${sessionId}/event`,
@@ -168,6 +168,13 @@ export function useSessionWebSocket({
           setObjective(envelope.payload)
         } else if (envelope.type === 'CLUE_DELIVERED') {
           addClue(envelope.payload)
+          if (envelope.payload.source === 'location' && playerId) {
+            const { id, itemId, title, roundNumberDiscovered } = envelope.payload
+            useCardStore.setState((state) => {
+              if (state.ownedClues.some((c) => c.id === id)) return state
+              return { ownedClues: [...state.ownedClues, { id, itemId, title, ownerPlayerId: playerId, roundNumberDiscovered }] }
+            })
+          }
         }
       }
     )

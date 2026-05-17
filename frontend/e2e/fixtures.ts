@@ -1,4 +1,4 @@
-import { expect, type Page, type Browser, type BrowserContext } from '@playwright/test'
+import { expect, type Page, type Browser, type BrowserContext, type Locator } from '@playwright/test'
 
 export async function createRoomAsHost(page: Page, hostNickname: string): Promise<string> {
   await page.goto('/')
@@ -112,4 +112,89 @@ export async function waitForLocationOccupied(page: Page, locationId: string): P
 /** 모든 차례 완료 표시 대기 */
 export async function waitForRoundTurnsComplete(page: Page): Promise<void> {
   await page.getByTestId('location-grid-complete').waitFor({ timeout: 15000 })
+}
+
+// ── Item action helpers ───────────────────────────────────────────────
+
+/** clue-item-{clueId} 요소를 500ms+ pointerdown으로 long-press → ClueActionSheet 대기 */
+export async function longPressClue(page: Page, clueId: string): Promise<void> {
+  const el = page.getByTestId(`clue-item-${clueId}`)
+  await el.waitFor({ timeout: 10000 })
+  const box = await el.boundingBox()
+  if (!box) throw new Error(`clue ${clueId} bounding box not found`)
+  const cx = box.x + box.width / 2
+  const cy = box.y + box.height / 2
+  await el.dispatchEvent('pointerdown', { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerType: 'mouse', pointerId: 1, pressure: 0.5, button: 0, buttons: 1 })
+  await page.waitForTimeout(600)
+  await el.dispatchEvent('pointerup', { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerType: 'mouse', pointerId: 1, pressure: 0, button: 0, buttons: 0 })
+  await page.getByTestId('clue-action-sheet').waitFor({ timeout: 3000 })
+}
+
+/** long-press → 전체 공유 클릭 */
+export async function shareFullClue(page: Page, clueId: string): Promise<void> {
+  await longPressClue(page, clueId)
+  await page.getByTestId('action-share-full').click()
+}
+
+/** long-press → 부분 공유 → recipient 체크박스 ON → 확정 */
+export async function sharePartialClue(
+  page: Page,
+  clueId: string,
+  recipientPlayerIds: string[],
+): Promise<void> {
+  await longPressClue(page, clueId)
+  await page.getByTestId('action-share-partial').click()
+  for (const id of recipientPlayerIds) {
+    await page.getByTestId(`recipient-${id}`).check()
+  }
+  await page.getByTestId('confirm-share-partial').click()
+}
+
+/** long-press → 교환 → partner 선택 → 내 단서·상대 단서 선택 → 교환 확정 */
+export async function exchangeClue(
+  page: Page,
+  partnerPlayerId: string,
+  requesterClueId: string,
+  partnerClueId: string,
+): Promise<void> {
+  await page.getByTestId(`exchange-partner-${partnerPlayerId}`).click()
+  await page.getByTestId(`exchange-my-clue-${requesterClueId}`).check()
+  await page.getByTestId(`exchange-partner-clue-${partnerClueId}`).check()
+  await page.getByTestId('confirm-exchange').click()
+}
+
+/** my-clues-panel 내 첫 번째 단서의 clueId 반환 (clue-item-{id} data-testid에서 추출) */
+export async function getFirstClueId(page: Page): Promise<string> {
+  const el = page.locator('[data-testid^="clue-item-"]').first()
+  await el.waitFor({ timeout: 10000 })
+  const testId = (await el.getAttribute('data-testid')) ?? ''
+  return testId.replace('clue-item-', '')
+}
+
+/**
+ * 닉네임으로 playerId 추출.
+ * ClueActionSheet exchange-partner 모드를 잠시 진입해서 exchange-partner-{playerId} 버튼의 testid를 읽음.
+ * ownerClueId: 진입에 필요한 내가 소유한 단서 ID (long-press 대상).
+ */
+export async function getPlayerIdByNickname(
+  page: Page,
+  nickname: string,
+  ownerClueId: string,
+): Promise<string> {
+  await longPressClue(page, ownerClueId)
+  await page.getByTestId('action-exchange').click()
+  const btn: Locator = page.locator(`[data-testid^="exchange-partner-"]`).filter({ hasText: nickname })
+  await btn.waitFor({ timeout: 5000 })
+  const testId = (await btn.getAttribute('data-testid')) ?? ''
+  const playerId = testId.replace('exchange-partner-', '')
+  await page.getByTestId('exchange-back').click()
+  await page.getByTestId('action-cancel').click()
+  return playerId
+}
+
+/** 배너 메시지에 partialText가 포함될 때까지 대기 (role=status로 개별 배너 item만 매칭) */
+export async function waitForBannerByText(page: Page, partialText: string): Promise<void> {
+  await expect(page.locator('[role="status"]').filter({ hasText: partialText })).toBeVisible({
+    timeout: 10000,
+  })
 }
