@@ -640,6 +640,85 @@ describe('useSessionWebSocket', () => {
     })
   })
 
+  it('LOCATION_AUTO_SELECTED 수신 시 locationOccupancy에 autoSelected: true로 추가한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'LOCATION_AUTO_SELECTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            locationId: 'loc-library',
+            playerId: 'player-bob',
+            characterId: 'char-b',
+            roundNumber: 1,
+            turnIndex: 0,
+          },
+        }),
+      } as IMessage)
+    })
+
+    expect(useSessionStore.getState().locationOccupancy).toContainEqual(
+      expect.objectContaining({ locationId: 'loc-library', autoSelected: true })
+    )
+  })
+
+  it('ROUND_TURNS_COMPLETE 수신 시 currentTurn 상태와 turnDeadlineAt을 초기화한다', () => {
+    useSessionStore.getState().setSession({
+      currentTurnIndex: 2,
+      currentTurnPlayerId: 'player-bob',
+      currentTurnCharacterId: 'char-b',
+      currentTurnDeadlineAt: Date.now() + 30_000,
+      currentRoundCandidateLocationIds: ['loc-a', 'loc-b'],
+    })
+    useTimerStore.getState().setTurnDeadline(Date.now() + 30_000)
+
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ROUND_TURNS_COMPLETE',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: { roundNumber: 1 },
+        }),
+      } as IMessage)
+    })
+
+    const s = useSessionStore.getState()
+    expect(s.currentTurnIndex).toBeNull()
+    expect(s.currentTurnPlayerId).toBeNull()
+    expect(s.currentTurnCharacterId).toBeNull()
+    expect(s.currentRoundCandidateLocationIds).toEqual([])
+    expect(useTimerStore.getState().turnDeadlineAt).toBeNull()
+  })
+
+  it('TURN_STARTED candidateLocationIds가 빈 배열이면 빈 배열로 저장한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'TURN_STARTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            turnIndex: 0,
+            playerId: 'player-bob',
+            characterId: 'char-b',
+            deadlineAt: Date.now() + 60_000,
+            candidateLocationIds: [],
+          },
+        }),
+      } as IMessage)
+    })
+
+    expect(useSessionStore.getState().currentRoundCandidateLocationIds).toEqual([])
+  })
+
   it('disconnected 상태에서 publishItemExchange 호출 시 publish가 실행되지 않는다', () => {
     mockUseStompClient.mockReturnValue({
       client: { current: { subscribe: mockSubscribe, publish: mockPublish, connected: false } as never },

@@ -298,6 +298,8 @@ class ItemIntegrationTest {
             }
         });
 
+        // STOMP subscribe() is fire-and-forget — no server ACK. Sleep gives the broker
+        // time to register all 6 subscriptions before we trigger game start events.
         Thread.sleep(300);
 
         postStart(host);
@@ -437,6 +439,43 @@ class ItemIntegrationTest {
             assertThat(action.getTargetPlayerId()).isNull();
             assertThat(action.getTargetClueId()).isNull();
             assertThat(action.getRecipientPlayerIds()).isNull();
+
+        } finally {
+            setup.disconnect();
+        }
+    }
+
+    @Test
+    void exchange_actorDoesNotOwnRequesterClue_isNoOp() throws Exception {
+        RoundSetup setup = setupToRound();
+        try {
+            UUID sessId  = UUID.fromString(setup.host().sessionId());
+            UUID aliceId = UUID.fromString(setup.host().playerId());
+            UUID bobId   = UUID.fromString(setup.guest1().playerId());
+
+            // Alice owns X, Bob owns Y
+            Clue clueX = seedClue(sessId, "torn-letter", "library", aliceId);
+            Clue clueY = seedClue(sessId, "poison-vial", "kitchen", bobId);
+
+            // Bob sends exchange claiming Alice's clue X as the requesterClue — Bob doesn't own X
+            Map<String, Object> body = new HashMap<>();
+            body.put("partnerPlayerId",  setup.host().playerId());
+            body.put("requesterClueId", clueX.getId().toString());
+            body.put("partnerClueId",   clueY.getId().toString());
+            setup.s2().send("/app/session/" + setup.host().sessionId() + "/item-exchange", body);
+
+            assertNoFrame(setup.topicFrames(), "ITEM_EXCHANGED", 500);
+
+            var actions = itemActionRepository.findAll().stream()
+                .filter(a -> a.getSessionId().equals(sessId)).toList();
+            assertThat(actions).isEmpty();
+
+            assertThat(clueRepository.findById(clueX.getId()))
+                .isPresent().get()
+                .extracting(Clue::getCurrentOwnerPlayerId).isEqualTo(aliceId);
+            assertThat(clueRepository.findById(clueY.getId()))
+                .isPresent().get()
+                .extracting(Clue::getCurrentOwnerPlayerId).isEqualTo(bobId);
 
         } finally {
             setup.disconnect();

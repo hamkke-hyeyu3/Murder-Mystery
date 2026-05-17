@@ -63,6 +63,13 @@ describe('useLongPress', () => {
     expect(onLongPress).not.toHaveBeenCalled()
   })
 
+  it('onContextMenu 이벤트에서 e.preventDefault가 호출된다', () => {
+    const { result } = renderHook(() => useLongPress(vi.fn()))
+    const e = { preventDefault: vi.fn() } as unknown as React.MouseEvent
+    result.current.onContextMenu(e)
+    expect(e.preventDefault).toHaveBeenCalledTimes(1)
+  })
+
   it('pointerLeave 이면 취소된다', () => {
     const onLongPress = vi.fn()
     const { result } = renderHook(() => useLongPress(onLongPress))
