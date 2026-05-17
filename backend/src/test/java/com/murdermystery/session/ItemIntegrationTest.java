@@ -464,11 +464,29 @@ class ItemIntegrationTest {
             body.put("partnerClueId",   clueY.getId().toString());
             setup.s2().send("/app/session/" + setup.host().sessionId() + "/item-exchange", body);
 
-            assertNoFrame(setup.topicFrames(), "ITEM_EXCHANGED", 500);
+            // Anchor: Alice issues a legitimate share-full on a separate clue.
+            // share-full and exchange broadcast on the same /topic/session/{id}/event.
+            // When the 3rd ITEM_SHARED_FULL frame arrives, any concurrent ITEM_EXCHANGED
+            // would have arrived on the same queue too — drains slow-CI flakiness.
+            Clue anchorClue = seedClue(sessId, "candlestick", "lounge", aliceId);
+            Map<String, Object> anchorBody = Map.of("clueId", anchorClue.getId().toString());
+            setup.s1().send("/app/session/" + setup.host().sessionId() + "/item-share-full", anchorBody);
+
+            int sharedFullCount = 0;
+            long deadline = System.currentTimeMillis() + 5000;
+            while (sharedFullCount < 3 && System.currentTimeMillis() < deadline) {
+                String frame = setup.topicFrames().poll(100, TimeUnit.MILLISECONDS);
+                if (frame == null) continue;
+                if (frame.contains("ITEM_EXCHANGED")) {
+                    throw new AssertionError("Bogus exchange was broadcast: " + frame);
+                }
+                if (frame.contains("ITEM_SHARED_FULL")) sharedFullCount++;
+            }
+            assertThat(sharedFullCount).isEqualTo(3);
 
             var actions = itemActionRepository.findAll().stream()
                 .filter(a -> a.getSessionId().equals(sessId)).toList();
-            assertThat(actions).isEmpty();
+            assertThat(actions).noneMatch(a -> "exchange".equals(a.getActionType()));
 
             assertThat(clueRepository.findById(clueX.getId()))
                 .isPresent().get()
