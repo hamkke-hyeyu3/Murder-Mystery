@@ -445,48 +445,12 @@ class ItemIntegrationTest {
         }
     }
 
-    @Test
-    void exchange_actorDoesNotOwnRequesterClue_isNoOp() throws Exception {
-        RoundSetup setup = setupToRound();
-        try {
-            UUID sessId  = UUID.fromString(setup.host().sessionId());
-            UUID aliceId = UUID.fromString(setup.host().playerId());
-            UUID bobId   = UUID.fromString(setup.guest1().playerId());
-
-            // Alice owns X, Bob owns Y
-            Clue clueX = seedClue(sessId, "torn-letter", "library", aliceId);
-            Clue clueY = seedClue(sessId, "poison-vial", "kitchen", bobId);
-
-            // Bob sends exchange claiming Alice's clue X as the requesterClue — Bob doesn't own X
-            Map<String, Object> body = new HashMap<>();
-            body.put("partnerPlayerId",  setup.host().playerId());
-            body.put("requesterClueId", clueX.getId().toString());
-            body.put("partnerClueId",   clueY.getId().toString());
-            setup.s2().send("/app/session/" + setup.host().sessionId() + "/item-exchange", body);
-
-            // Drain topicFrames generously. We don't use a cross-session anchor: Spring's
-            // clientInboundChannel dispatches handlers on a thread pool, so a frame produced
-            // by another session does not prove the bogus request finished processing.
-            // Broker dispatch latency for a single broadcast is sub-second in practice,
-            // so a regression that wrongly publishes ITEM_EXCHANGED would arrive well
-            // within this window. The DB assertion below is the authoritative check.
-            assertNoFrame(setup.topicFrames(), "ITEM_EXCHANGED", 2000);
-
-            var actions = itemActionRepository.findAll().stream()
-                .filter(a -> a.getSessionId().equals(sessId)).toList();
-            assertThat(actions).isEmpty();
-
-            assertThat(clueRepository.findById(clueX.getId()))
-                .isPresent().get()
-                .extracting(Clue::getCurrentOwnerPlayerId).isEqualTo(aliceId);
-            assertThat(clueRepository.findById(clueY.getId()))
-                .isPresent().get()
-                .extracting(Clue::getCurrentOwnerPlayerId).isEqualTo(bobId);
-
-        } finally {
-            setup.disconnect();
-        }
-    }
+    // Note: exchange actor-ownership guard is deterministically verified in
+    // ItemServiceTest.exchange_requesterNotOwnerOfRequesterClue_noOp and
+    // ItemServiceTest.exchange_partnerNotOwnerOfPartnerClue_noOp via direct service
+    // invocation + publisher mock verification. A STOMP integration variant cannot
+    // prove rejection without a way to wait for async handler completion, so it would
+    // be flake-prone — keep this layer for happy-path flow assertions only.
 
     @Test
     void sharePartial_grantsAclOnlyToRecipientsAndBroadcasts() throws Exception {
