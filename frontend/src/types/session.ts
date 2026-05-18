@@ -1,3 +1,5 @@
+export type PrivateTalkParticipant = { playerId: string; nickname: string }
+
 export type CreateSessionRequest = {
   scenarioId: string
   hostNickname: string
@@ -329,5 +331,40 @@ export type SessionEvent =
         recipients: { playerId: string; nickname: string }[]
         actionId: string
         occurredAt: number
+      }
+    }
+  | {
+      type: 'PRIVATE_TALK_REQUESTED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        requestId: string
+        requesterPlayerId: string
+        requesterNickname: string
+        targetPlayerId: string
+        targetNickname: string
+        requestedAt: number
+        expiresAt: number
+      }
+    }
+  | {
+      type: 'PRIVATE_TALK_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        requestId: string
+        participants: PrivateTalkParticipant[]
+        startedAt: number
+      }
+    }
+  | {
+      type: 'PRIVATE_TALK_ENDED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        requestId: string
+        participants: PrivateTalkParticipant[]
+        endReason: string
+        endedAt: number
       }
     }

@@ -17,15 +17,21 @@ const mockUseSessionWebSocket = vi.mocked(useSessionWebSocket)
 
 const mockGetSession = vi.mocked(getSession)
 
+const mockWsBase = () => ({
+  connected: false as const,
+  publishLeave: vi.fn(),
+  publishSelectLocation: vi.fn(),
+  publishItemExchange: vi.fn(),
+  publishItemShareFull: vi.fn(),
+  publishItemSharePartial: vi.fn(),
+  publishPrivateTalkRequest: vi.fn(),
+  publishPrivateTalkAccept: vi.fn(),
+  publishPrivateTalkReject: vi.fn(),
+  publishPrivateTalkEnd: vi.fn(),
+})
+
 beforeEach(() => {
-  mockUseSessionWebSocket.mockReturnValue({
-    connected: false,
-    publishLeave: vi.fn(),
-    publishSelectLocation: vi.fn(),
-    publishItemExchange: vi.fn(),
-    publishItemShareFull: vi.fn(),
-    publishItemSharePartial: vi.fn(),
-  })
+  mockUseSessionWebSocket.mockReturnValue(mockWsBase())
 })
 
 afterEach(() => {
@@ -132,14 +138,7 @@ describe('Play', () => {
   it("state='round'일 때 단서 long-press → 전체공유 시 publishItemShareFull 이 호출된다", async () => {
     vi.useFakeTimers()
     const publishItemShareFull = vi.fn()
-    mockUseSessionWebSocket.mockReturnValue({
-      connected: false,
-      publishLeave: vi.fn(),
-      publishSelectLocation: vi.fn(),
-      publishItemExchange: vi.fn(),
-      publishItemShareFull,
-      publishItemSharePartial: vi.fn(),
-    })
+    mockUseSessionWebSocket.mockReturnValue({ ...mockWsBase(), publishItemShareFull })
     useSessionStore.getState().setSession({
       state: 'round',
       roundNumber: 1,
@@ -168,14 +167,7 @@ describe('Play', () => {
   it("state='round'일 때 단서 long-press → 부분공유 시 publishItemSharePartial 이 호출된다", async () => {
     vi.useFakeTimers()
     const publishItemSharePartial = vi.fn()
-    mockUseSessionWebSocket.mockReturnValue({
-      connected: false,
-      publishLeave: vi.fn(),
-      publishSelectLocation: vi.fn(),
-      publishItemExchange: vi.fn(),
-      publishItemShareFull: vi.fn(),
-      publishItemSharePartial,
-    })
+    mockUseSessionWebSocket.mockReturnValue({ ...mockWsBase(), publishItemSharePartial })
     useSessionStore.getState().setSession({
       state: 'round',
       roundNumber: 1,

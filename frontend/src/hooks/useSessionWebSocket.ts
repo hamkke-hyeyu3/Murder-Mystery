@@ -172,6 +172,14 @@ export function useSessionWebSocket({
           message: `${p.actorNickname}님이 단서를 일부에게 공유했습니다 (총 ${p.recipients.length}명)`,
         })
       },
+      PRIVATE_TALK_STARTED: (e) => {
+        const p = e.payload
+        useSessionStore.setState({ currentPrivateTalk: { requestId: p.requestId, participants: p.participants, startedAt: p.startedAt } })
+        useTransientStore.getState().setPendingPrivateTalk(null)
+      },
+      PRIVATE_TALK_ENDED: (_e) => {
+        useSessionStore.setState({ currentPrivateTalk: null })
+      },
     }
 
     const privateHandlers: EventHandlers = {
@@ -188,6 +196,19 @@ export function useSessionWebSocket({
             }
           })
         }
+      },
+      PRIVATE_TALK_REQUESTED: (e) => {
+        const p = e.payload
+        const role = p.requesterPlayerId === playerId ? 'requester' : 'target'
+        const partnerPlayerId = role === 'requester' ? p.targetPlayerId : p.requesterPlayerId
+        const partnerNickname = role === 'requester' ? p.targetNickname : p.requesterNickname
+        useTransientStore.getState().setPendingPrivateTalk({
+          requestId: p.requestId,
+          partnerPlayerId,
+          partnerNickname,
+          role,
+          expiresAt: p.expiresAt,
+        })
       },
     }
 
@@ -237,5 +258,28 @@ export function useSessionWebSocket({
   const publishItemSharePartial = (clueId: string, recipientPlayerIds: string[]) =>
     sendToSession('item-share-partial', JSON.stringify({ clueId, recipientPlayerIds }))
 
-  return { connected, publishLeave, publishSelectLocation, publishItemExchange, publishItemShareFull, publishItemSharePartial }
+  const publishPrivateTalkRequest = (targetPlayerId: string) =>
+    sendToSession('private-talk/request', JSON.stringify({ targetPlayerId }))
+
+  const publishPrivateTalkAccept = (requestId: string) =>
+    sendToSession('private-talk/accept', JSON.stringify({ requestId }))
+
+  const publishPrivateTalkReject = (requestId: string) =>
+    sendToSession('private-talk/reject', JSON.stringify({ requestId }))
+
+  const publishPrivateTalkEnd = (requestId: string) =>
+    sendToSession('private-talk/end', JSON.stringify({ requestId }))
+
+  return {
+    connected,
+    publishLeave,
+    publishSelectLocation,
+    publishItemExchange,
+    publishItemShareFull,
+    publishItemSharePartial,
+    publishPrivateTalkRequest,
+    publishPrivateTalkAccept,
+    publishPrivateTalkReject,
+    publishPrivateTalkEnd,
+  }
 }

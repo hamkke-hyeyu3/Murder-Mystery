@@ -1,5 +1,11 @@
 import { create } from 'zustand'
-import type { OccupancyView, ScenarioLocationView, SessionViewResponse } from '@/types/session'
+import type { OccupancyView, PrivateTalkParticipant, ScenarioLocationView, SessionViewResponse } from '@/types/session'
+
+export type CurrentPrivateTalk = {
+  requestId: string
+  participants: PrivateTalkParticipant[]
+  startedAt: number
+}
 
 export interface PlayerSummary {
   playerId: string
@@ -35,6 +41,7 @@ export interface SessionState {
   currentRoundCandidateLocationIds: string[]
   locationOccupancy: OccupancyView[]
   scenarioLocations: ScenarioLocationView[]
+  currentPrivateTalk: CurrentPrivateTalk | null
 }
 
 interface SessionActions {
@@ -70,6 +77,7 @@ const initialState: SessionState = {
   currentRoundCandidateLocationIds: [],
   locationOccupancy: [],
   scenarioLocations: [],
+  currentPrivateTalk: null,
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({

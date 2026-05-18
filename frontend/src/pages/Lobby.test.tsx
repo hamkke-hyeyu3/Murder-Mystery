@@ -30,6 +30,10 @@ beforeEach(() => {
     publishItemExchange: vi.fn(),
     publishItemShareFull: vi.fn(),
     publishItemSharePartial: vi.fn(),
+    publishPrivateTalkRequest: vi.fn(),
+    publishPrivateTalkAccept: vi.fn(),
+    publishPrivateTalkReject: vi.fn(),
+    publishPrivateTalkEnd: vi.fn(),
   })
 })
 
