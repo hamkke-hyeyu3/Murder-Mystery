@@ -3,6 +3,7 @@ package com.murdermystery.ws;
 import com.murdermystery.config.StompPrincipal;
 import com.murdermystery.session.ItemService;
 import com.murdermystery.session.LeaveService;
+import com.murdermystery.session.PrivateTalkService;
 import com.murdermystery.session.RoundTurnService;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -20,12 +21,14 @@ public class SessionStompController {
     private final LeaveService leaveService;
     private final RoundTurnService roundTurnService;
     private final ItemService itemService;
+    private final PrivateTalkService privateTalkService;
 
     public SessionStompController(LeaveService leaveService, RoundTurnService roundTurnService,
-                                  ItemService itemService) {
+                                  ItemService itemService, PrivateTalkService privateTalkService) {
         this.leaveService = leaveService;
         this.roundTurnService = roundTurnService;
         this.itemService = itemService;
+        this.privateTalkService = privateTalkService;
     }
 
     @MessageMapping("/session/{sessionId}/leave")
@@ -110,6 +113,74 @@ public class SessionStompController {
             );
         } catch (IllegalArgumentException e) {
             // malformed UUID in payload — ignore to prevent STOMP session kill
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/private-talk/request")
+    public void privateTalkRequest(@DestinationVariable String sessionId,
+                                   @Payload PrivateTalkRequestRequest request,
+                                   Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        if (request == null || request.targetPlayerId() == null) return;
+        try {
+            privateTalkService.request(
+                UUID.fromString(sessionId),
+                UUID.fromString(sp.playerId()),
+                UUID.fromString(request.targetPlayerId())
+            );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID — ignore
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/private-talk/accept")
+    public void privateTalkAccept(@DestinationVariable String sessionId,
+                                  @Payload PrivateTalkActionRequest request,
+                                  Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        if (request == null || request.requestId() == null) return;
+        try {
+            privateTalkService.accept(
+                UUID.fromString(sessionId),
+                UUID.fromString(request.requestId()),
+                UUID.fromString(sp.playerId())
+            );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID — ignore
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/private-talk/reject")
+    public void privateTalkReject(@DestinationVariable String sessionId,
+                                  @Payload PrivateTalkActionRequest request,
+                                  Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        if (request == null || request.requestId() == null) return;
+        try {
+            privateTalkService.reject(
+                UUID.fromString(sessionId),
+                UUID.fromString(request.requestId()),
+                UUID.fromString(sp.playerId())
+            );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID — ignore
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/private-talk/end")
+    public void privateTalkEnd(@DestinationVariable String sessionId,
+                               @Payload PrivateTalkActionRequest request,
+                               Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        if (request == null || request.requestId() == null) return;
+        try {
+            privateTalkService.end(
+                UUID.fromString(sessionId),
+                UUID.fromString(request.requestId()),
+                UUID.fromString(sp.playerId())
+            );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID — ignore
         }
     }
 }

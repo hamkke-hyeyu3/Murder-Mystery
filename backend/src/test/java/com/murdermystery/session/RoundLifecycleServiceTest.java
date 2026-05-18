@@ -2,6 +2,7 @@ package com.murdermystery.session;
 
 import com.murdermystery.scenario.Scenario;
 import com.murdermystery.scenario.ScenarioRepository;
+import com.murdermystery.ws.event.PrivateTalkEndedPayload;
 import com.murdermystery.ws.event.RoundEndedPayload;
 import com.murdermystery.ws.event.RoundTurnsCompletePayload;
 import com.murdermystery.ws.event.SessionStateChangedPayload;
@@ -40,6 +41,7 @@ class RoundLifecycleServiceTest {
     @SuppressWarnings("unchecked")
     private ObjectProvider<RoundService> roundServiceProvider;
     private RoundService mockRoundService;
+    private PrivateTalkService privateTalkService;
     private RoundLifecycleService service;
 
     private final List<Runnable> capturedTasks = new ArrayList<>();
@@ -60,6 +62,7 @@ class RoundLifecycleServiceTest {
         clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
         roundServiceProvider = mock(ObjectProvider.class);
         mockRoundService = mock(RoundService.class);
+        privateTalkService = mock(PrivateTalkService.class);
         capturedTasks.clear();
         capturedFutures.clear();
 
@@ -80,7 +83,7 @@ class RoundLifecycleServiceTest {
 
         service = new RoundLifecycleService(
             sessionRepo, roundRepo, scenarioRepo, eventPublisher, txTemplate,
-            scheduler, clock, roundServiceProvider
+            scheduler, clock, roundServiceProvider, privateTalkService
         );
     }
 
@@ -235,5 +238,29 @@ class RoundLifecycleServiceTest {
 
         assertThat(round.getEndedAt()).isEqualTo(FIXED_NOW);
         verify(roundRepo).save(round);
+    }
+
+    // ── endRound: private talk boundary integration ──
+
+    @Test
+    void endRound_callsEndByRoundBoundaryBeforeRoundEnded() {
+        stubHappyPath(1, 2);
+
+        service.endRound(SESSION_ID, 1, "turns_complete");
+
+        InOrder inOrder = inOrder(privateTalkService, eventPublisher);
+        inOrder.verify(privateTalkService).endByRoundBoundary(SESSION_ID, 1);
+        inOrder.verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("ROUND_ENDED"), any());
+    }
+
+    @Test
+    void endRound_skippedSession_doesNotCallEndByRoundBoundary() {
+        Session session = roundSession(1);
+        session.setState("tutorial");
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+
+        service.endRound(SESSION_ID, 1, "turns_complete");
+
+        verify(privateTalkService, never()).endByRoundBoundary(any(), anyInt());
     }
 }

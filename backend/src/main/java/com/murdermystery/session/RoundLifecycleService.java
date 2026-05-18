@@ -2,6 +2,7 @@ package com.murdermystery.session;
 
 import com.murdermystery.scenario.Scenario;
 import com.murdermystery.scenario.ScenarioRepository;
+import com.murdermystery.session.PrivateTalkService;
 import com.murdermystery.ws.event.RoundEndedPayload;
 import com.murdermystery.ws.event.RoundTurnsCompletePayload;
 import com.murdermystery.ws.event.SessionStateChangedPayload;
@@ -35,6 +36,7 @@ public class RoundLifecycleService {
     private final Clock clock;
     // ObjectProvider breaks the construction-time cycle: RoundService → RoundLifecycleService
     private final ObjectProvider<RoundService> roundServiceProvider;
+    private final PrivateTalkService privateTalkService;
 
     // session:roundNumber → pending time_limit future (cancelled if turns finish first)
     private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingDeadlines = new ConcurrentHashMap<>();
@@ -49,7 +51,8 @@ public class RoundLifecycleService {
         TransactionTemplate transactionTemplate,
         ScheduledExecutorService gameScheduler,
         Clock systemClock,
-        ObjectProvider<RoundService> roundServiceProvider
+        ObjectProvider<RoundService> roundServiceProvider,
+        PrivateTalkService privateTalkService
     ) {
         this.sessionRepository = sessionRepository;
         this.roundRepository = roundRepository;
@@ -59,6 +62,7 @@ public class RoundLifecycleService {
         this.scheduler = gameScheduler;
         this.clock = systemClock;
         this.roundServiceProvider = roundServiceProvider;
+        this.privateTalkService = privateTalkService;
     }
 
     /** Called by RoundService.startRound after persisting the round entity. */
@@ -134,6 +138,9 @@ public class RoundLifecycleService {
             endedRounds.remove(key); // allow a retry if TX failed
             return;
         }
+
+        // End any active private talk before ROUND_ENDED so FE clears banner first
+        privateTalkService.endByRoundBoundary(sessionId, roundNumber);
 
         eventPublisher.publish(sessionId.toString(), "ROUND_ENDED",
             new RoundEndedPayload(roundNumber, reason, ctx.endedAt().toEpochMilli()));
