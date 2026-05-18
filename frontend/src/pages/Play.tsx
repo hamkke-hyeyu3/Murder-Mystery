@@ -118,7 +118,7 @@ export default function Play() {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
         <BannerStack />
-        {playerId && <PrivateTalkBanner myPlayerId={playerId} />}
+        <PrivateTalkBanner />
         <CharacterCard />
         <RoundPanel
           roundNumber={roundNumber ?? 1}

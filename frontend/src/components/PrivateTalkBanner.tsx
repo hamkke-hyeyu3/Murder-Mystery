@@ -1,16 +1,9 @@
 import { useSessionStore } from '@/stores/sessionStore'
 
-interface PrivateTalkBannerProps {
-  myPlayerId: string
-}
-
-export function PrivateTalkBanner({ myPlayerId }: PrivateTalkBannerProps) {
+export function PrivateTalkBanner() {
   const currentPrivateTalk = useSessionStore((s) => s.currentPrivateTalk)
 
   if (!currentPrivateTalk) return null
-
-  const isParticipant = currentPrivateTalk.participants.some((p) => p.playerId === myPlayerId)
-  if (isParticipant) return null
   if (currentPrivateTalk.participants.length < 2) return null
 
   const [a, b] = currentPrivateTalk.participants

@@ -9,11 +9,11 @@ beforeEach(() => {
 
 describe('PrivateTalkBanner', () => {
   it('currentPrivateTalk이 null이면 렌더하지 않는다', () => {
-    render(<PrivateTalkBanner myPlayerId="alice-id" />)
+    render(<PrivateTalkBanner />)
     expect(screen.queryByTestId('private-talk-banner')).toBeNull()
   })
 
-  it('비참여자에게 "A, B 밀담 중" 배너를 보여준다', () => {
+  it('"A, B 밀담 중" 배너를 모든 단말에 보여준다', () => {
     useSessionStore.setState({
       currentPrivateTalk: {
         requestId: 'talk-1',
@@ -25,14 +25,14 @@ describe('PrivateTalkBanner', () => {
       },
     })
 
-    render(<PrivateTalkBanner myPlayerId="charlie-id" />)
+    render(<PrivateTalkBanner />)
 
     const banner = screen.getByTestId('private-talk-banner')
     expect(banner.textContent).toContain('Alice')
     expect(banner.textContent).toContain('Bob')
   })
 
-  it('참여자에게는 배너를 표시하지 않는다', () => {
+  it('참여자 단말에서도 배너를 표시한다 (PRD A4.5: 모든 단말)', () => {
     useSessionStore.setState({
       currentPrivateTalk: {
         requestId: 'talk-2',
@@ -44,7 +44,7 @@ describe('PrivateTalkBanner', () => {
       },
     })
 
-    render(<PrivateTalkBanner myPlayerId="alice-id" />)
-    expect(screen.queryByTestId('private-talk-banner')).toBeNull()
+    render(<PrivateTalkBanner />)
+    expect(screen.getByTestId('private-talk-banner')).toBeTruthy()
   })
 })
