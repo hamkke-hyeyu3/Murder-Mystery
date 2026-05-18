@@ -464,29 +464,17 @@ class ItemIntegrationTest {
             body.put("partnerClueId",   clueY.getId().toString());
             setup.s2().send("/app/session/" + setup.host().sessionId() + "/item-exchange", body);
 
-            // Anchor: Alice issues a legitimate share-full on a separate clue.
-            // share-full and exchange broadcast on the same /topic/session/{id}/event.
-            // When the 3rd ITEM_SHARED_FULL frame arrives, any concurrent ITEM_EXCHANGED
-            // would have arrived on the same queue too — drains slow-CI flakiness.
-            Clue anchorClue = seedClue(sessId, "candlestick", "lounge", aliceId);
-            Map<String, Object> anchorBody = Map.of("clueId", anchorClue.getId().toString());
-            setup.s1().send("/app/session/" + setup.host().sessionId() + "/item-share-full", anchorBody);
-
-            int sharedFullCount = 0;
-            long deadline = System.currentTimeMillis() + 5000;
-            while (sharedFullCount < 3 && System.currentTimeMillis() < deadline) {
-                String frame = setup.topicFrames().poll(100, TimeUnit.MILLISECONDS);
-                if (frame == null) continue;
-                if (frame.contains("ITEM_EXCHANGED")) {
-                    throw new AssertionError("Bogus exchange was broadcast: " + frame);
-                }
-                if (frame.contains("ITEM_SHARED_FULL")) sharedFullCount++;
-            }
-            assertThat(sharedFullCount).isEqualTo(3);
+            // Drain topicFrames generously. We don't use a cross-session anchor: Spring's
+            // clientInboundChannel dispatches handlers on a thread pool, so a frame produced
+            // by another session does not prove the bogus request finished processing.
+            // Broker dispatch latency for a single broadcast is sub-second in practice,
+            // so a regression that wrongly publishes ITEM_EXCHANGED would arrive well
+            // within this window. The DB assertion below is the authoritative check.
+            assertNoFrame(setup.topicFrames(), "ITEM_EXCHANGED", 2000);
 
             var actions = itemActionRepository.findAll().stream()
                 .filter(a -> a.getSessionId().equals(sessId)).toList();
-            assertThat(actions).noneMatch(a -> "exchange".equals(a.getActionType()));
+            assertThat(actions).isEmpty();
 
             assertThat(clueRepository.findById(clueX.getId()))
                 .isPresent().get()
