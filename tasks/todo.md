@@ -186,11 +186,11 @@
   - [x] **리뷰 R5**: FE 이벤트 빈 구멍 3건·useLongPress·BE exchange 권한 위반 통합테스트 — `6df97e1`
   - [x] **리뷰 R6**: ItemService.exchange UUID[][] → List<NewAcl> + useSessionWebSocket publish 헬퍼 단순화 — `84224a3`
 
-- [ ] **T-12** 1:1 밀담 신청·수락·거절 + 동시 한 쌍 + 배너
-  - [ ] BE: `PrivateTalkService` (신청 private only → 수락 broadcast → 거절·timeout 무반응)
-  - [ ] FE: 인라인 신청 카드(모달 아님) + "A, B 밀담 중" 배너 + 밀담 신청 버튼 잠금
-  - [ ] DB: `V6__private_talk.sql`
-  - [ ] 검증: `PrivateTalkServiceTest` (거절·timeout·미응답 동일 무반응)
+- [x] **T-12** 1:1 밀담 신청·수락·거절 + 동시 한 쌍 + 배너
+  - [x] BE: `PrivateTalkService` (신청 private only → 수락 broadcast → 거절·timeout 무반응)
+  - [x] FE: 인라인 신청 카드(모달 아님) + "A, B 밀담 중" 배너 + STARTED/ENDED 이벤트 처리
+  - [x] DB: `V11__private_talks.sql` (partial unique index + round-boundary auto-close)
+  - [x] 검증: `PrivateTalkServiceTest` (18 케이스) + `PrivateTalkIntegrationTest` (5 케이스)
 
 **✅ 체크포인트 C 완료 조건:** 라운드 1·2·3 끝까지 + 단서 monotonic verify + 아이템 3행위 + 밀담 데모
 

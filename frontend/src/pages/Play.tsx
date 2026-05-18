@@ -11,6 +11,8 @@ import { LocationGrid } from '@/components/LocationGrid'
 import { MyCluesPanel } from '@/components/MyCluesPanel'
 import { VotePlaceholder } from '@/components/VotePlaceholder'
 import { BannerStack } from '@/components/BannerStack'
+import { PrivateTalkInlineCard } from '@/components/PrivateTalkInlineCard'
+import { PrivateTalkBanner } from '@/components/PrivateTalkBanner'
 import { postTutorialAck, getSession } from '@/lib/sessionApi'
 
 export default function Play() {
@@ -72,7 +74,10 @@ export default function Play() {
     return () => { cancelled = true }
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { publishSelectLocation, publishItemExchange, publishItemShareFull, publishItemSharePartial } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
+  const {
+    publishSelectLocation, publishItemExchange, publishItemShareFull, publishItemSharePartial,
+    publishPrivateTalkAccept, publishPrivateTalkReject,
+  } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 
   const handleTutorialAck = async () => {
     if (!sessionId) return
@@ -113,6 +118,7 @@ export default function Play() {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
         <BannerStack />
+        {playerId && <PrivateTalkBanner myPlayerId={playerId} />}
         <CharacterCard />
         <RoundPanel
           roundNumber={roundNumber ?? 1}
@@ -120,6 +126,10 @@ export default function Play() {
           commonHint={roundCommonHint}
           deadlineAt={roundDeadlineAt}
           serverOffsetMs={serverOffsetMs}
+        />
+        <PrivateTalkInlineCard
+          onAccept={publishPrivateTalkAccept}
+          onReject={publishPrivateTalkReject}
         />
         <MyCluesPanel
           players={players}
