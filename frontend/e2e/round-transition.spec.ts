@@ -7,20 +7,8 @@ import {
   waitForRound1,
   waitForLocationGrid,
   waitAndSelectLocation,
+  createDevDuoRoom,
 } from './fixtures'
-
-async function createDevDuoRoom(page: import('@playwright/test').Page, hostNickname: string): Promise<string> {
-  await page.goto('/')
-  const devDuoCard = page.locator('li', { hasText: '2인 테스트' }).first()
-  await devDuoCard.waitFor({ timeout: 10000 })
-  await devDuoCard.getByRole('button', { name: '세션 만들기' }).click()
-  await page.getByPlaceholder('닉네임').fill(hostNickname)
-  await page.getByRole('button', { name: '확인' }).click()
-  await page.getByTestId('page-lobby').waitFor()
-  const inviteCode = await page.locator('.text-5xl').textContent()
-  if (!inviteCode) throw new Error('inviteCode를 찾을 수 없음')
-  return inviteCode.trim()
-}
 
 async function completeRound(page1: import('@playwright/test').Page, page2: import('@playwright/test').Page) {
   await Promise.all([waitForLocationGrid(page1), waitForLocationGrid(page2)])

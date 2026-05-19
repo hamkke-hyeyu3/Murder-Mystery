@@ -60,8 +60,29 @@ export async function waitForTutorialAndAck(page: Page): Promise<void> {
   }
 }
 
+export async function waitForRoundN(page: Page, n: number): Promise<void> {
+  await expect(page.getByTestId('round-number')).toHaveText(`라운드 ${n}`, { timeout: 20000 })
+}
+
 export async function waitForRound1(page: Page): Promise<void> {
   await page.getByTestId('round-panel').waitFor({ timeout: 15000 })
+}
+
+export async function expectClueSectionVisible(page: Page, n: number): Promise<void> {
+  await expect(page.getByTestId(`clue-section-round-${n}`)).toBeVisible({ timeout: 10000 })
+}
+
+export async function createDevDuoRoom(page: Page, hostNickname: string): Promise<string> {
+  await page.goto('/')
+  const devDuoCard = page.locator('li', { hasText: '2인 테스트' }).first()
+  await devDuoCard.waitFor({ timeout: 10000 })
+  await devDuoCard.getByRole('button', { name: '세션 만들기' }).click()
+  await page.getByPlaceholder('닉네임').fill(hostNickname)
+  await page.getByRole('button', { name: '확인' }).click()
+  await page.getByTestId('page-lobby').waitFor()
+  const inviteCode = await page.locator('.text-5xl').textContent()
+  if (!inviteCode) throw new Error('inviteCode를 찾을 수 없음')
+  return inviteCode.trim()
 }
 
 export async function getMyCharacterId(page: Page): Promise<string> {
@@ -73,11 +94,10 @@ export async function getMyCharacterId(page: Page): Promise<string> {
 
 // ── LocationGrid helpers ─────────────────────────────────────────────
 
-/** location-grid가 나타날 때까지 대기 (TURN_STARTED 도착 후) */
+/** location-grid(활성)가 나타날 때까지 대기 (TURN_STARTED 도착 후) */
 export async function waitForLocationGrid(page: Page): Promise<void> {
-  // 첫 차례가 올 때까지, 또는 이미 완료됐을 경우 complete 표시 대기
-  const locator = page.locator('[data-testid="location-grid"],[data-testid="location-grid-complete"]')
-  await locator.first().waitFor({ timeout: 15000 })
+  // 활성 grid만 기다림 — stale location-grid-complete 오탐 방지
+  await page.getByTestId('location-grid').waitFor({ timeout: 30000 })
 }
 
 /** 이 페이지가 현재 자기 차례(활성 후보 버튼 존재)인지 반환 */
@@ -100,13 +120,6 @@ export async function waitAndSelectLocation(page: Page): Promise<string> {
   const locationId = testId.replace('location-cell-', '')
   await btn.click()
   return locationId
-}
-
-/** 지정된 locationId 셀에 점유자가 표시될 때까지 대기하고 닉네임을 반환 */
-export async function waitForLocationOccupied(page: Page, locationId: string): Promise<string> {
-  const cell = page.getByTestId(`location-cell-${locationId}`)
-  await expect(cell).toHaveAttribute('data-occupied-by', /.+/, { timeout: 10000 })
-  return (await cell.getAttribute('data-occupied-by')) ?? ''
 }
 
 /** 모든 차례 완료 표시 대기 */

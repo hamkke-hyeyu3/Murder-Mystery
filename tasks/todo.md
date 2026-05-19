@@ -186,6 +186,11 @@
   - [x] **리뷰 R5**: FE 이벤트 빈 구멍 3건·useLongPress·BE exchange 권한 위반 통합테스트 — `6df97e1`
   - [x] **리뷰 R6**: ItemService.exchange UUID[][] → List<NewAcl> + useSessionWebSocket publish 헬퍼 단순화 — `84224a3`
 
+- [ ] **T-12.1 (후속)** 밀담 신청 UI + e2e — 별도 PR
+  - [ ] FE: `Play.tsx`에 밀담 신청 트리거 추가 (플레이어 목록 옆 버튼 등) — `publishPrivateTalkRequest` 바인딩 (현재 어떤 UI에도 미연결)
+  - [ ] e2e: `checkpoint-c-private-talk.spec.ts` — 신청·수락·거절·동시 한 쌍 검증
+  - 출처: 체크포인트 C TDD 보강 (2026-05-18) — T-12 완료 마킹 시 신청 트리거 누락 발견
+
 - [x] **T-12** 1:1 밀담 신청·수락·거절 + 동시 한 쌍 + 배너
   - [x] BE: `PrivateTalkService` (신청 private only → 수락 broadcast → 거절·timeout 무반응)
   - [x] FE: 인라인 신청 카드(모달 아님) + "A, B 밀담 중" 배너 + STARTED/ENDED 이벤트 처리

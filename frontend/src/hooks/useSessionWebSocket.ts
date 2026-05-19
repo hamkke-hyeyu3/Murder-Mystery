@@ -37,21 +37,25 @@ export function useSessionWebSocket({
     if (!connected || !client.current || !client.current.connected || !sessionId) return
 
     const handleLocationOccupancy = (
-      payload: { locationId: string; playerId: string; characterId: string },
+      payload: { locationId: string; playerId: string; characterId: string; roundNumber: number },
       autoSelected: boolean
     ) => {
-      useSessionStore.setState((state) => ({
-        ...state,
-        locationOccupancy: [
-          ...state.locationOccupancy.filter((o) => o.locationId !== payload.locationId),
-          {
-            locationId: payload.locationId,
-            playerId: payload.playerId,
-            characterId: payload.characterId,
-            autoSelected,
-          },
-        ],
-      }))
+      useSessionStore.setState((state) => {
+        // 재연결 등으로 이전 라운드 이벤트가 늦게 도달한 경우 무시
+        if (payload.roundNumber !== state.roundNumber) return state
+        return {
+          ...state,
+          locationOccupancy: [
+            ...state.locationOccupancy.filter((o) => o.locationId !== payload.locationId),
+            {
+              locationId: payload.locationId,
+              playerId: payload.playerId,
+              characterId: payload.characterId,
+              autoSelected,
+            },
+          ],
+        }
+      })
     }
 
     const topicHandlers: EventHandlers = {
@@ -96,12 +100,15 @@ export function useSessionWebSocket({
         useTimerStore.getState().setServerOffset(e.payload.serverNow - Date.now())
       },
       ROUND_STARTED: (e) => {
-        setSession({
+        useSessionStore.setState((s) => ({
+          ...s,
           state: 'round',
           roundNumber: e.payload.roundNumber,
           roundPrompt: e.payload.prompt,
           roundCommonHint: e.payload.commonHint,
-        })
+          // 실제로 새 라운드로 전진할 때만 점유 초기화 (재연결로 중복 수신 방어)
+          ...(e.payload.roundNumber !== s.roundNumber ? { locationOccupancy: [] } : {}),
+        }))
         useTimerStore.getState().setRoundDeadline(e.payload.deadlineAt)
       },
       TURN_STARTED: (e) => {

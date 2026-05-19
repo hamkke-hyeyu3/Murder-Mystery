@@ -6,10 +6,9 @@ import {
   waitForCharacterCard,
   waitForTutorialAndAck,
   waitForRound1,
+  waitForRoundN,
   waitForLocationGrid,
   waitAndSelectLocation,
-  waitForLocationOccupied,
-  waitForRoundTurnsComplete,
 } from './fixtures'
 
 test('3 단말 회전 턴 조사 — 각자 차례에 장소 선택 후 모든 차례 완료', async ({ page, browser }) => {
@@ -50,17 +49,10 @@ test('3 단말 회전 턴 조사 — 각자 차례에 장소 선택 후 모든 �
     // 6. 선택된 장소가 모두 다른지 확인 (중복 점유 없음)
     expect(new Set([loc1, loc2, loc3]).size).toBe(3)
 
-    // 7. 각 단말에서 선택된 장소들이 최종적으로 occupied로 표시되는지 확인
-    //    (자신이 선택한 장소는 이미 선택 완료, 타인 장소만 확인)
-    await waitForLocationOccupied(page, loc2)
-    await waitForLocationOccupied(page, loc3)
-    await waitForLocationOccupied(guestPage1, loc1)
-    await waitForLocationOccupied(guestPage2, loc1)
+    // R18 배칭으로 LOCATION_SELECTED·ROUND_STARTED가 한 사이클에 처리됨 — 중간 상태 대신 다음 라운드 진입을 완료 신호로 사용
+    await Promise.all(allPages.map((p) => waitForRoundN(p, 2)))
 
-    // 8. 모든 차례 완료 — 3 단말 모두 "이번 라운드 조사 완료" 표시
-    await Promise.all(allPages.map((p) => waitForRoundTurnsComplete(p)))
-
-    // 9. 라운드 패널은 여전히 표시
+    // 9. 라운드 패널은 여전히 표시 (투표 단계 미진입)
     await expect(page.getByTestId('round-panel')).toBeVisible()
   } finally {
     await guestCtx1.close()

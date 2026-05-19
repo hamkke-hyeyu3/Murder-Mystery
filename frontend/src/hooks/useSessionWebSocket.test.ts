@@ -330,6 +330,35 @@ describe('useSessionWebSocket', () => {
     expect(useSessionStore.getState().roundCommonHint).toBe('부검 결과가 공개됐다.')
   })
 
+  it('ROUND_STARTED 중복 수신 시 동일 roundNumber면 locationOccupancy를 초기화하지 않는다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+    // R2가 이미 진행 중 — occupancy 데이터 존재
+    useSessionStore.getState().setSession({
+      roundNumber: 2,
+      locationOccupancy: [{ locationId: 'loc-a', playerId: 'p1', characterId: 'c1', autoSelected: false }],
+    })
+
+    act(() => {
+      // 재연결로 인해 동일 roundNumber의 ROUND_STARTED가 중복 도달
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'ROUND_STARTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            roundNumber: 2,
+            prompt: '알리바이를 비교해 보세요.',
+            commonHint: null,
+            deadlineAt: Date.now() + 300_000,
+            startedAt: Date.now(),
+          },
+        }),
+      } as IMessage)
+    })
+
+    expect(useSessionStore.getState().locationOccupancy).toHaveLength(1)
+  })
+
   it('ROUND_ENDED 수신 시 배너를 push하고 currentTurn을 초기화한다', () => {
     renderHook(() => useSessionWebSocket(defaultOptions))
 
@@ -642,6 +671,7 @@ describe('useSessionWebSocket', () => {
 
   it('LOCATION_AUTO_SELECTED 수신 시 locationOccupancy에 autoSelected: true로 추가한다', () => {
     renderHook(() => useSessionWebSocket(defaultOptions))
+    useSessionStore.getState().setSession({ roundNumber: 1 })
 
     act(() => {
       topicCallback!({
@@ -663,6 +693,32 @@ describe('useSessionWebSocket', () => {
     expect(useSessionStore.getState().locationOccupancy).toContainEqual(
       expect.objectContaining({ locationId: 'loc-library', autoSelected: true })
     )
+  })
+
+  it('LOCATION_SELECTED 이전 라운드 이벤트는 roundNumber 불일치 시 무시한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+    // 현재 라운드를 2로 설정 (ROUND_STARTED R2 처리 완료 상태)
+    useSessionStore.getState().setSession({ roundNumber: 2, locationOccupancy: [] })
+
+    act(() => {
+      // R1에서 지연 도달한 stale 이벤트 (roundNumber: 1)
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'LOCATION_SELECTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-10T00:00:00Z',
+          payload: {
+            locationId: 'loc-library',
+            playerId: 'player-alice',
+            characterId: 'char-a',
+            roundNumber: 1,
+            turnIndex: 2,
+          },
+        }),
+      } as IMessage)
+    })
+
+    expect(useSessionStore.getState().locationOccupancy).toHaveLength(0)
   })
 
   it('ROUND_TURNS_COMPLETE 수신 시 currentTurn 상태와 turnDeadlineAt을 초기화한다', () => {
