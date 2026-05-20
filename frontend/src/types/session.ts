@@ -398,7 +398,7 @@ export type SessionEvent =
       type: 'VOTE_STARTED'
       sessionId: string
       occurredAt: string
-      payload: { roundNo: number; deadlineAt: number; candidateCharacterIds: string[] }
+      payload: { roundNo: number; deadlineAt: number; candidates: VoteCandidate[] }
     }
   | {
       type: 'VOTE_PROGRESS'
@@ -425,7 +425,7 @@ export type SessionEvent =
       payload: {
         roundNo: number
         deadlineAt: number
-        candidateCharacterIds: string[]
+        candidates: VoteCandidate[]
         tiedFromPreviousRound: string[]
       }
     }

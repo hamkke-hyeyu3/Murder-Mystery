@@ -5,5 +5,12 @@ import java.util.List;
 public record VoteStartedPayload(
     int roundNo,
     long deadlineAt,
-    List<String> candidateCharacterIds
-) {}
+    List<Candidate> candidates
+) {
+    public record Candidate(
+        String characterId,
+        String name,
+        String playerNickname,
+        String playerId
+    ) {}
+}

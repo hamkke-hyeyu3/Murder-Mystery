@@ -140,7 +140,8 @@ class VoteServiceTest {
         verify(eventPublisher).publish(eq(SESSION_ID.toString()), eq("VOTE_STARTED"), captor.capture());
         VoteStartedPayload payload = captor.getValue();
         assertThat(payload.roundNo()).isEqualTo(0);
-        assertThat(payload.candidateCharacterIds()).containsExactlyInAnyOrder(CHAR_ALICE, CHAR_BOB, CHAR_CHARLIE);
+        assertThat(payload.candidates()).extracting(VoteStartedPayload.Candidate::characterId)
+                .containsExactlyInAnyOrder(CHAR_ALICE, CHAR_BOB, CHAR_CHARLIE);
         assertThat(payload.deadlineAt()).isGreaterThan(FIXED_NOW.toEpochMilli());
     }
 

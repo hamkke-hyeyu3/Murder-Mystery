@@ -811,7 +811,13 @@ describe('useSessionWebSocket', () => {
           type: 'VOTE_STARTED',
           sessionId: 'sess-001',
           occurredAt: '2026-05-20T00:00:00Z',
-          payload: { roundNo: 0, deadlineAt: 9999000, candidateCharacterIds: ['alice', 'bob'] },
+          payload: {
+            roundNo: 0, deadlineAt: 9999000,
+            candidates: [
+              { characterId: 'alice', name: 'Alice', playerNickname: null, playerId: null },
+              { characterId: 'bob', name: 'Bob', playerNickname: null, playerId: null },
+            ],
+          },
         }),
       } as IMessage)
     })
@@ -822,6 +828,8 @@ describe('useSessionWebSocket', () => {
     expect(vote!.deadlineAt).toBe(9999000)
     expect(vote!.submittedCount).toBe(0)
     expect(vote!.totalCount).toBe(2)
+    expect(vote!.candidates).toHaveLength(2)
+    expect(vote!.candidates[0].characterId).toBe('alice')
   })
 
   it('VOTE_PROGRESS 수신 시 vote.submittedCount, vote.totalCount를 업데이트한다', () => {
@@ -887,7 +895,14 @@ describe('useSessionWebSocket', () => {
           type: 'RUNOFF_STARTED',
           sessionId: 'sess-001',
           occurredAt: '2026-05-20T00:00:00Z',
-          payload: { roundNo: 1, deadlineAt: 9999060000, candidateCharacterIds: ['alice', 'bob'], tiedFromPreviousRound: ['alice', 'bob'] },
+          payload: {
+            roundNo: 1, deadlineAt: 9999060000,
+            candidates: [
+              { characterId: 'alice', name: 'Alice', playerNickname: null, playerId: null },
+              { characterId: 'bob', name: 'Bob', playerNickname: null, playerId: null },
+            ],
+            tiedFromPreviousRound: ['alice', 'bob'],
+          },
         }),
       } as IMessage)
     })

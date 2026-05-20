@@ -192,9 +192,10 @@ export function useSessionWebSocket({
         useSessionStore.setState((state) => ({
           ...state,
           vote: {
-            ...(state.vote ?? { candidates: [], myVote: null, outcome: null, winnerCharacterId: null, tiedCharacterIds: null, tally: null }),
+            ...(state.vote ?? { myVote: null, outcome: null, winnerCharacterId: null, tiedCharacterIds: null, tally: null }),
             roundNo: p.roundNo,
             deadlineAt: p.deadlineAt,
+            candidates: p.candidates,
             submittedCount: 0,
             totalCount: state.players.length,
           },
@@ -233,6 +234,7 @@ export function useSessionWebSocket({
               ...state.vote,
               roundNo: p.roundNo,
               deadlineAt: p.deadlineAt,
+              candidates: p.candidates,
               submittedCount: 0,
               myVote: null,
               outcome: null,

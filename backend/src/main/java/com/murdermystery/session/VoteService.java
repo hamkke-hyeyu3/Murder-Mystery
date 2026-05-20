@@ -64,8 +64,19 @@ public class VoteService {
             Scenario scenario = scenarioRepository.findById(session.getScenarioId()).orElse(null);
             if (scenario == null) return null;
 
-            List<String> candidates = scenario.characters().stream()
-                    .map(c -> c.id()).collect(Collectors.toList());
+            Map<String, Player> charToPlayer = new HashMap<>();
+            for (Player p : session.getPlayers()) {
+                if (p.getAssignedCharacterId() != null) charToPlayer.put(p.getAssignedCharacterId(), p);
+            }
+            List<VoteStartedPayload.Candidate> candidates = scenario.characters().stream()
+                    .map(ch -> {
+                        Player p = charToPlayer.get(ch.id());
+                        return new VoteStartedPayload.Candidate(
+                                ch.id(), ch.name(),
+                                p != null ? p.getNickname() : null,
+                                p != null ? p.getId().toString() : null);
+                    })
+                    .collect(Collectors.toList());
             Instant deadlineAt = clock.instant().plusSeconds(VOTE_DEADLINE_SECONDS);
             session.setVoteRoundNo(roundNo);
             session.setVoteDeadlineAt(deadlineAt);
@@ -199,9 +210,21 @@ public class VoteService {
                 sessionRepository.save(session);
 
                 Scenario scenario = scenarioRepository.findById(session.getScenarioId()).orElse(null);
-                List<String> allCandidates = scenario != null
-                        ? scenario.characters().stream().map(c -> c.id()).collect(Collectors.toList())
-                        : leaders;
+                Map<String, Player> charToPlayer2 = new HashMap<>();
+                for (Player p : session.getPlayers()) {
+                    if (p.getAssignedCharacterId() != null) charToPlayer2.put(p.getAssignedCharacterId(), p);
+                }
+                List<VoteStartedPayload.Candidate> allCandidates = scenario != null
+                        ? scenario.characters().stream()
+                            .map(ch -> {
+                                Player p = charToPlayer2.get(ch.id());
+                                return new VoteStartedPayload.Candidate(
+                                        ch.id(), ch.name(),
+                                        p != null ? p.getNickname() : null,
+                                        p != null ? p.getId().toString() : null);
+                            })
+                            .collect(Collectors.toList())
+                        : List.of();
 
                 return new TallyContext(sessionId.toString(), roundNo, "tie",
                         null, leaders, tally, allCandidates, deadlineAt);
@@ -256,7 +279,7 @@ public class VoteService {
 
     // ── Bundle records ───────────────────────────────────────────────────
 
-    private record StartBundle(String sessionId, List<String> candidates, Instant deadlineAt) {}
+    private record StartBundle(String sessionId, List<VoteStartedPayload.Candidate> candidates, Instant deadlineAt) {}
 
     private record SubmitBundle(String sessionId, int roundNo, int submittedCount, int totalCount) {}
 
@@ -264,5 +287,5 @@ public class VoteService {
             String sessionId, int roundNo, String outcome,
             String winnerCharacterId, List<String> tiedCharacterIds,
             List<VoteResultPayload.TallyEntry> tally,
-            List<String> runoffCandidates, Instant runoffDeadlineAt) {}
+            List<VoteStartedPayload.Candidate> runoffCandidates, Instant runoffDeadlineAt) {}
 }
