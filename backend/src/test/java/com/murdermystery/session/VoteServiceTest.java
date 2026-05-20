@@ -197,6 +197,24 @@ class VoteServiceTest {
     }
 
     @Test
+    void submit_runoff_rejectsNonTiedCharacter() {
+        // Round-0 result: alice→BOB(1), bob→CHARLIE(1) → BOB and CHARLIE tied; ALICE not tied
+        Session session = voteSession();
+        session.setVoteRoundNo(1);
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(threeCharScenario()));
+        when(voteRepo.findBySessionIdAndRoundNo(SESSION_ID, 0))
+                .thenReturn(List.of(voteFor(ALICE_ID, CHAR_BOB, 0), voteFor(BOB_ID, CHAR_CHARLIE, 0)));
+        when(voteRepo.findBySessionIdAndRoundNo(SESSION_ID, 1)).thenReturn(List.of());
+
+        // CHAR_ALICE was not tied in round 0 → must be rejected in runoff
+        service.submit(SESSION_ID, CHARLIE_ID, CHAR_ALICE, 1, INVITE_CODE);
+
+        verify(voteRepo, never()).save(any());
+        verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
     void submit_staleRoundNo_doesNothing() {
         Session session = voteSession();
         session.setVoteRoundNo(1); // runoff already started

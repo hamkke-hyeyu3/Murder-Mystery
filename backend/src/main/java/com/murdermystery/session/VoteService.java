@@ -113,8 +113,27 @@ public class VoteService {
             Scenario scenario = scenarioRepository.findById(session.getScenarioId()).orElse(null);
             if (scenario == null) return null;
 
-            Set<String> validCharIds = scenario.characters().stream()
-                    .map(c -> c.id()).collect(Collectors.toSet());
+            Set<String> validCharIds;
+            if (currentRoundNo == 0) {
+                validCharIds = scenario.characters().stream()
+                        .map(c -> c.id()).collect(Collectors.toSet());
+            } else {
+                // runoff: only characters that were tied in round 0 are valid targets
+                List<Vote> prevVotes = voteRepository.findBySessionIdAndRoundNo(sessionId, 0);
+                if (prevVotes.isEmpty()) {
+                    // all abstained in round 0 → all characters eligible
+                    validCharIds = scenario.characters().stream()
+                            .map(c -> c.id()).collect(Collectors.toSet());
+                } else {
+                    Map<String, Long> prevCounts = prevVotes.stream()
+                            .collect(Collectors.groupingBy(Vote::getTargetCharacterId, Collectors.counting()));
+                    long maxCount = prevCounts.values().stream().mapToLong(l -> l).max().orElse(0);
+                    validCharIds = prevCounts.entrySet().stream()
+                            .filter(e -> e.getValue() == maxCount)
+                            .map(Map.Entry::getKey)
+                            .collect(Collectors.toSet());
+                }
+            }
             if (!validCharIds.contains(targetCharacterId)) return null;
 
             List<Player> players = session.getPlayers();
@@ -214,8 +233,11 @@ public class VoteService {
                 for (Player p : session.getPlayers()) {
                     if (p.getAssignedCharacterId() != null) charToPlayer2.put(p.getAssignedCharacterId(), p);
                 }
-                List<VoteStartedPayload.Candidate> allCandidates = scenario != null
+                Set<String> tiedIds = new HashSet<>(leaders);
+                // runoff candidates = only the tied characters (not all scenario characters)
+                List<VoteStartedPayload.Candidate> runoffCandidates = scenario != null
                         ? scenario.characters().stream()
+                            .filter(ch -> tiedIds.contains(ch.id()))
                             .map(ch -> {
                                 Player p = charToPlayer2.get(ch.id());
                                 return new VoteStartedPayload.Candidate(
@@ -227,7 +249,7 @@ public class VoteService {
                         : List.of();
 
                 return new TallyContext(sessionId.toString(), roundNo, "tie",
-                        null, leaders, tally, allCandidates, deadlineAt);
+                        null, leaders, tally, runoffCandidates, deadlineAt);
             } else {
                 session.setVoteOutcome("failed");
                 sessionRepository.save(session);
