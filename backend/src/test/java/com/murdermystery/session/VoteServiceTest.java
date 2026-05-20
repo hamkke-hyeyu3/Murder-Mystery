@@ -36,6 +36,7 @@ class VoteServiceTest {
     private SessionEventPublisher eventPublisher;
     private TransactionTemplate txTemplate;
     private ScheduledExecutorService scheduler;
+    private RevealService revealService;
     private VoteService service;
 
     private static final UUID SESSION_ID = UUID.randomUUID();
@@ -56,6 +57,7 @@ class VoteServiceTest {
         eventPublisher = mock(SessionEventPublisher.class);
         txTemplate = mock(TransactionTemplate.class);
         scheduler = Executors.newSingleThreadScheduledExecutor();
+        revealService = mock(RevealService.class);
 
         when(txTemplate.execute(any())).thenAnswer(inv -> {
             var cb = inv.getArgument(0, TransactionCallback.class);
@@ -65,7 +67,7 @@ class VoteServiceTest {
 
         service = new VoteService(sessionRepo, voteRepo, scenarioRepo,
                 eventPublisher, txTemplate, scheduler,
-                Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+                Clock.fixed(FIXED_NOW, ZoneOffset.UTC), revealService);
     }
 
     @AfterEach
@@ -109,7 +111,7 @@ class VoteServiceTest {
     }
 
     private ScenarioCharacter charOf(String id) {
-        return new ScenarioCharacter(id, id, null, null, null, null, null, null, null, List.of());
+        return new ScenarioCharacter(id, id, null, null, null, null, null, null, null, List.of(), null);
     }
 
     private Vote voteFor(UUID voter, String target, int roundNo) {
@@ -376,6 +378,37 @@ class VoteServiceTest {
 
         verify(voteRepo, never()).findBySessionIdAndRoundNo(any(), anyInt());
         verify(eventPublisher, never()).publish(any(), any(), any());
+    }
+
+    @Test
+    void tally_terminalOutcome_invokesRevealService() {
+        Session session = voteSession();
+        List<Vote> votes = List.of(
+                voteFor(ALICE_ID, CHAR_BOB, 0),
+                voteFor(BOB_ID, CHAR_BOB, 0),
+                voteFor(CHARLIE_ID, CHAR_ALICE, 0));
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(voteRepo.findBySessionIdAndRoundNo(SESSION_ID, 0)).thenReturn(votes);
+
+        service.tally(SESSION_ID, 0);
+
+        verify(revealService).startReveal(SESSION_ID);
+    }
+
+    @Test
+    void tally_tieOutcome_doesNotInvokeRevealService() {
+        Session session = voteSession();
+        List<Vote> votes = List.of(
+                voteFor(ALICE_ID, CHAR_BOB, 0),
+                voteFor(BOB_ID, CHAR_CHARLIE, 0),
+                voteFor(CHARLIE_ID, CHAR_ALICE, 0));
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(session));
+        when(voteRepo.findBySessionIdAndRoundNo(SESSION_ID, 0)).thenReturn(votes);
+        when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(threeCharScenario()));
+
+        service.tally(SESSION_ID, 0);
+
+        verify(revealService, never()).startReveal(any());
     }
 
     @Test

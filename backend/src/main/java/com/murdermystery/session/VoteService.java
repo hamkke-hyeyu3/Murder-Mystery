@@ -34,6 +34,7 @@ public class VoteService {
     private final TransactionTemplate transactionTemplate;
     private final ScheduledExecutorService scheduler;
     private final Clock clock;
+    private final RevealService revealService;
 
     // key = sessionId:roundNo
     private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingDeadlines = new ConcurrentHashMap<>();
@@ -44,7 +45,8 @@ public class VoteService {
                        SessionEventPublisher eventPublisher,
                        TransactionTemplate transactionTemplate,
                        ScheduledExecutorService scheduler,
-                       Clock clock) {
+                       Clock clock,
+                       RevealService revealService) {
         this.sessionRepository = sessionRepository;
         this.voteRepository = voteRepository;
         this.scenarioRepository = scenarioRepository;
@@ -52,6 +54,7 @@ public class VoteService {
         this.transactionTemplate = transactionTemplate;
         this.scheduler = scheduler;
         this.clock = clock;
+        this.revealService = revealService;
     }
 
     /** Called by RoundLifecycleService when the last round ends (state='vote' already set). */
@@ -269,6 +272,9 @@ public class VoteService {
             eventPublisher.publish(ctx.sessionId(), "RUNOFF_STARTED",
                     new RunoffStartedPayload(1, ctx.runoffDeadlineAt().toEpochMilli(),
                             ctx.runoffCandidates(), ctx.tiedCharacterIds()));
+        } else {
+            // terminal outcome (single_winner or failed) — kick off reveal chain
+            revealService.startReveal(UUID.fromString(ctx.sessionId()));
         }
     }
 

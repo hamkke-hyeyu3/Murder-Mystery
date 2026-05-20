@@ -2,6 +2,7 @@ package com.murdermystery.session;
 
 import com.murdermystery.scenario.Scenario;
 import com.murdermystery.scenario.ScenarioCharacter;
+import com.murdermystery.scenario.ScenarioCharacter.Mission;
 import com.murdermystery.scenario.ScenarioLocation;
 import com.murdermystery.scenario.ScenarioRepository;
 import org.slf4j.Logger;
@@ -24,6 +25,7 @@ public class SessionService {
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
     private static final int INVITE_CODE_RETRY_LIMIT = 5;
     private static final Set<String> CARD_VISIBLE_STATES = Set.of("character_assignment", "tutorial", "round");
+    private static final Set<String> REVEAL_VISIBLE_STATES = Set.of("reveal", "mission");
 
     private final ScenarioRepository scenarioRepository;
     private final SessionRepository sessionRepository;
@@ -177,12 +179,38 @@ public class SessionService {
                 String assignedCharacterId = cardVisible ? me.getAssignedCharacterId() : null;
                 Long tutorialAckedAtMs = me.getTutorialAckedAt() != null
                     ? me.getTutorialAckedAt().toEpochMilli() : null;
+
+                List<Mission> myMissions = null;
+                if ("mission".equals(session.getState()) && me.getAssignedCharacterId() != null) {
+                    myMissions = scenario.characters().stream()
+                        .filter(c -> me.getAssignedCharacterId().equals(c.id()))
+                        .findFirst()
+                        .map(c -> c.missions() != null ? c.missions() : List.<Mission>of())
+                        .orElse(List.of());
+                }
+
                 meView = new SessionViewResponse.MeView(
                     me.getId().toString(), me.getNickname(), me.isHost(),
                     assignedCharacterId, characterView, objectiveView, tutorialAckedAtMs,
-                    myClues, allOwnedClues
+                    myClues, allOwnedClues, myMissions
                 );
             }
+        }
+
+        // Only expose culprit info to verified session participants (meView != null)
+        SessionViewResponse.RevealView revealView = null;
+        if (meView != null && session.getState() != null && REVEAL_VISIBLE_STATES.contains(session.getState()) && session.getVoteOutcome() != null) {
+            String outcome = session.getVoteOutcome();
+            String culpritCharacterId;
+            String accusedCharacterId;
+            if ("single_winner".equals(outcome)) {
+                culpritCharacterId = session.getVoteWinnerCharacterId();
+                accusedCharacterId = culpritCharacterId;
+            } else {
+                culpritCharacterId = scenario.trueCulpritCharacterId();
+                accusedCharacterId = null;
+            }
+            revealView = new SessionViewResponse.RevealView(outcome, culpritCharacterId, accusedCharacterId);
         }
 
         SessionViewResponse.VoteView voteView = null;
@@ -245,7 +273,7 @@ public class SessionService {
             session.getId().toString(), session.getInviteCode(), session.getScenarioId(),
             session.getPhase(), required, players.size(), players,
             session.getState(), session.getCurrentRoundNumber(), session.getTurnOrder(),
-            locationViews, roundView, currentTurnView, occupancyViews, meView, voteView
+            locationViews, roundView, currentTurnView, occupancyViews, meView, voteView, revealView
         );
     }
 

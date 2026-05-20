@@ -21,6 +21,9 @@
       "objectives_by_round": [
         { "round": 1, "text": "자신의 역할을 소개하고 A 방에서 발견한 단서를 공유하세요." },
         { "round": 2, "text": "단서를 종합해 범인을 지목하세요." }
+      ],
+      "missions": [
+        { "label": "진범 색출", "description": "투표 전에 게스트가 범인임을 다른 플레이어에게 납득시킨다." }
       ]
     },
     {
@@ -36,6 +39,9 @@
       "objectives_by_round": [
         { "round": 1, "text": "자신의 역할을 소개하고 B 방에서 발견한 단서를 공유하세요." },
         { "round": 2, "text": "자신이 범인이 아님을 설득하세요." }
+      ],
+      "missions": [
+        { "label": "의심 회피", "description": "끝까지 B 방 알리바이를 유지하고 투표에서 지목을 피한다." }
       ]
     }
   ],

@@ -16,7 +16,7 @@ class ObjectiveResolverTest {
     private Scenario scenarioWith(String charId, List<RoundObjective> objectives) {
         return new Scenario(
             "s1", "Test", "summary", "icon", 60,
-            List.of(new ScenarioCharacter(charId, "캐릭터", null, null, null, null, null, null, null, objectives)),
+            List.of(new ScenarioCharacter(charId, "캐릭터", null, null, null, null, null, null, null, objectives, null)),
             List.of(), List.of(), List.of(), charId, false, 3,
             List.of(new Round("p1", null, 60), new Round("p2", null, 60), new Round("p3", null, 60))
         );

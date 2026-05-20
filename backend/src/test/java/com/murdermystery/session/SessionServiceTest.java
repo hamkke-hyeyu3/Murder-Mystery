@@ -68,7 +68,7 @@ class SessionServiceTest {
     private Scenario toyManor() {
         return new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
-            List.of(new ScenarioCharacter("alice", "앨리스", null, null, null, null, null, null, null, null)),
+            List.of(new ScenarioCharacter("alice", "앨리스", null, null, null, null, null, null, null, null, null)),
             List.of(new ScenarioLocation("loc1", "도서관", null, null)),
             List.of("loc1"),
             List.of(new ScenarioItem("i1", "편지", "loc1")),
@@ -184,9 +184,9 @@ class SessionServiceTest {
         Scenario scenario = new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
             List.of(
-                new ScenarioCharacter("c1", "A", null, null, null, null, null, null, null, null),
-                new ScenarioCharacter("c2", "B", null, null, null, null, null, null, null, null),
-                new ScenarioCharacter("c3", "C", null, null, null, null, null, null, null, null)
+                new ScenarioCharacter("c1", "A", null, null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("c2", "B", null, null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("c3", "C", null, null, null, null, null, null, null, null, null)
             ),
             List.of(), List.of(), List.of(), "c1", false, 3, null
         );
@@ -214,7 +214,7 @@ class SessionServiceTest {
         var roundObjective = new com.murdermystery.scenario.RoundObjective(1, "진실을 밝혀라");
         Scenario scenario = new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
-            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective))),
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective), null)),
             List.of(), List.of(), List.of(), "c1", false, 3,
             List.of(new com.murdermystery.scenario.Round("라운드 prompt", null, 60))
         );
@@ -271,7 +271,7 @@ class SessionServiceTest {
         var roundObjective = new com.murdermystery.scenario.RoundObjective(1, "목표");
         Scenario scenario = new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
-            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective))),
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective), null)),
             List.of(), List.of(), List.of(), "c1", false, 3, null
         );
         when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
@@ -302,7 +302,7 @@ class SessionServiceTest {
         var roundObjective = new com.murdermystery.scenario.RoundObjective(1, "목표");
         Scenario scenario = new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
-            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective))),
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, List.of(roundObjective), null)),
             List.of(), List.of(), List.of(), "c1", false, 3,
             List.of(new com.murdermystery.scenario.Round("라운드 prompt", null, 60))
         );
@@ -338,7 +338,7 @@ class SessionServiceTest {
     void getSession_round_allOwnedCluesContainsAllSessionClues() {
         Scenario scenario = new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
-            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, null)),
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, null, null)),
             List.of(), List.of(), List.of(), "c1", false, 3, null
         );
         when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));
@@ -384,7 +384,7 @@ class SessionServiceTest {
     void getSession_nonCardVisibleState_allOwnedCluesEmpty() {
         Scenario scenario = new Scenario(
             "toy-manor", "Toy Manor", "summary", "🏚️", 60,
-            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, null)),
+            List.of(new ScenarioCharacter("c1", "앨리스", null, null, null, null, null, null, null, null, null)),
             List.of(), List.of(), List.of(), "c1", false, 3, null
         );
         when(scenarioRepo.findById("toy-manor")).thenReturn(Optional.of(scenario));

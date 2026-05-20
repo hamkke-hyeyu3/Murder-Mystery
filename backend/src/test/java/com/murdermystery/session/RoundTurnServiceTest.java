@@ -135,9 +135,9 @@ class RoundTurnServiceTest {
         return new Scenario(
             "toy-manor", "Toy Manor", null, null, 60,
             List.of(
-                new ScenarioCharacter("char-a", "Alice", null, null, null, null, null, null, null, null),
-                new ScenarioCharacter("char-b", "Bob", null, null, null, null, null, null, null, null),
-                new ScenarioCharacter("char-c", "Charlie", null, null, null, null, null, null, null, null)
+                new ScenarioCharacter("char-a", "Alice", null, null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("char-b", "Bob", null, null, null, null, null, null, null, null, null),
+                new ScenarioCharacter("char-c", "Charlie", null, null, null, null, null, null, null, null, null)
             ),
             List.of(
                 new ScenarioLocation("library", "도서관", "📚", null),

@@ -15,5 +15,12 @@ public record ScenarioCharacter(
     @JsonProperty("secret") String secret,
     @JsonProperty("relationships") String relationships,
     @JsonProperty("alibi_location_id") String alibiLocationId,
-    @JsonProperty("objectives_by_round") List<RoundObjective> objectivesByRound
-) {}
+    @JsonProperty("objectives_by_round") List<RoundObjective> objectivesByRound,
+    @JsonProperty("missions") List<Mission> missions
+) {
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Mission(
+        @JsonProperty("label") String label,
+        @JsonProperty("description") String description
+    ) {}
+}

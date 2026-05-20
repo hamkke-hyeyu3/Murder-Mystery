@@ -219,9 +219,9 @@ class RoundServiceTest {
     void startRound_emitsObjectiveUpdatedPerAssignedPlayer() {
         List<ScenarioCharacter> chars = List.of(
             new ScenarioCharacter("char-a", "A", null, null, null, null, null, null, null,
-                List.of(new RoundObjective(1, "R1 목표 A"))),
+                List.of(new RoundObjective(1, "R1 목표 A")), null),
             new ScenarioCharacter("char-b", "B", null, null, null, null, null, null, null,
-                List.of(new RoundObjective(1, "R1 목표 B")))
+                List.of(new RoundObjective(1, "R1 목표 B")), null)
         );
         Scenario scenario = scenarioWith(List.of(round(null, null, 300)));
         when(scenario.characters()).thenReturn(chars);
@@ -273,7 +273,7 @@ class RoundServiceTest {
     @Test
     void startRound_characterWithoutObjectives_sendsNullObjective() {
         List<ScenarioCharacter> chars = List.of(
-            new ScenarioCharacter("char-a", "A", null, null, null, null, null, null, null, null)
+            new ScenarioCharacter("char-a", "A", null, null, null, null, null, null, null, null, null)
         );
         Scenario scenario = scenarioWith(List.of(round(null, null, 300)));
         when(scenario.characters()).thenReturn(chars);

@@ -1,5 +1,6 @@
 package com.murdermystery.session;
 
+import com.murdermystery.scenario.ScenarioCharacter.Mission;
 import java.util.List;
 
 public record SessionViewResponse(
@@ -18,7 +19,8 @@ public record SessionViewResponse(
     TurnView currentTurn,
     List<OccupancyView> locationOccupancy,
     MeView me,
-    VoteView vote
+    VoteView vote,
+    RevealView reveal
 ) {
     public record RoundView(
         int roundNumber,
@@ -62,7 +64,14 @@ public record SessionViewResponse(
         ObjectiveView objective,
         Long tutorialAckedAt,
         List<ClueView> myClues,
-        List<OwnedClueView> allOwnedClues
+        List<OwnedClueView> allOwnedClues,
+        List<Mission> missions
+    ) {}
+
+    public record RevealView(
+        String outcome,
+        String culpritCharacterId,
+        String accusedCharacterId
     ) {}
 
     public record OwnedClueView(
