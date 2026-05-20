@@ -209,11 +209,17 @@
   - [x] DB: `V12__votes.sql`
   - [x] 검증: `VoteServiceTest` (3 분기) + `VoteIntegrationTest` (e2e 3분기)
 
-- [ ] **T-14** 9-A 자동 → 9-B 미션 자가 체크
-  - [ ] BE: `CULPRIT_REVEAL_STARTED` → 일정 시간 후 `MISSION_PHASE_STARTED` + 본인 private `MISSION_REVEALED`
+- [x] **T-14** 9-A 범인 공개 → 미션 페이즈 자동 체인
+  - [x] BE: `CULPRIT_REVEAL_STARTED` → 8초 후 `MISSION_PHASE_STARTED` + 본인 private `MISSION_REVEALED`
+  - [x] BE: `ScenarioCharacter.missions` + toy-manor·dev-duo JSON 미션 적용
+  - [x] FE: `RevealPanel.tsx` (단독승자/색출실패 프레임) + `MissionPanel.tsx` (placeholder)
+  - [x] FE: `VotePanel.tsx` 결과 프레임 → `RevealPanel`로 이전
+  - [x] DB: `V13__reveal_and_mission_state.sql`
+  - [x] 검증: `RevealServiceTest` (9 케이스) + `RevealIntegrationTest` (미션 누설 음성 확인) + `checkpoint-d-reveal.spec.ts`
+- [ ] **T-14-B** 9-B 미션 자가 체크 *(별도 task)*
   - [ ] BE: `/app/mission/check-complete` → `mission_checks` 저장 + 모두 완료 시 9-C
-  - [ ] FE: `RevealPanel.tsx` + `MissionPanel.tsx` (✓/✗ + "체크 완료" 잠금 + "X / N 완료" 카운트)
-  - [ ] DB: `V8__mission.sql`
+  - [ ] FE: `MissionPanel.tsx` (✓/✗ + "체크 완료" 잠금 + "X / N 완료" 카운트)
+  - [ ] DB: `V14__mission_checks.sql`
   - [ ] 검증: `MissionServiceTest`
 
 - [ ] **T-15** 호스트 강제 진행 + NB3 좁은 인계 ⚠️ *위험*
