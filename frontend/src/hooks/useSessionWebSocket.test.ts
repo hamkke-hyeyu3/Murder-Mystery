@@ -914,6 +914,68 @@ describe('useSessionWebSocket', () => {
     expect(vote!.outcome).toBeNull()
   })
 
+  it('CULPRIT_REVEAL_STARTED 수신 시 sessionStore.reveal이 갱신된다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'CULPRIT_REVEAL_STARTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-20T00:00:00Z',
+          payload: { outcome: 'single_winner', culpritCharacterId: 'alice', accusedCharacterId: 'alice' },
+        }),
+      } as IMessage)
+    })
+
+    const reveal = useSessionStore.getState().reveal
+    expect(reveal).not.toBeNull()
+    expect(reveal!.outcome).toBe('single_winner')
+    expect(reveal!.culpritCharacterId).toBe('alice')
+  })
+
+  it('MISSION_PHASE_STARTED 수신 시 state는 SESSION_STATE_CHANGED로만 전환된다 (noop)', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+    useSessionStore.getState().setSession({ state: 'reveal' })
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'MISSION_PHASE_STARTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-20T00:00:00Z',
+          payload: {},
+        }),
+      } as IMessage)
+    })
+
+    // MISSION_PHASE_STARTED 자체는 state를 변경하지 않음 — SESSION_STATE_CHANGED가 담당
+    expect(useSessionStore.getState().state).toBe('reveal')
+  })
+
+  it('MISSION_REVEALED private 수신 시 cardStore.missions가 갱신된다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      privateCallback!({
+        body: JSON.stringify({
+          type: 'MISSION_REVEALED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-20T00:00:00Z',
+          payload: {
+            missions: [
+              { label: '진범 색출', description: '범인을 찾아라' },
+            ],
+          },
+        }),
+      } as IMessage)
+    })
+
+    const missions = useCardStore.getState().missions
+    expect(missions).toHaveLength(1)
+    expect(missions![0].label).toBe('진범 색출')
+  })
+
   it('publishVoteSubmit 호출 시 vote-submit 경로로 STOMP 메시지를 발송한다', () => {
     const { result } = renderHook(() => useSessionWebSocket(defaultOptions))
 

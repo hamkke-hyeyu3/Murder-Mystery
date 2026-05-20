@@ -11,6 +11,8 @@ import { CharacterCard } from '@/components/CharacterCard'
 import { LocationGrid } from '@/components/LocationGrid'
 import { MyCluesPanel } from '@/components/MyCluesPanel'
 import { VotePanel } from '@/components/VotePanel'
+import { RevealPanel } from '@/components/RevealPanel'
+import { MissionPanel } from '@/components/MissionPanel'
 import { BannerStack } from '@/components/BannerStack'
 import { PrivateTalkInlineCard } from '@/components/PrivateTalkInlineCard'
 import { PrivateTalkBanner } from '@/components/PrivateTalkBanner'
@@ -40,6 +42,7 @@ export default function Play() {
   const setObjective = useCardStore((s) => s.setObjective)
   const setClues = useCardStore((s) => s.setClues)
   const setOwnedClues = useCardStore((s) => s.setOwnedClues)
+  const setMissions = useCardStore((s) => s.setMissions)
   const resetCard = useCardStore((s) => s.reset)
   const currentTurnIndex = useSessionStore((s) => s.currentTurnIndex)
   const currentTurnPlayerId = useSessionStore((s) => s.currentTurnPlayerId)
@@ -72,6 +75,7 @@ export default function Play() {
         if (snap.me.objective) setObjective(snap.me.objective)
         if (snap.me.myClues !== undefined) setClues(snap.me.myClues)
         if (snap.me.allOwnedClues !== undefined) setOwnedClues(snap.me.allOwnedClues)
+        if (snap.me.missions != null) setMissions(snap.me.missions)
         if (snap.round) setRoundDeadline(snap.round.deadlineAt)
         if (snap.currentTurn) useTimerStore.getState().setTurnDeadline(snap.currentTurn.deadlineAt)
       })
@@ -101,6 +105,25 @@ export default function Play() {
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
         <BannerStack />
         <VotePanel onSubmit={publishVoteSubmit} />
+      </div>
+    )
+  }
+
+  if (effectiveState === 'reveal') {
+    return (
+      <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <BannerStack />
+        <RevealPanel />
+      </div>
+    )
+  }
+
+  if (effectiveState === 'mission') {
+    return (
+      <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <BannerStack />
+        <RevealPanel />
+        <MissionPanel />
       </div>
     )
   }

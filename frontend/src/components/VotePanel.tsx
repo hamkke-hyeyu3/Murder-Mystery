@@ -17,53 +17,9 @@ export function VotePanel({ onSubmit }: VotePanelProps) {
   const { remainingSec: secondsLeft } = useCountdown(deadlineAt, serverOffsetMs)
 
   if (!vote) return null
+  if (vote.outcome != null) return null  // RevealPanel takes over once vote concludes
 
-  const { outcome, winnerCharacterId, tiedCharacterIds, tally, candidates,
-          submittedCount, totalCount, myVote, roundNo } = vote
-
-  // ── Result screens ──────────────────────────────────────────────────
-
-  if (outcome === 'single_winner') {
-    const winner = candidates.find((c) => c.characterId === winnerCharacterId)
-    return (
-      <div data-testid="vote-result-winner" className="flex flex-col items-center gap-4 p-6">
-        <h2 className="text-2xl font-bold">투표 결과</h2>
-        <p className="text-lg">
-          범인은 <span className="font-semibold">{winner?.name ?? winnerCharacterId}</span>
-          {winner?.playerNickname ? ` (${winner.playerNickname})` : ''}
-        </p>
-        {tally && (
-          <ul className="text-sm text-muted-foreground">
-            {tally.map((t) => {
-              const c = candidates.find((cd) => cd.characterId === t.characterId)
-              return (
-                <li key={t.characterId}>
-                  {c?.name ?? t.characterId}: {t.count}표
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
-    )
-  }
-
-  if (outcome === 'failed') {
-    return (
-      <div data-testid="vote-result-failed" className="flex flex-col items-center gap-4 p-6">
-        <h2 className="text-2xl font-bold">색출 실패</h2>
-        <p className="text-muted-foreground">여러분은 범인을 색출하는 데 실패했습니다.</p>
-        {tiedCharacterIds && tiedCharacterIds.length > 0 && (
-          <p className="text-sm">
-            동점 후보: {tiedCharacterIds.map((id) => {
-              const c = candidates.find((cd) => cd.characterId === id)
-              return c?.name ?? id
-            }).join(', ')}
-          </p>
-        )}
-      </div>
-    )
-  }
+  const { candidates, submittedCount, totalCount, myVote, roundNo } = vote
 
   // ── Active voting screen ────────────────────────────────────────────
 

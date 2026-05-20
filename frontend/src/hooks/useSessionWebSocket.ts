@@ -32,6 +32,7 @@ export function useSessionWebSocket({
   const setCharacterCard = useCardStore((s) => s.setCharacterCard)
   const setObjective = useCardStore((s) => s.setObjective)
   const addClue = useCardStore((s) => s.addClue)
+  const setMissions = useCardStore((s) => s.setMissions)
 
   useEffect(() => {
     if (!connected || !client.current || !client.current.connected || !sessionId) return
@@ -244,6 +245,8 @@ export function useSessionWebSocket({
           }
         })
       },
+      CULPRIT_REVEAL_STARTED: (e) => setSession({ reveal: e.payload }),
+      MISSION_PHASE_STARTED: () => {},
     }
 
     const privateHandlers: EventHandlers = {
@@ -274,6 +277,7 @@ export function useSessionWebSocket({
           expiresAt: p.expiresAt,
         })
       },
+      MISSION_REVEALED: (e) => setMissions(e.payload.missions),
     }
 
     const dispatch = (handlers: EventHandlers, envelope: SessionEvent) => {

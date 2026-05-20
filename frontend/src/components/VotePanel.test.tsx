@@ -80,36 +80,13 @@ describe('VotePanel', () => {
     expect(screen.getByTestId('vote-runoff-banner')).toBeInTheDocument()
   })
 
-  it('단독 승자 결과 화면을 렌더링한다', () => {
+  it('outcome이 null이 아니면 아무것도 렌더링하지 않는다 (RevealPanel로 위임)', () => {
     useSessionStore.getState().setSession({
-      vote: {
-        ...baseVote,
-        outcome: 'single_winner',
-        winnerCharacterId: 'alice',
-        tally: [
-          { characterId: 'alice', count: 2 },
-          { characterId: 'bob', count: 0 },
-        ],
-      },
+      vote: { ...baseVote, outcome: 'single_winner', winnerCharacterId: 'alice' },
     })
-    render(<VotePanel onSubmit={vi.fn()} />)
+    const { container } = render(<VotePanel onSubmit={vi.fn()} />)
 
-    expect(screen.getByTestId('vote-result-winner')).toBeInTheDocument()
-    expect(screen.getByTestId('vote-result-winner').textContent).toContain('알리스')
-  })
-
-  it('색출 실패 결과 화면을 렌더링한다', () => {
-    useSessionStore.getState().setSession({
-      vote: {
-        ...baseVote,
-        outcome: 'failed',
-        tiedCharacterIds: ['alice', 'bob'],
-      },
-    })
-    render(<VotePanel onSubmit={vi.fn()} />)
-
-    expect(screen.getByTestId('vote-result-failed')).toBeInTheDocument()
-    expect(screen.getByTestId('vote-result-failed').textContent).toContain('색출 실패')
+    expect(container.firstChild).toBeNull()
   })
 
   it('vote가 null이면 아무것도 렌더링하지 않는다', () => {

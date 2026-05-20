@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { OccupancyView, PrivateTalkParticipant, ScenarioLocationView, SessionViewResponse, VoteView } from '@/types/session'
+import type { OccupancyView, PrivateTalkParticipant, RevealView, ScenarioLocationView, SessionViewResponse, VoteView } from '@/types/session'
 
 export type CurrentPrivateTalk = {
   requestId: string
@@ -43,6 +43,7 @@ export interface SessionState {
   scenarioLocations: ScenarioLocationView[]
   currentPrivateTalk: CurrentPrivateTalk | null
   vote: VoteView | null
+  reveal: RevealView | null
 }
 
 interface SessionActions {
@@ -80,6 +81,7 @@ const initialState: SessionState = {
   scenarioLocations: [],
   currentPrivateTalk: null,
   vote: null,
+  reveal: null,
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({
@@ -117,6 +119,7 @@ export const useSessionStore = create<SessionState & SessionActions>((set) => ({
       currentRoundCandidateLocationIds: snap.currentTurn.candidateLocationIds,
     } : {}),
     vote: snap.vote ?? state.vote,
+    reveal: snap.reveal ?? state.reveal,
   })),
   reset: () => set(initialState),
 }))

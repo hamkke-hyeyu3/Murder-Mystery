@@ -1,5 +1,13 @@
 export type PrivateTalkParticipant = { playerId: string; nickname: string }
 
+export type Mission = { label: string; description: string }
+
+export type RevealView = {
+  outcome: 'single_winner' | 'failed'
+  culpritCharacterId: string
+  accusedCharacterId: string | null
+}
+
 export type CreateSessionRequest = {
   scenarioId: string
   hostNickname: string
@@ -99,6 +107,7 @@ export type MeView = {
   tutorialAckedAt: number | null
   myClues: ClueView[]
   allOwnedClues?: OwnedClueView[]
+  missions?: Mission[] | null
 }
 
 export type ScenarioLocationView = {
@@ -149,6 +158,7 @@ export type SessionViewResponse = {
   locationOccupancy?: OccupancyView[]
   me?: MeView | null
   vote?: VoteView | null
+  reveal?: RevealView | null
 }
 
 export type ResumeResponse = {
@@ -428,4 +438,22 @@ export type SessionEvent =
         candidates: VoteCandidate[]
         tiedFromPreviousRound: string[]
       }
+    }
+  | {
+      type: 'CULPRIT_REVEAL_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: RevealView
+    }
+  | {
+      type: 'MISSION_PHASE_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: Record<string, never>
+    }
+  | {
+      type: 'MISSION_REVEALED'
+      sessionId: string
+      occurredAt: string
+      payload: { missions: Mission[] }
     }
