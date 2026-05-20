@@ -28,6 +28,7 @@ const mockWsBase = () => ({
   publishPrivateTalkAccept: vi.fn(),
   publishPrivateTalkReject: vi.fn(),
   publishPrivateTalkEnd: vi.fn(),
+  publishVoteSubmit: vi.fn(),
 })
 
 beforeEach(() => {
@@ -197,12 +198,26 @@ describe('Play', () => {
     expect(publishItemSharePartial).toHaveBeenCalledWith('clue-partial', ['player-bob'])
   })
 
-  it("state='vote'일 때 vote-placeholder를 렌더한다", () => {
-    useSessionStore.getState().setSession({ state: 'vote' })
+  it("state='vote'일 때 vote-panel을 렌더한다", () => {
+    useSessionStore.getState().setSession({
+      state: 'vote',
+      vote: {
+        roundNo: 0,
+        deadlineAt: Date.now() + 60_000,
+        candidates: [],
+        submittedCount: 0,
+        totalCount: 2,
+        myVote: null,
+        outcome: null,
+        winnerCharacterId: null,
+        tiedCharacterIds: null,
+        tally: null,
+      },
+    })
 
     renderPlay()
 
-    expect(screen.getByTestId('vote-placeholder')).toBeInTheDocument()
+    expect(screen.getByTestId('vote-panel')).toBeInTheDocument()
     expect(screen.queryByTestId('round-panel')).not.toBeInTheDocument()
   })
 

@@ -34,6 +34,7 @@ beforeEach(() => {
     publishPrivateTalkAccept: vi.fn(),
     publishPrivateTalkReject: vi.fn(),
     publishPrivateTalkEnd: vi.fn(),
+    publishVoteSubmit: vi.fn(),
   })
 })
 

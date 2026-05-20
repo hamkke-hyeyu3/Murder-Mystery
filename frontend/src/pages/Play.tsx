@@ -4,15 +4,17 @@ import { useSessionWebSocket } from '@/hooks/useSessionWebSocket'
 import { useCardStore } from '@/stores/cardStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useTimerStore } from '@/stores/timerStore'
+import { useTransientStore } from '@/stores/transientStore'
 import { Tutorial } from '@/components/Tutorial'
 import { RoundPanel } from '@/components/RoundPanel'
 import { CharacterCard } from '@/components/CharacterCard'
 import { LocationGrid } from '@/components/LocationGrid'
 import { MyCluesPanel } from '@/components/MyCluesPanel'
-import { VotePlaceholder } from '@/components/VotePlaceholder'
+import { VotePanel } from '@/components/VotePanel'
 import { BannerStack } from '@/components/BannerStack'
 import { PrivateTalkInlineCard } from '@/components/PrivateTalkInlineCard'
 import { PrivateTalkBanner } from '@/components/PrivateTalkBanner'
+import { RequestPrivateTalkPanel } from '@/components/RequestPrivateTalkPanel'
 import { postTutorialAck, getSession } from '@/lib/sessionApi'
 
 export default function Play() {
@@ -44,6 +46,9 @@ export default function Play() {
   const currentRoundCandidateLocationIds = useSessionStore((s) => s.currentRoundCandidateLocationIds)
   const locationOccupancy = useSessionStore((s) => s.locationOccupancy)
   const scenarioLocations = useSessionStore((s) => s.scenarioLocations)
+  const leftPlayerIds = useSessionStore((s) => s.leftPlayerIds)
+  const currentPrivateTalk = useSessionStore((s) => s.currentPrivateTalk)
+  const pendingPrivateTalk = useTransientStore((s) => s.pendingPrivateTalk)
   const roundDeadlineAt = useTimerStore((s) => s.roundDeadlineAt)
   const turnDeadlineAt = useTimerStore((s) => s.turnDeadlineAt)
   const serverOffsetMs = useTimerStore((s) => s.serverOffsetMs)
@@ -76,7 +81,8 @@ export default function Play() {
 
   const {
     publishSelectLocation, publishItemExchange, publishItemShareFull, publishItemSharePartial,
-    publishPrivateTalkAccept, publishPrivateTalkReject,
+    publishPrivateTalkRequest, publishPrivateTalkAccept, publishPrivateTalkReject,
+    publishVoteSubmit,
   } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 
   const handleTutorialAck = async () => {
@@ -94,7 +100,7 @@ export default function Play() {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
         <BannerStack />
-        <VotePlaceholder />
+        <VotePanel onSubmit={publishVoteSubmit} />
       </div>
     )
   }
@@ -130,6 +136,13 @@ export default function Play() {
         <PrivateTalkInlineCard
           onAccept={publishPrivateTalkAccept}
           onReject={publishPrivateTalkReject}
+        />
+        <RequestPrivateTalkPanel
+          players={players}
+          myPlayerId={playerId}
+          leftPlayerIds={leftPlayerIds}
+          disabled={currentPrivateTalk !== null || pendingPrivateTalk !== null}
+          onRequest={publishPrivateTalkRequest}
         />
         <MyCluesPanel
           players={players}

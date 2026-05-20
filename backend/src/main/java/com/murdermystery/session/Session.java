@@ -41,6 +41,18 @@ public class Session implements Persistable<UUID> {
     @Column(name = "current_round_number")
     private Integer currentRoundNumber;
 
+    @Column(name = "vote_round_no")
+    private Integer voteRoundNo;
+
+    @Column(name = "vote_outcome", length = 16)
+    private String voteOutcome;
+
+    @Column(name = "vote_winner_character_id")
+    private String voteWinnerCharacterId;
+
+    @Column(name = "vote_deadline_at")
+    private Instant voteDeadlineAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -101,4 +113,12 @@ public class Session implements Persistable<UUID> {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public List<Player> getPlayers() { return players; }
+    public Integer getVoteRoundNo() { return voteRoundNo; }
+    public void setVoteRoundNo(Integer voteRoundNo) { this.voteRoundNo = voteRoundNo; }
+    public String getVoteOutcome() { return voteOutcome; }
+    public void setVoteOutcome(String voteOutcome) { this.voteOutcome = voteOutcome; }
+    public String getVoteWinnerCharacterId() { return voteWinnerCharacterId; }
+    public void setVoteWinnerCharacterId(String voteWinnerCharacterId) { this.voteWinnerCharacterId = voteWinnerCharacterId; }
+    public Instant getVoteDeadlineAt() { return voteDeadlineAt; }
+    public void setVoteDeadlineAt(Instant voteDeadlineAt) { this.voteDeadlineAt = voteDeadlineAt; }
 }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +35,7 @@ public class SessionService {
     private final RoundTurnService roundTurnService;
     private final InviteCodeGenerator inviteCodeGenerator;
     private final TransactionTemplate transactionTemplate;
+    private final VoteRepository voteRepository;
 
     public SessionService(
         ScenarioRepository scenarioRepository,
@@ -45,7 +47,8 @@ public class SessionService {
         ClueAclRepository clueAclRepository,
         RoundTurnService roundTurnService,
         InviteCodeGenerator inviteCodeGenerator,
-        TransactionTemplate transactionTemplate
+        TransactionTemplate transactionTemplate,
+        VoteRepository voteRepository
     ) {
         this.scenarioRepository = scenarioRepository;
         this.sessionRepository = sessionRepository;
@@ -57,6 +60,7 @@ public class SessionService {
         this.roundTurnService = roundTurnService;
         this.inviteCodeGenerator = inviteCodeGenerator;
         this.transactionTemplate = transactionTemplate;
+        this.voteRepository = voteRepository;
     }
 
     public SessionViewResponse getSession(UUID sessionId, UUID deviceId) {
@@ -181,11 +185,67 @@ public class SessionService {
             }
         }
 
+        SessionViewResponse.VoteView voteView = null;
+        if ("in_progress".equals(session.getPhase()) && "vote".equals(session.getState())) {
+            int voteRoundNo = session.getVoteRoundNo() != null ? session.getVoteRoundNo() : 0;
+            long deadlineEpochMilli = session.getVoteDeadlineAt() != null
+                ? session.getVoteDeadlineAt().toEpochMilli() : 0L;
+
+            Map<String, Player> charToPlayer = new HashMap<>();
+            for (Player p : session.getPlayers()) {
+                if (p.getAssignedCharacterId() != null) charToPlayer.put(p.getAssignedCharacterId(), p);
+            }
+            List<SessionViewResponse.VoteCandidate> candidates = scenario.characters().stream()
+                .map(ch -> {
+                    Player p = charToPlayer.get(ch.id());
+                    return new SessionViewResponse.VoteCandidate(
+                        ch.id(), ch.name(),
+                        p != null ? p.getNickname() : null,
+                        p != null ? p.getId().toString() : null);
+                })
+                .toList();
+
+            List<Vote> votes = voteRepository.findBySessionIdAndRoundNo(sessionId, voteRoundNo);
+            int submittedCount = (int) votes.stream().map(Vote::getVoterPlayerId).distinct().count();
+            int totalCount = session.getPlayers().size();
+
+            String myVote = null;
+            if (deviceId != null) {
+                Player me = session.getPlayers().stream()
+                    .filter(p -> deviceId.equals(p.getDeviceId())).findFirst().orElse(null);
+                if (me != null) {
+                    UUID meId = me.getId();
+                    myVote = votes.stream().filter(v -> v.getVoterPlayerId().equals(meId))
+                        .map(Vote::getTargetCharacterId).findFirst().orElse(null);
+                }
+            }
+
+            String outcome = session.getVoteOutcome();
+            List<SessionViewResponse.TallyEntryView> tally = null;
+            List<String> tiedCharacterIds = null;
+            if (outcome != null) {
+                Map<String, Integer> counts = new HashMap<>();
+                for (Vote v : votes) counts.merge(v.getTargetCharacterId(), 1, Integer::sum);
+                tally = counts.entrySet().stream()
+                    .map(e -> new SessionViewResponse.TallyEntryView(e.getKey(), e.getValue()))
+                    .toList();
+                if (!"single_winner".equals(outcome)) {
+                    int max = counts.values().stream().mapToInt(i -> i).max().orElse(0);
+                    tiedCharacterIds = counts.entrySet().stream()
+                        .filter(e -> e.getValue() == max).map(Map.Entry::getKey).toList();
+                }
+            }
+
+            voteView = new SessionViewResponse.VoteView(
+                voteRoundNo, deadlineEpochMilli, candidates, submittedCount, totalCount,
+                myVote, outcome, session.getVoteWinnerCharacterId(), tiedCharacterIds, tally);
+        }
+
         return new SessionViewResponse(
             session.getId().toString(), session.getInviteCode(), session.getScenarioId(),
             session.getPhase(), required, players.size(), players,
             session.getState(), session.getCurrentRoundNumber(), session.getTurnOrder(),
-            locationViews, roundView, currentTurnView, occupancyViews, meView
+            locationViews, roundView, currentTurnView, occupancyViews, meView, voteView
         );
     }
 

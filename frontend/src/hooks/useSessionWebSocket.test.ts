@@ -795,4 +795,122 @@ describe('useSessionWebSocket', () => {
 
     expect(mockSubscribe).not.toHaveBeenCalled()
   })
+
+  // ── Vote events ────────────────────────────────────────────────────
+
+  it('VOTE_STARTED 수신 시 vote.roundNo, vote.deadlineAt, vote.submittedCount를 설정한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+    useSessionStore.getState().setSession({ players: [
+      { playerId: 'player-alice', nickname: 'alice', isHost: true },
+      { playerId: 'player-bob', nickname: 'bob', isHost: false },
+    ] })
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'VOTE_STARTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-20T00:00:00Z',
+          payload: { roundNo: 0, deadlineAt: 9999000, candidateCharacterIds: ['alice', 'bob'] },
+        }),
+      } as IMessage)
+    })
+
+    const vote = useSessionStore.getState().vote
+    expect(vote).not.toBeNull()
+    expect(vote!.roundNo).toBe(0)
+    expect(vote!.deadlineAt).toBe(9999000)
+    expect(vote!.submittedCount).toBe(0)
+    expect(vote!.totalCount).toBe(2)
+  })
+
+  it('VOTE_PROGRESS 수신 시 vote.submittedCount, vote.totalCount를 업데이트한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+    useSessionStore.getState().setSession({
+      vote: { roundNo: 0, deadlineAt: 9999000, candidates: [], submittedCount: 0, totalCount: 2 },
+    })
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'VOTE_PROGRESS',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-20T00:00:00Z',
+          payload: { roundNo: 0, submittedCount: 1, totalCount: 2 },
+        }),
+      } as IMessage)
+    })
+
+    const vote = useSessionStore.getState().vote
+    expect(vote!.submittedCount).toBe(1)
+    expect(vote!.totalCount).toBe(2)
+  })
+
+  it('VOTE_RESULT 수신 시 vote.outcome, winnerCharacterId를 설정한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+    useSessionStore.getState().setSession({
+      vote: { roundNo: 0, deadlineAt: 9999000, candidates: [], submittedCount: 2, totalCount: 2 },
+    })
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'VOTE_RESULT',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-20T00:00:00Z',
+          payload: {
+            roundNo: 0,
+            outcome: 'single_winner',
+            winnerCharacterId: 'alice',
+            tiedCharacterIds: null,
+            tally: [{ characterId: 'alice', count: 2 }],
+          },
+        }),
+      } as IMessage)
+    })
+
+    const vote = useSessionStore.getState().vote
+    expect(vote!.outcome).toBe('single_winner')
+    expect(vote!.winnerCharacterId).toBe('alice')
+    expect(vote!.tally).toHaveLength(1)
+  })
+
+  it('RUNOFF_STARTED 수신 시 vote.roundNo를 1로, submittedCount를 0으로 초기화한다', () => {
+    renderHook(() => useSessionWebSocket(defaultOptions))
+    useSessionStore.getState().setSession({
+      vote: { roundNo: 0, deadlineAt: 9999000, candidates: [], submittedCount: 2, totalCount: 2, myVote: 'alice' },
+    })
+
+    act(() => {
+      topicCallback!({
+        body: JSON.stringify({
+          type: 'RUNOFF_STARTED',
+          sessionId: 'sess-001',
+          occurredAt: '2026-05-20T00:00:00Z',
+          payload: { roundNo: 1, deadlineAt: 9999060000, candidateCharacterIds: ['alice', 'bob'], tiedFromPreviousRound: ['alice', 'bob'] },
+        }),
+      } as IMessage)
+    })
+
+    const vote = useSessionStore.getState().vote
+    expect(vote!.roundNo).toBe(1)
+    expect(vote!.submittedCount).toBe(0)
+    expect(vote!.myVote).toBeNull()
+    expect(vote!.outcome).toBeNull()
+  })
+
+  it('publishVoteSubmit 호출 시 vote-submit 경로로 STOMP 메시지를 발송한다', () => {
+    const { result } = renderHook(() => useSessionWebSocket(defaultOptions))
+
+    act(() => {
+      result.current.publishVoteSubmit('alice', 0)
+    })
+
+    expect(mockPublish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: '/app/session/sess-001/vote-submit',
+        body: JSON.stringify({ targetCharacterId: 'alice', roundNo: 0 }),
+      })
+    )
+  })
 })

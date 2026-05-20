@@ -83,7 +83,7 @@ class RoundLifecycleServiceTest {
 
         service = new RoundLifecycleService(
             sessionRepo, roundRepo, scenarioRepo, eventPublisher, txTemplate,
-            scheduler, clock, roundServiceProvider, privateTalkService
+            scheduler, clock, roundServiceProvider, privateTalkService, mock(VoteService.class)
         );
     }
 

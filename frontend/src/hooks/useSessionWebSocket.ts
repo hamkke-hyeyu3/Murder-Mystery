@@ -187,6 +187,61 @@ export function useSessionWebSocket({
       PRIVATE_TALK_ENDED: (_e) => {
         useSessionStore.setState({ currentPrivateTalk: null })
       },
+      VOTE_STARTED: (e) => {
+        const p = e.payload
+        useSessionStore.setState((state) => ({
+          ...state,
+          vote: {
+            ...(state.vote ?? { candidates: [], myVote: null, outcome: null, winnerCharacterId: null, tiedCharacterIds: null, tally: null }),
+            roundNo: p.roundNo,
+            deadlineAt: p.deadlineAt,
+            submittedCount: 0,
+            totalCount: state.players.length,
+          },
+        }))
+      },
+      VOTE_PROGRESS: (e) => {
+        const p = e.payload
+        useSessionStore.setState((state) => {
+          if (state.vote == null) return state
+          return { ...state, vote: { ...state.vote, submittedCount: p.submittedCount, totalCount: p.totalCount } }
+        })
+      },
+      VOTE_RESULT: (e) => {
+        const p = e.payload
+        useSessionStore.setState((state) => {
+          if (state.vote == null) return state
+          return {
+            ...state,
+            vote: {
+              ...state.vote,
+              outcome: p.outcome,
+              winnerCharacterId: p.winnerCharacterId,
+              tiedCharacterIds: p.tiedCharacterIds,
+              tally: p.tally,
+            },
+          }
+        })
+      },
+      RUNOFF_STARTED: (e) => {
+        const p = e.payload
+        useSessionStore.setState((state) => {
+          if (state.vote == null) return state
+          return {
+            ...state,
+            vote: {
+              ...state.vote,
+              roundNo: p.roundNo,
+              deadlineAt: p.deadlineAt,
+              submittedCount: 0,
+              myVote: null,
+              outcome: null,
+              tiedCharacterIds: null,
+              tally: null,
+            },
+          }
+        })
+      },
     }
 
     const privateHandlers: EventHandlers = {
@@ -277,6 +332,9 @@ export function useSessionWebSocket({
   const publishPrivateTalkEnd = (requestId: string) =>
     sendToSession('private-talk/end', JSON.stringify({ requestId }))
 
+  const publishVoteSubmit = (targetCharacterId: string, roundNo: number) =>
+    sendToSession('vote-submit', JSON.stringify({ targetCharacterId, roundNo }))
+
   return {
     connected,
     publishLeave,
@@ -288,5 +346,6 @@ export function useSessionWebSocket({
     publishPrivateTalkAccept,
     publishPrivateTalkReject,
     publishPrivateTalkEnd,
+    publishVoteSubmit,
   }
 }

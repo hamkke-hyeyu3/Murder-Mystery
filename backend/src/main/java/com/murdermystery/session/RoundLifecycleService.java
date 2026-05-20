@@ -37,6 +37,7 @@ public class RoundLifecycleService {
     // ObjectProvider breaks the construction-time cycle: RoundService → RoundLifecycleService
     private final ObjectProvider<RoundService> roundServiceProvider;
     private final PrivateTalkService privateTalkService;
+    private final VoteService voteService;
 
     // session:roundNumber → pending time_limit future (cancelled if turns finish first)
     private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingDeadlines = new ConcurrentHashMap<>();
@@ -52,7 +53,8 @@ public class RoundLifecycleService {
         ScheduledExecutorService gameScheduler,
         Clock systemClock,
         ObjectProvider<RoundService> roundServiceProvider,
-        PrivateTalkService privateTalkService
+        PrivateTalkService privateTalkService,
+        VoteService voteService
     ) {
         this.sessionRepository = sessionRepository;
         this.roundRepository = roundRepository;
@@ -63,6 +65,7 @@ public class RoundLifecycleService {
         this.clock = systemClock;
         this.roundServiceProvider = roundServiceProvider;
         this.privateTalkService = privateTalkService;
+        this.voteService = voteService;
     }
 
     /** Called by RoundService.startRound after persisting the round entity. */
@@ -148,6 +151,7 @@ public class RoundLifecycleService {
         if (ctx.isLast()) {
             eventPublisher.publish(sessionId.toString(), "SESSION_STATE_CHANGED",
                 new SessionStateChangedPayload("vote", null));
+            voteService.startVoteRound(sessionId, 0);
         } else {
             roundServiceProvider.getObject().startRound(sessionId, roundNumber + 1);
         }

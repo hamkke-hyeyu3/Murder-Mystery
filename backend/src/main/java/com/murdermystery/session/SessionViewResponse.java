@@ -17,7 +17,8 @@ public record SessionViewResponse(
     RoundView round,
     TurnView currentTurn,
     List<OccupancyView> locationOccupancy,
-    MeView me
+    MeView me,
+    VoteView vote
 ) {
     public record RoundView(
         int roundNumber,
@@ -93,4 +94,26 @@ public record SessionViewResponse(
     public record ItemRef(String id, String title, LocationRef originLocation) {}
 
     public record ObjectiveView(int roundNumber, int totalRounds, String objective) {}
+
+    public record VoteView(
+        int roundNo,
+        long deadlineAt,
+        List<VoteCandidate> candidates,
+        int submittedCount,
+        int totalCount,
+        String myVote,
+        String outcome,
+        String winnerCharacterId,
+        List<String> tiedCharacterIds,
+        List<TallyEntryView> tally
+    ) {}
+
+    public record VoteCandidate(
+        String characterId,
+        String name,
+        String playerNickname,
+        String playerId
+    ) {}
+
+    public record TallyEntryView(String characterId, int count) {}
 }

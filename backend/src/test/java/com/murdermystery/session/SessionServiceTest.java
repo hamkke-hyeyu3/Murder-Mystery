@@ -56,7 +56,8 @@ class SessionServiceTest {
         });
 
         service = new SessionService(scenarioRepo, sessionRepo, playerRepo, roundRepo,
-            occupancyRepo, clueRepo, clueAclRepo, roundTurnService, codeGen, txTemplate);
+            occupancyRepo, clueRepo, clueAclRepo, roundTurnService, codeGen, txTemplate,
+            mock(VoteRepository.class));
 
         // safe defaults for snapshot fields introduced in S5
         when(occupancyRepo.findBySessionIdAndRoundNumber(any(), anyInt())).thenReturn(List.of());

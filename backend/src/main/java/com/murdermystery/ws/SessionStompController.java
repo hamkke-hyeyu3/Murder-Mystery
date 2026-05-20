@@ -5,6 +5,7 @@ import com.murdermystery.session.ItemService;
 import com.murdermystery.session.LeaveService;
 import com.murdermystery.session.PrivateTalkService;
 import com.murdermystery.session.RoundTurnService;
+import com.murdermystery.session.VoteService;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -22,13 +23,16 @@ public class SessionStompController {
     private final RoundTurnService roundTurnService;
     private final ItemService itemService;
     private final PrivateTalkService privateTalkService;
+    private final VoteService voteService;
 
     public SessionStompController(LeaveService leaveService, RoundTurnService roundTurnService,
-                                  ItemService itemService, PrivateTalkService privateTalkService) {
+                                  ItemService itemService, PrivateTalkService privateTalkService,
+                                  VoteService voteService) {
         this.leaveService = leaveService;
         this.roundTurnService = roundTurnService;
         this.itemService = itemService;
         this.privateTalkService = privateTalkService;
+        this.voteService = voteService;
     }
 
     @MessageMapping("/session/{sessionId}/leave")
@@ -113,6 +117,25 @@ public class SessionStompController {
             );
         } catch (IllegalArgumentException e) {
             // malformed UUID in payload — ignore to prevent STOMP session kill
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/vote-submit")
+    public void voteSubmit(@DestinationVariable String sessionId,
+                           @Payload VoteSubmitRequest request,
+                           Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        if (request == null || request.targetCharacterId() == null) return;
+        try {
+            voteService.submit(
+                UUID.fromString(sessionId),
+                UUID.fromString(sp.playerId()),
+                request.targetCharacterId(),
+                request.roundNo(),
+                sp.inviteCode()
+            );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID — ignore
         }
     }
 

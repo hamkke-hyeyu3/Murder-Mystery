@@ -107,6 +107,31 @@ export type ScenarioLocationView = {
   icon?: string
 }
 
+export type VoteCandidate = {
+  characterId: string
+  name: string
+  playerNickname: string | null
+  playerId: string | null
+}
+
+export type TallyEntryView = {
+  characterId: string
+  count: number
+}
+
+export type VoteView = {
+  roundNo: number
+  deadlineAt: number
+  candidates: VoteCandidate[]
+  submittedCount: number
+  totalCount: number
+  myVote?: string | null
+  outcome?: string | null
+  winnerCharacterId?: string | null
+  tiedCharacterIds?: string[] | null
+  tally?: TallyEntryView[] | null
+}
+
 export type SessionViewResponse = {
   sessionId: string
   inviteCode: string
@@ -123,6 +148,7 @@ export type SessionViewResponse = {
   currentTurn?: TurnView | null
   locationOccupancy?: OccupancyView[]
   me?: MeView | null
+  vote?: VoteView | null
 }
 
 export type ResumeResponse = {
@@ -366,5 +392,40 @@ export type SessionEvent =
         participants: PrivateTalkParticipant[]
         endReason: string
         endedAt: number
+      }
+    }
+  | {
+      type: 'VOTE_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: { roundNo: number; deadlineAt: number; candidateCharacterIds: string[] }
+    }
+  | {
+      type: 'VOTE_PROGRESS'
+      sessionId: string
+      occurredAt: string
+      payload: { roundNo: number; submittedCount: number; totalCount: number }
+    }
+  | {
+      type: 'VOTE_RESULT'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        roundNo: number
+        outcome: string
+        winnerCharacterId: string | null
+        tiedCharacterIds: string[] | null
+        tally: TallyEntryView[]
+      }
+    }
+  | {
+      type: 'RUNOFF_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: {
+        roundNo: number
+        deadlineAt: number
+        candidateCharacterIds: string[]
+        tiedFromPreviousRound: string[]
       }
     }
