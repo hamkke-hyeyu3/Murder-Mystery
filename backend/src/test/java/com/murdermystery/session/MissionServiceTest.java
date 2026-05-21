@@ -172,4 +172,20 @@ class MissionServiceTest {
         verify(eventPublisher, never()).publish(any(), eq("MISSION_CHECK_COMPLETE"), any());
         verify(eventPublisher, never()).publish(any(), eq("SESSION_STATE_CHANGED"), any());
     }
+
+    @Test
+    void checkComplete_lastPlayerDoubleSubmit_secondCallThrowsMissionPhaseRequired() {
+        // After the last player checks, state = 'ending'. A duplicate submit (e.g. from
+        // double-click before UI disables the button) hits the state guard and throws.
+        // The STOMP controller catches this exception, so no channel disruption occurs.
+        Session s = missionSessionWith3Players();
+        s.getPlayers().get(0).acknowledgeMission(Instant.now());
+        s.getPlayers().get(1).acknowledgeMission(Instant.now());
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(s));
+
+        service.checkComplete(SESSION_ID, playerCId); // transitions to 'ending'
+
+        assertThatThrownBy(() -> service.checkComplete(SESSION_ID, playerCId))
+            .isInstanceOf(MissionPhaseRequiredException.class);
+    }
 }

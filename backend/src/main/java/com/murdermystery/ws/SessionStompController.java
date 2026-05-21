@@ -3,7 +3,10 @@ package com.murdermystery.ws;
 import com.murdermystery.config.StompPrincipal;
 import com.murdermystery.session.ItemService;
 import com.murdermystery.session.LeaveService;
+import com.murdermystery.session.MissionPhaseRequiredException;
 import com.murdermystery.session.MissionService;
+import com.murdermystery.session.PlayerNotInSessionException;
+import com.murdermystery.session.SessionNotFoundException;
 import com.murdermystery.session.PrivateTalkService;
 import com.murdermystery.session.RoundTurnService;
 import com.murdermystery.session.VoteService;
@@ -215,8 +218,9 @@ public class SessionStompController {
         if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
         try {
             missionService.checkComplete(UUID.fromString(sessionId), UUID.fromString(sp.playerId()));
-        } catch (IllegalArgumentException e) {
-            // malformed UUID — ignore
+        } catch (IllegalArgumentException | MissionPhaseRequiredException
+                 | SessionNotFoundException | PlayerNotInSessionException e) {
+            // wrong state, unknown session/player, or malformed UUID — silently ignore
         }
     }
 }

@@ -128,6 +128,17 @@ export default function Play() {
     )
   }
 
+  if (effectiveState === 'ending') {
+    return (
+      <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <BannerStack />
+        <div data-testid="ending-placeholder" className="flex flex-col items-center justify-center flex-1 gap-4">
+          <p className="text-xl text-muted-foreground">엔딩 준비 중…</p>
+        </div>
+      </div>
+    )
+  }
+
   if (effectiveState === 'tutorial') {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
