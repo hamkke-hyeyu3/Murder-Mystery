@@ -85,4 +85,7 @@ public class Player implements Persistable<UUID> {
         if (this.tutorialAckedAt == null) this.tutorialAckedAt = ackedAt;
     }
     public Instant getMissionCheckedAt() { return missionCheckedAt; }
+    public void acknowledgeMission(Instant checkedAt) {
+        if (this.missionCheckedAt == null) this.missionCheckedAt = checkedAt;
+    }
 }

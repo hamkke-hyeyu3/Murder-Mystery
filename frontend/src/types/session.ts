@@ -457,3 +457,9 @@ export type SessionEvent =
       occurredAt: string
       payload: { missions: Mission[] }
     }
+  | {
+      type: 'MISSION_CHECK_COMPLETE'
+      sessionId: string
+      occurredAt: string
+      payload: { playerId: string; nickname: string; checkedCount: number; totalCount: number }
+    }

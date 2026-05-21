@@ -1,7 +1,15 @@
 import { useCardStore } from '@/stores/cardStore'
+import { useSessionStore } from '@/stores/sessionStore'
 
-export function MissionPanel() {
+interface MissionPanelProps {
+  onCheckComplete: () => void
+}
+
+export function MissionPanel({ onCheckComplete }: MissionPanelProps) {
   const missions = useCardStore((s) => s.missions)
+  const myMissionChecked = useSessionStore((s) => s.myMissionChecked)
+  const checkedCount = useSessionStore((s) => s.missionCheckedCount)
+  const totalCount = useSessionStore((s) => s.missionTotalCount)
 
   if (!missions) {
     return (
@@ -22,6 +30,21 @@ export function MissionPanel() {
           </li>
         ))}
       </ul>
+      <div className="flex items-center gap-4">
+        <button
+          data-testid="mission-check-button"
+          onClick={onCheckComplete}
+          disabled={myMissionChecked}
+          className="px-4 py-2 rounded bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {myMissionChecked ? '✓ 체크 완료' : '체크 완료'}
+        </button>
+        {checkedCount != null && totalCount != null && (
+          <span data-testid="mission-check-count" className="text-sm text-muted-foreground">
+            {checkedCount} / {totalCount} 완료
+          </span>
+        )}
+      </div>
     </div>
   )
 }

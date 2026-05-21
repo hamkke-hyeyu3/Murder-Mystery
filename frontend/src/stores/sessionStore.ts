@@ -44,6 +44,9 @@ export interface SessionState {
   currentPrivateTalk: CurrentPrivateTalk | null
   vote: VoteView | null
   reveal: RevealView | null
+  myMissionChecked: boolean
+  missionCheckedCount: number | null
+  missionTotalCount: number | null
 }
 
 interface SessionActions {
@@ -82,6 +85,9 @@ const initialState: SessionState = {
   currentPrivateTalk: null,
   vote: null,
   reveal: null,
+  myMissionChecked: false,
+  missionCheckedCount: null,
+  missionTotalCount: null,
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({

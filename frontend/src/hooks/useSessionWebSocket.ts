@@ -247,6 +247,14 @@ export function useSessionWebSocket({
       },
       CULPRIT_REVEAL_STARTED: (e) => setSession({ reveal: e.payload }),
       MISSION_PHASE_STARTED: () => {},
+      MISSION_CHECK_COMPLETE: (e) => {
+        const patch: Parameters<typeof setSession>[0] = {
+          missionCheckedCount: e.payload.checkedCount,
+          missionTotalCount: e.payload.totalCount,
+        }
+        if (e.payload.playerId === playerId) patch.myMissionChecked = true
+        setSession(patch)
+      },
     }
 
     const privateHandlers: EventHandlers = {
@@ -341,6 +349,9 @@ export function useSessionWebSocket({
   const publishVoteSubmit = (targetCharacterId: string, roundNo: number) =>
     sendToSession('vote-submit', JSON.stringify({ targetCharacterId, roundNo }))
 
+  const publishMissionCheckComplete = () =>
+    sendToSession('mission/check-complete')
+
   return {
     connected,
     publishLeave,
@@ -353,5 +364,6 @@ export function useSessionWebSocket({
     publishPrivateTalkReject,
     publishPrivateTalkEnd,
     publishVoteSubmit,
+    publishMissionCheckComplete,
   }
 }

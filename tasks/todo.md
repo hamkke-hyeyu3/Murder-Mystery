@@ -216,11 +216,11 @@
   - [x] FE: `VotePanel.tsx` 결과 프레임 → `RevealPanel`로 이전
   - [x] DB: `V13__reveal_and_mission_state.sql`
   - [x] 검증: `RevealServiceTest` (9 케이스) + `RevealIntegrationTest` (미션 누설 음성 확인) + `checkpoint-d-reveal.spec.ts`
-- [ ] **T-14-B** 9-B 미션 자가 체크 *(별도 task)*
-  - [ ] BE: `/app/mission/check-complete` → `mission_checks` 저장 + 모두 완료 시 9-C
-  - [ ] FE: `MissionPanel.tsx` (✓/✗ + "체크 완료" 잠금 + "X / N 완료" 카운트)
-  - [ ] DB: `V14__mission_checks.sql`
-  - [ ] 검증: `MissionServiceTest`
+- [x] **T-14-B** 9-B 미션 자가 체크 *(별도 task)*
+  - [x] BE: `/app/mission/check-complete` → `mission_checks` 저장 + 모두 완료 시 9-C
+  - [x] FE: `MissionPanel.tsx` (✓/✗ + "체크 완료" 잠금 + "X / N 완료" 카운트)
+  - [x] DB: `V14__mission_checks.sql`
+  - [x] 검증: `MissionServiceTest` 9케이스 + `MissionPanel.test.tsx` 6케이스
 
 - [ ] **T-15** 호스트 강제 진행 + NB3 좁은 인계 ⚠️ *위험*
   - [ ] BE: 첫 체크 완료 후 3분 ScheduledExecutor → `FORCE_PROGRESS_AVAILABLE`

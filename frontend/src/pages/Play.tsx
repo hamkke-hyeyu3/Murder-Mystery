@@ -86,7 +86,7 @@ export default function Play() {
   const {
     publishSelectLocation, publishItemExchange, publishItemShareFull, publishItemSharePartial,
     publishPrivateTalkRequest, publishPrivateTalkAccept, publishPrivateTalkReject,
-    publishVoteSubmit,
+    publishVoteSubmit, publishMissionCheckComplete,
   } = useSessionWebSocket({ sessionId: sessionId ?? null, inviteCode, nickname, playerId })
 
   const handleTutorialAck = async () => {
@@ -123,7 +123,7 @@ export default function Play() {
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
         <BannerStack />
         <RevealPanel />
-        <MissionPanel />
+        <MissionPanel onCheckComplete={publishMissionCheckComplete} />
       </div>
     )
   }

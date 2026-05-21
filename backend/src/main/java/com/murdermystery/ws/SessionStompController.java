@@ -3,6 +3,7 @@ package com.murdermystery.ws;
 import com.murdermystery.config.StompPrincipal;
 import com.murdermystery.session.ItemService;
 import com.murdermystery.session.LeaveService;
+import com.murdermystery.session.MissionService;
 import com.murdermystery.session.PrivateTalkService;
 import com.murdermystery.session.RoundTurnService;
 import com.murdermystery.session.VoteService;
@@ -24,15 +25,17 @@ public class SessionStompController {
     private final ItemService itemService;
     private final PrivateTalkService privateTalkService;
     private final VoteService voteService;
+    private final MissionService missionService;
 
     public SessionStompController(LeaveService leaveService, RoundTurnService roundTurnService,
                                   ItemService itemService, PrivateTalkService privateTalkService,
-                                  VoteService voteService) {
+                                  VoteService voteService, MissionService missionService) {
         this.leaveService = leaveService;
         this.roundTurnService = roundTurnService;
         this.itemService = itemService;
         this.privateTalkService = privateTalkService;
         this.voteService = voteService;
+        this.missionService = missionService;
     }
 
     @MessageMapping("/session/{sessionId}/leave")
@@ -202,6 +205,16 @@ public class SessionStompController {
                 UUID.fromString(request.requestId()),
                 UUID.fromString(sp.playerId())
             );
+        } catch (IllegalArgumentException e) {
+            // malformed UUID — ignore
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/mission/check-complete")
+    public void missionCheckComplete(@DestinationVariable String sessionId, Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        try {
+            missionService.checkComplete(UUID.fromString(sessionId), UUID.fromString(sp.playerId()));
         } catch (IllegalArgumentException e) {
             // malformed UUID — ignore
         }
