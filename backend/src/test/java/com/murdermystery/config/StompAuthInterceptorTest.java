@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class StompAuthInterceptorTest {
@@ -204,5 +205,34 @@ class StompAuthInterceptorTest {
 
         assertThat(interceptor.preSend(msg, mock(MessageChannel.class))).isSameAs(msg);
         verify(sessionRepository, never()).findById(any());
+    }
+
+    // ── SEND ─────────────────────────────────────────────────────────────────────
+
+    @Test
+    void sendCommand_authenticatedPlayer_touchesLastSeen() {
+        UUID playerId = UUID.randomUUID();
+        StompPrincipal principal = new StompPrincipal("ABCDEF:" + playerId);
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
+        accessor.setLeaveMutable(true);
+        accessor.setUser(principal);
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        interceptor.preSend(message, mock(MessageChannel.class));
+
+        verify(playerRepository).touchLastSeen(eq(playerId), any());
+    }
+
+    @Test
+    void sendCommand_anonPlayer_doesNotTouchLastSeen() {
+        StompPrincipal anon = new StompPrincipal("anon-" + UUID.randomUUID());
+        StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SEND);
+        accessor.setLeaveMutable(true);
+        accessor.setUser(anon);
+        Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        interceptor.preSend(message, mock(MessageChannel.class));
+
+        verify(playerRepository, never()).touchLastSeen(any(), any());
     }
 }

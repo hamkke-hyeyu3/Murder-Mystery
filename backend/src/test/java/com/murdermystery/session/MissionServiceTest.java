@@ -1,7 +1,6 @@
 package com.murdermystery.session;
 
 import com.murdermystery.ws.event.MissionCheckCompletePayload;
-import com.murdermystery.ws.event.SessionStateChangedPayload;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -23,6 +22,8 @@ class MissionServiceTest {
     private SessionRepository sessionRepo;
     private TransactionTemplate txTemplate;
     private SessionEventPublisher eventPublisher;
+    private MissionEndingHelper endingHelper;
+    private ForceProgressService forceProgressService;
     private MissionService service;
 
     private static final UUID SESSION_ID = UUID.randomUUID();
@@ -38,13 +39,22 @@ class MissionServiceTest {
         sessionRepo = mock(SessionRepository.class);
         txTemplate = mock(TransactionTemplate.class);
         eventPublisher = mock(SessionEventPublisher.class);
+        endingHelper = mock(MissionEndingHelper.class);
+        forceProgressService = mock(ForceProgressService.class);
 
         when(txTemplate.execute(any())).thenAnswer(inv -> {
             var cb = inv.getArgument(0, org.springframework.transaction.support.TransactionCallback.class);
             return cb.doInTransaction(null);
         });
 
-        service = new MissionService(sessionRepo, txTemplate, eventPublisher);
+        service = new MissionService(sessionRepo, txTemplate, eventPublisher, endingHelper, forceProgressService);
+
+        // endingHelper.transitionToEnding actually sets state so downstream guards work
+        doAnswer(inv -> {
+            Session s = inv.getArgument(0, Session.class);
+            s.setState("ending");
+            return null;
+        }).when(endingHelper).transitionToEnding(any(Session.class));
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
@@ -144,7 +154,7 @@ class MissionServiceTest {
     }
 
     @Test
-    void checkComplete_lastPlayer_broadcastsCheckCompleteThenStateChanged() {
+    void checkComplete_lastPlayer_broadcastsCheckCompleteThenEnding() {
         Session s = missionSessionWith3Players();
         s.getPlayers().get(0).acknowledgeMission(Instant.now());
         s.getPlayers().get(1).acknowledgeMission(Instant.now());
@@ -152,10 +162,9 @@ class MissionServiceTest {
 
         service.checkComplete(SESSION_ID, playerCId);
 
-        InOrder order = inOrder(eventPublisher);
+        InOrder order = inOrder(eventPublisher, endingHelper);
         order.verify(eventPublisher).publish(any(), eq("MISSION_CHECK_COMPLETE"), any());
-        order.verify(eventPublisher).publish(any(), eq("SESSION_STATE_CHANGED"),
-            argThat(p -> p instanceof SessionStateChangedPayload sc && "ending".equals(sc.state())));
+        order.verify(endingHelper).broadcastEndingTransition(SESSION_ID.toString());
     }
 
     // ── idempotency ───────────────────────────────────────────────────────────
@@ -171,6 +180,41 @@ class MissionServiceTest {
 
         verify(eventPublisher, never()).publish(any(), eq("MISSION_CHECK_COMPLETE"), any());
         verify(eventPublisher, never()).publish(any(), eq("SESSION_STATE_CHANGED"), any());
+    }
+
+    // ── force-progress integration ────────────────────────────────────────────
+
+    @Test
+    void checkComplete_firstCheck_schedulesForceProgress() {
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(missionSessionWith3Players()));
+
+        service.checkComplete(SESSION_ID, playerAId);
+
+        verify(forceProgressService).scheduleEvaluation(SESSION_ID);
+        verify(forceProgressService, never()).cancel(any());
+    }
+
+    @Test
+    void checkComplete_secondCheck_doesNotReschedule() {
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(missionSessionWith3Players()));
+
+        service.checkComplete(SESSION_ID, playerAId); // first
+        reset(forceProgressService);
+        service.checkComplete(SESSION_ID, playerBId); // second
+
+        verify(forceProgressService, never()).scheduleEvaluation(any());
+    }
+
+    @Test
+    void checkComplete_allChecked_cancelsForceProgress() {
+        Session s = missionSessionWith3Players();
+        s.getPlayers().get(0).acknowledgeMission(Instant.now());
+        s.getPlayers().get(1).acknowledgeMission(Instant.now());
+        when(sessionRepo.findByIdForUpdate(SESSION_ID)).thenReturn(Optional.of(s));
+
+        service.checkComplete(SESSION_ID, playerCId);
+
+        verify(forceProgressService).cancel(SESSION_ID);
     }
 
     @Test

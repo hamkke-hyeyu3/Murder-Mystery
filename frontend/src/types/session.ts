@@ -463,3 +463,9 @@ export type SessionEvent =
       occurredAt: string
       payload: { playerId: string; nickname: string; checkedCount: number; totalCount: number }
     }
+  | {
+      type: 'FORCE_PROGRESS_AVAILABLE'
+      sessionId: string
+      occurredAt: string
+      payload: { scope: 'host' | 'all' }
+    }

@@ -47,6 +47,9 @@ public class Player implements Persistable<UUID> {
     @Column(name = "mission_checked_at")
     private Instant missionCheckedAt;
 
+    @Column(name = "last_seen_at")
+    private Instant lastSeenAt;
+
     protected Player() {}
 
     public Player(String nickname, boolean isHost) {
@@ -88,4 +91,6 @@ public class Player implements Persistable<UUID> {
     public void acknowledgeMission(Instant checkedAt) {
         if (this.missionCheckedAt == null) this.missionCheckedAt = checkedAt;
     }
+    public Instant getLastSeenAt() { return lastSeenAt; }
+    public void setLastSeenAt(Instant at) { this.lastSeenAt = at; }
 }

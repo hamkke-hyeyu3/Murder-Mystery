@@ -83,11 +83,13 @@ export function useSessionWebSocket({
         setSession({ joinedCount: e.payload.joined, requiredCharacterCount: e.payload.required })
       },
       SESSION_STATE_CHANGED: (e) => {
-        setSession({
+        const patch: Parameters<typeof setSession>[0] = {
           phase: 'in_progress',
           state: e.payload.state,
           ...(e.payload.turnOrder ? { turnOrder: e.payload.turnOrder } : {}),
-        })
+        }
+        if (e.payload.state === 'ending') patch.forceProgressAvailable = null
+        setSession(patch)
       },
       TUTORIAL_ACKED: (e) => {
         const patch: Parameters<typeof setSession>[0] = {
@@ -255,6 +257,9 @@ export function useSessionWebSocket({
         if (e.payload.playerId === playerId) patch.myMissionChecked = true
         setSession(patch)
       },
+      FORCE_PROGRESS_AVAILABLE: (e) => {
+        setSession({ forceProgressAvailable: e.payload })
+      },
     }
 
     const privateHandlers: EventHandlers = {
@@ -352,6 +357,9 @@ export function useSessionWebSocket({
   const publishMissionCheckComplete = () =>
     sendToSession('mission/check-complete')
 
+  const publishForceProgress = () =>
+    sendToSession('host/force-progress')
+
   return {
     connected,
     publishLeave,
@@ -365,5 +373,6 @@ export function useSessionWebSocket({
     publishPrivateTalkEnd,
     publishVoteSubmit,
     publishMissionCheckComplete,
+    publishForceProgress,
   }
 }

@@ -1,7 +1,6 @@
 package com.murdermystery.session;
 
 import com.murdermystery.ws.event.MissionCheckCompletePayload;
-import com.murdermystery.ws.event.SessionStateChangedPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,15 +17,21 @@ public class MissionService {
     private final SessionRepository sessionRepository;
     private final TransactionTemplate transactionTemplate;
     private final SessionEventPublisher eventPublisher;
+    private final MissionEndingHelper endingHelper;
+    private final ForceProgressService forceProgressService;
 
     public MissionService(
         SessionRepository sessionRepository,
         TransactionTemplate transactionTemplate,
-        SessionEventPublisher eventPublisher
+        SessionEventPublisher eventPublisher,
+        MissionEndingHelper endingHelper,
+        ForceProgressService forceProgressService
     ) {
         this.sessionRepository = sessionRepository;
         this.transactionTemplate = transactionTemplate;
         this.eventPublisher = eventPublisher;
+        this.endingHelper = endingHelper;
+        this.forceProgressService = forceProgressService;
     }
 
     public void checkComplete(UUID sessionId, UUID playerId) {
@@ -53,9 +58,10 @@ public class MissionService {
             boolean allChecked = checkedCount == total;
 
             if (allChecked) {
-                session.setState("ending");
+                endingHelper.transitionToEnding(session);
+            } else {
+                sessionRepository.saveAndFlush(session);
             }
-            sessionRepository.saveAndFlush(session);
 
             return new CheckResult(
                 player.getId().toString(),
@@ -72,6 +78,10 @@ public class MissionService {
             return;
         }
 
+        if (result.checkedCount() == 1) {
+            forceProgressService.scheduleEvaluation(sessionId);
+        }
+
         eventPublisher.publish(
             sessionId.toString(),
             "MISSION_CHECK_COMPLETE",
@@ -79,11 +89,8 @@ public class MissionService {
         );
 
         if (result.allChecked()) {
-            eventPublisher.publish(
-                sessionId.toString(),
-                "SESSION_STATE_CHANGED",
-                new SessionStateChangedPayload("ending", null)
-            );
+            forceProgressService.cancel(sessionId);
+            endingHelper.broadcastEndingTransition(sessionId.toString());
         }
     }
 

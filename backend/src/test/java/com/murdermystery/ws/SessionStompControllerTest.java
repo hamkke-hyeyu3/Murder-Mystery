@@ -24,7 +24,7 @@ class SessionStompControllerTest {
     void setUp() {
         leaveService = mock(LeaveService.class);
         roundTurnService = mock(RoundTurnService.class);
-        controller = new SessionStompController(leaveService, roundTurnService, mock(ItemService.class), mock(PrivateTalkService.class), mock(com.murdermystery.session.VoteService.class), mock(com.murdermystery.session.MissionService.class));
+        controller = new SessionStompController(leaveService, roundTurnService, mock(ItemService.class), mock(PrivateTalkService.class), mock(com.murdermystery.session.VoteService.class), mock(com.murdermystery.session.MissionService.class), mock(com.murdermystery.session.ForceProgressService.class));
     }
 
     @Test
@@ -75,7 +75,7 @@ class SessionStompControllerTest {
     void itemSharePartial_nullRecipients_noOp() {
         StompPrincipal principal = new StompPrincipal("ABCDEF:00000000-0000-0000-0000-000000000001");
         ItemService itemService = mock(ItemService.class);
-        SessionStompController ctrl = new SessionStompController(leaveService, roundTurnService, itemService, mock(PrivateTalkService.class), mock(com.murdermystery.session.VoteService.class), mock(com.murdermystery.session.MissionService.class));
+        SessionStompController ctrl = new SessionStompController(leaveService, roundTurnService, itemService, mock(PrivateTalkService.class), mock(com.murdermystery.session.VoteService.class), mock(com.murdermystery.session.MissionService.class), mock(com.murdermystery.session.ForceProgressService.class));
 
         assertThatCode(() -> ctrl.itemSharePartial(
             "00000000-0000-0000-0000-000000000002",

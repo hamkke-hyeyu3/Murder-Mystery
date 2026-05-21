@@ -222,12 +222,12 @@
   - [x] DB: `V14__mission_checks.sql`
   - [x] 검증: `MissionServiceTest` 9케이스 + `MissionPanel.test.tsx` 6케이스
 
-- [ ] **T-15** 호스트 강제 진행 + NB3 좁은 인계 ⚠️ *위험*
-  - [ ] BE: 첫 체크 완료 후 3분 ScheduledExecutor → `FORCE_PROGRESS_AVAILABLE`
-  - [ ] BE: NB3 — 호스트 미완료 + 오프라인(last_seen_at < now-30s) 시 모든 단말 broadcast
-  - [ ] BE: `/app/host/force-progress` — 미완료자 null + 9-C 트리거
-  - [ ] FE: `MissionPanel.tsx`에 "강제 진행" 컨트롤 조건부 노출
-  - [ ] 검증: `ForceProgressTest` (가짜 시계, `_NB3_doesNotApplyToOtherHostActions` 가드)
+- [x] **T-15** 호스트 강제 진행 + NB3 좁은 인계 ⚠️ *위험*
+  - [x] BE: 첫 체크 완료 후 3분 ScheduledExecutor → `FORCE_PROGRESS_AVAILABLE`
+  - [x] BE: NB3 — 호스트 미완료 + 오프라인(last_seen_at < now-30s) 시 모든 단말 broadcast
+  - [x] BE: `/app/host/force-progress` — 미완료자 null + 9-C 트리거
+  - [x] FE: `MissionPanel.tsx`에 "강제 진행" 컨트롤 조건부 노출
+  - [x] 검증: `ForceProgressTest` (가짜 시계, `_NB3_doesNotApplyToOtherHostActions` 가드)
 
 - [ ] **T-16** 9-C 엔딩 + 10 디브리프 자동 표시
   - [ ] BE: `ENDING_STARTED` → `DEBRIEF_STARTED` → `SURVEY_AVAILABLE` 자동 체인

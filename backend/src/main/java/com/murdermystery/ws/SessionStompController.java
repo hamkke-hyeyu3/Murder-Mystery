@@ -1,6 +1,8 @@
 package com.murdermystery.ws;
 
 import com.murdermystery.config.StompPrincipal;
+import com.murdermystery.session.ForceProgressNotAvailableException;
+import com.murdermystery.session.ForceProgressService;
 import com.murdermystery.session.ItemService;
 import com.murdermystery.session.LeaveService;
 import com.murdermystery.session.MissionPhaseRequiredException;
@@ -29,16 +31,19 @@ public class SessionStompController {
     private final PrivateTalkService privateTalkService;
     private final VoteService voteService;
     private final MissionService missionService;
+    private final ForceProgressService forceProgressService;
 
     public SessionStompController(LeaveService leaveService, RoundTurnService roundTurnService,
                                   ItemService itemService, PrivateTalkService privateTalkService,
-                                  VoteService voteService, MissionService missionService) {
+                                  VoteService voteService, MissionService missionService,
+                                  ForceProgressService forceProgressService) {
         this.leaveService = leaveService;
         this.roundTurnService = roundTurnService;
         this.itemService = itemService;
         this.privateTalkService = privateTalkService;
         this.voteService = voteService;
         this.missionService = missionService;
+        this.forceProgressService = forceProgressService;
     }
 
     @MessageMapping("/session/{sessionId}/leave")
@@ -221,6 +226,18 @@ public class SessionStompController {
         } catch (IllegalArgumentException | MissionPhaseRequiredException
                  | SessionNotFoundException | PlayerNotInSessionException e) {
             // wrong state, unknown session/player, or malformed UUID — silently ignore
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/host/force-progress")
+    public void hostForceProgress(@DestinationVariable String sessionId, Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        try {
+            forceProgressService.forceProgress(UUID.fromString(sessionId), UUID.fromString(sp.playerId()));
+        } catch (IllegalArgumentException | ForceProgressNotAvailableException
+                 | MissionPhaseRequiredException | SessionNotFoundException
+                 | PlayerNotInSessionException e) {
+            // wrong state / unauthorized / malformed UUID — silently ignore
         }
     }
 }

@@ -47,6 +47,7 @@ export interface SessionState {
   myMissionChecked: boolean
   missionCheckedCount: number | null
   missionTotalCount: number | null
+  forceProgressAvailable: { scope: 'host' | 'all' } | null
 }
 
 interface SessionActions {
@@ -88,6 +89,7 @@ const initialState: SessionState = {
   myMissionChecked: false,
   missionCheckedCount: null,
   missionTotalCount: null,
+  forceProgressAvailable: null,
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({

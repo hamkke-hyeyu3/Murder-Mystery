@@ -10,6 +10,7 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Component
@@ -38,7 +39,20 @@ public class StompAuthInterceptor implements ChannelInterceptor {
             return handleSubscribe(message, accessor);
         }
 
+        if (StompCommand.SEND.equals(accessor.getCommand())) {
+            touchLastSeen(accessor);
+        }
+
         return message;
+    }
+
+    private void touchLastSeen(StompHeaderAccessor accessor) {
+        if (!(accessor.getUser() instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        try {
+            playerRepository.touchLastSeen(UUID.fromString(sp.playerId()), Instant.now());
+        } catch (Exception ignored) {
+            // best-effort: never break the message pipeline
+        }
     }
 
     private Message<?> handleConnect(Message<?> message, StompHeaderAccessor accessor) {

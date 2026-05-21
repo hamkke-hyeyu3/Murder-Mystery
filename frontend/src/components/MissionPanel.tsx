@@ -3,13 +3,20 @@ import { useSessionStore } from '@/stores/sessionStore'
 
 interface MissionPanelProps {
   onCheckComplete: () => void
+  onForceProgress: () => void
 }
 
-export function MissionPanel({ onCheckComplete }: MissionPanelProps) {
+export function MissionPanel({ onCheckComplete, onForceProgress }: MissionPanelProps) {
   const missions = useCardStore((s) => s.missions)
   const myMissionChecked = useSessionStore((s) => s.myMissionChecked)
   const checkedCount = useSessionStore((s) => s.missionCheckedCount)
   const totalCount = useSessionStore((s) => s.missionTotalCount)
+  const isHost = useSessionStore((s) => s.isHost)
+  const forceProgressAvailable = useSessionStore((s) => s.forceProgressAvailable)
+
+  const showForceProgress =
+    forceProgressAvailable != null &&
+    (forceProgressAvailable.scope === 'all' || (forceProgressAvailable.scope === 'host' && isHost))
 
   if (!missions) {
     return (
@@ -45,6 +52,15 @@ export function MissionPanel({ onCheckComplete }: MissionPanelProps) {
           </span>
         )}
       </div>
+      {showForceProgress && (
+        <button
+          data-testid="force-progress-button"
+          onClick={onForceProgress}
+          className="mt-2 px-4 py-2 rounded bg-destructive text-destructive-foreground"
+        >
+          강제 진행
+        </button>
+      )}
     </div>
   )
 }
