@@ -51,6 +51,27 @@ class StompAuthInterceptorTest {
     }
 
     @Test
+    void validConnect_touchesLastSeen() {
+        UUID playerId = UUID.randomUUID();
+        when(playerRepository.existsByIdAndNicknameAndSession_InviteCode(
+                playerId, "alice", "123456")).thenReturn(true);
+
+        interceptor.preSend(connectMessage(Map.of(
+            "X-Invite-Code", "123456",
+            "X-Nickname", "alice",
+            "X-Player-Id", playerId.toString()
+        )), mock(MessageChannel.class));
+
+        verify(playerRepository).touchLastSeen(eq(playerId), any());
+    }
+
+    @Test
+    void anonConnect_doesNotTouchLastSeen() {
+        interceptor.preSend(connectMessage(Map.of()), mock(MessageChannel.class));
+        verify(playerRepository, never()).touchLastSeen(any(), any());
+    }
+
+    @Test
     void validPlayer_setsAuthenticatedPrincipal() {
         UUID playerId = UUID.randomUUID();
         when(playerRepository.existsByIdAndNicknameAndSession_InviteCode(

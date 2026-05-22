@@ -32,7 +32,9 @@ public class StompAuthInterceptor implements ChannelInterceptor {
         if (accessor == null) return message;
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-            return handleConnect(message, accessor);
+            Message<?> result = handleConnect(message, accessor);
+            touchLastSeen(accessor); // principal is now set; marks host as online at connect time
+            return result;
         }
 
         if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
