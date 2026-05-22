@@ -260,6 +260,9 @@ export function useSessionWebSocket({
       FORCE_PROGRESS_AVAILABLE: (e) => {
         setSession({ forceProgressAvailable: e.payload })
       },
+      ENDING_STARTED: () => {},
+      DEBRIEF_STARTED: () => {},
+      SURVEY_AVAILABLE: () => {},
     }
 
     const privateHandlers: EventHandlers = {

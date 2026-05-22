@@ -469,3 +469,21 @@ export type SessionEvent =
       occurredAt: string
       payload: { scope: 'host' | 'all' }
     }
+  | {
+      type: 'ENDING_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: Record<string, never>
+    }
+  | {
+      type: 'DEBRIEF_STARTED'
+      sessionId: string
+      occurredAt: string
+      payload: Record<string, never>
+    }
+  | {
+      type: 'SURVEY_AVAILABLE'
+      sessionId: string
+      occurredAt: string
+      payload: Record<string, never>
+    }

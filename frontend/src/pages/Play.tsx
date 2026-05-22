@@ -13,6 +13,8 @@ import { MyCluesPanel } from '@/components/MyCluesPanel'
 import { VotePanel } from '@/components/VotePanel'
 import { RevealPanel } from '@/components/RevealPanel'
 import { MissionPanel } from '@/components/MissionPanel'
+import { EndingPanel } from '@/components/EndingPanel'
+import { DebriefPanel } from '@/components/DebriefPanel'
 import { BannerStack } from '@/components/BannerStack'
 import { PrivateTalkInlineCard } from '@/components/PrivateTalkInlineCard'
 import { PrivateTalkBanner } from '@/components/PrivateTalkBanner'
@@ -132,8 +134,30 @@ export default function Play() {
     return (
       <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
         <BannerStack />
-        <div data-testid="ending-placeholder" className="flex flex-col items-center justify-center flex-1 gap-4">
-          <p className="text-xl text-muted-foreground">엔딩 준비 중…</p>
+        <EndingPanel />
+      </div>
+    )
+  }
+
+  if (effectiveState === 'debrief') {
+    return (
+      <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <BannerStack />
+        <EndingPanel />
+        <DebriefPanel />
+      </div>
+    )
+  }
+
+  if (effectiveState === 'survey') {
+    return (
+      <div data-testid="page-play" className="min-h-screen p-6 flex flex-col gap-6">
+        <BannerStack />
+        <EndingPanel />
+        <DebriefPanel />
+        <div data-testid="survey-placeholder" className="flex flex-col items-center gap-4 p-6">
+          <p className="text-xl font-semibold">설문 시작</p>
+          <p className="text-sm text-muted-foreground">잠시 후 설문이 표시됩니다.</p>
         </div>
       </div>
     )
