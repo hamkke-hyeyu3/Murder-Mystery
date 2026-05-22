@@ -229,9 +229,9 @@
   - [x] FE: `MissionPanel.tsx`에 "강제 진행" 컨트롤 조건부 노출
   - [x] 검증: `ForceProgressTest` (가짜 시계, `_NB3_doesNotApplyToOtherHostActions` 가드)
 
-- [ ] **T-16** 9-C 엔딩 + 10 디브리프 자동 표시
-  - [ ] BE: `ENDING_STARTED` → `DEBRIEF_STARTED` → `SURVEY_AVAILABLE` 자동 체인
-  - [ ] FE: `EndingPanel.tsx` + `DebriefPanel.tsx` (텍스트만)
+- [x] **T-16** 9-C 엔딩 + 10 디브리프 자동 표시
+  - [x] BE: `ENDING_STARTED` → `DEBRIEF_STARTED` → `SURVEY_AVAILABLE` 자동 체인
+  - [x] FE: `EndingPanel.tsx` + `DebriefPanel.tsx` (텍스트만)
   - [ ] 검증: 수동
 
 - [ ] **T-17** 인라인 설문 + 종료 화면
