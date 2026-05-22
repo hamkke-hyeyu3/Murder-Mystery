@@ -25,7 +25,7 @@ public class SessionService {
     private static final Logger log = LoggerFactory.getLogger(SessionService.class);
     private static final int INVITE_CODE_RETRY_LIMIT = 5;
     private static final Set<String> CARD_VISIBLE_STATES = Set.of("character_assignment", "tutorial", "round");
-    private static final Set<String> REVEAL_VISIBLE_STATES = Set.of("reveal", "mission");
+    private static final Set<String> REVEAL_VISIBLE_STATES = Set.of("reveal", "mission", "ending", "debrief", "survey");
 
     private final ScenarioRepository scenarioRepository;
     private final SessionRepository sessionRepository;
@@ -210,7 +210,12 @@ public class SessionService {
                 culpritCharacterId = scenario.trueCulpritCharacterId();
                 accusedCharacterId = null;
             }
-            revealView = new SessionViewResponse.RevealView(outcome, culpritCharacterId, accusedCharacterId);
+            String finalCulpritId = culpritCharacterId;
+            String culpritName = scenario.characters().stream()
+                .filter(c -> c.id().equals(finalCulpritId))
+                .map(com.murdermystery.scenario.ScenarioCharacter::name)
+                .findFirst().orElse(culpritCharacterId);
+            revealView = new SessionViewResponse.RevealView(outcome, culpritCharacterId, accusedCharacterId, culpritName);
         }
 
         SessionViewResponse.VoteView voteView = null;

@@ -6,7 +6,7 @@ export function EndingPanel() {
 
   const candidates = vote?.candidates ?? []
   const culprit = reveal ? candidates.find((c) => c.characterId === reveal.culpritCharacterId) : null
-  const culpritName = culprit?.name ?? reveal?.culpritCharacterId
+  const culpritName = reveal?.culpritName ?? culprit?.name ?? reveal?.culpritCharacterId
 
   return (
     <div data-testid="ending-panel" className="flex flex-col items-center gap-6 p-6">

@@ -6,6 +6,7 @@ export type RevealView = {
   outcome: 'single_winner' | 'failed'
   culpritCharacterId: string
   accusedCharacterId: string | null
+  culpritName?: string | null
 }
 
 export type CreateSessionRequest = {

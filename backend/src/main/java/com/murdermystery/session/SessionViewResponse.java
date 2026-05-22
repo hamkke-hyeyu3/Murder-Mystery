@@ -71,7 +71,8 @@ public record SessionViewResponse(
     public record RevealView(
         String outcome,
         String culpritCharacterId,
-        String accusedCharacterId
+        String accusedCharacterId,
+        String culpritName
     ) {}
 
     public record OwnedClueView(
