@@ -263,6 +263,15 @@ export function useSessionWebSocket({
       ENDING_STARTED: () => {},
       DEBRIEF_STARTED: () => {},
       SURVEY_AVAILABLE: () => {},
+      SURVEY_RESPONSE_RECORDED: (e) => {
+        const patch: Parameters<typeof setSession>[0] = {
+          surveyRespondedCount: e.payload.respondedCount,
+          surveyTotalCount: e.payload.totalCount,
+        }
+        if (e.payload.playerId === playerId) patch.mySurveyResponded = true
+        setSession(patch)
+      },
+      SESSION_ENDED: () => setSession({ phase: 'ended', state: 'ended' }),
     }
 
     const privateHandlers: EventHandlers = {
@@ -363,6 +372,9 @@ export function useSessionWebSocket({
   const publishForceProgress = () =>
     sendToSession('host/force-progress')
 
+  const publishSurveySubmit = (platformScore: number | null, workScore: number | null, freeText: string | null) =>
+    sendToSession('survey/submit', JSON.stringify({ platformScore, workScore, freeText }))
+
   return {
     connected,
     publishLeave,
@@ -377,5 +389,6 @@ export function useSessionWebSocket({
     publishVoteSubmit,
     publishMissionCheckComplete,
     publishForceProgress,
+    publishSurveySubmit,
   }
 }

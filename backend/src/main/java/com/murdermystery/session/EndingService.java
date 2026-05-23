@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Drives the post-game chain: ending → debrief → survey.
@@ -37,10 +38,16 @@ public class EndingService {
     @Value("${app.ending.survey-delay-ms:30000}")
     long surveyDelayMs;
 
+    @Value("${app.session.survey-timeout-ms:60000}")
+    long surveyTimeoutMs;
+
     // JVM-memory once-only guard
     private final ConcurrentHashMap<String, Boolean> startedEndings = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingDebrief = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingSurvey = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingSessionEnd = new ConcurrentHashMap<>();
+
+    private Consumer<String> surveyEndCallback = sessionId -> {};
 
     public EndingService(
         SessionRepository sessionRepository,
@@ -52,6 +59,11 @@ public class EndingService {
         this.transactionTemplate = transactionTemplate;
         this.eventPublisher = eventPublisher;
         this.scheduler = gameScheduler;
+    }
+
+    /** Injected by SurveyService at startup to avoid circular dependency. */
+    public void setSurveyEndCallback(Consumer<String> callback) {
+        this.surveyEndCallback = callback;
     }
 
     public void startEnding(String sessionId) {
@@ -131,6 +143,19 @@ public class EndingService {
         eventPublisher.publish(sessionId, "SESSION_STATE_CHANGED",
             new SessionStateChangedPayload("survey", null));
         eventPublisher.publish(sessionId, "SURVEY_AVAILABLE", new SurveyAvailablePayload());
+
+        ScheduledFuture<?> endFuture = scheduler.schedule(
+            () -> {
+                try {
+                    surveyEndCallback.accept(sessionId);
+                } catch (Exception e) {
+                    log.error("surveyTimeout endSession failed for session {}", sessionId, e);
+                }
+            },
+            surveyTimeoutMs, TimeUnit.MILLISECONDS
+        );
+        ScheduledFuture<?> old = pendingSessionEnd.put(sessionId, endFuture);
+        if (old != null) old.cancel(false);
     }
 
     @PreDestroy
@@ -139,6 +164,8 @@ public class EndingService {
         pendingDebrief.clear();
         pendingSurvey.forEach((k, f) -> f.cancel(false));
         pendingSurvey.clear();
+        pendingSessionEnd.forEach((k, f) -> f.cancel(false));
+        pendingSessionEnd.clear();
         startedEndings.clear();
     }
 
@@ -148,6 +175,8 @@ public class EndingService {
         pendingDebrief.clear();
         pendingSurvey.forEach((k, f) -> f.cancel(false));
         pendingSurvey.clear();
+        pendingSessionEnd.forEach((k, f) -> f.cancel(false));
+        pendingSessionEnd.clear();
         startedEndings.clear();
     }
 }

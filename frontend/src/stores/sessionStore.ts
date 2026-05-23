@@ -48,6 +48,9 @@ export interface SessionState {
   missionCheckedCount: number | null
   missionTotalCount: number | null
   forceProgressAvailable: { scope: 'host' | 'all' } | null
+  mySurveyResponded: boolean
+  surveyRespondedCount: number | null
+  surveyTotalCount: number | null
 }
 
 interface SessionActions {
@@ -90,6 +93,9 @@ const initialState: SessionState = {
   missionCheckedCount: null,
   missionTotalCount: null,
   forceProgressAvailable: null,
+  mySurveyResponded: false,
+  surveyRespondedCount: null,
+  surveyTotalCount: null,
 }
 
 export const useSessionStore = create<SessionState & SessionActions>((set) => ({

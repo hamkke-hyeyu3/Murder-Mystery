@@ -234,11 +234,11 @@
   - [x] FE: `EndingPanel.tsx` + `DebriefPanel.tsx` (텍스트만)
   - [ ] 검증: 수동
 
-- [ ] **T-17** 인라인 설문 + 종료 화면
-  - [ ] BE: `/app/survey` → `survey_responses` 저장 + `SESSION_ENDED`
-  - [ ] FE: `EndScreen.tsx` (인라인 설문 카드 + 두 슬라이더(체크박스 분리) + 80자 자유 텍스트 + "응답하기"/"건너뛰기" 동등 + 미션 한 줄 요약)
-  - [ ] DB: `V9__survey.sql`
-  - [ ] 검증: `SurveyServiceTest._oneResponsePerPlayerPerSession`, `EndScreen.test.tsx`
+- [x] **T-17** 인라인 설문 + 종료 화면
+  - [x] BE: `/app/session/{id}/survey/submit` → `survey_responses` UPSERT + `SURVEY_RESPONSE_RECORDED` broadcast + 전원 submit OR 60s timeout → `SESSION_ENDED`
+  - [x] FE: `EndScreen.tsx` (인라인 설문 카드 + 두 슬라이더(체크박스 활성) + 80자 textarea + "응답하기"/"건너뛰기" 동등 + 미션 한 줄 요약)
+  - [x] DB: `V17__survey.sql` (`survey_responses` + `sessions.state` 'ended' 추가)
+  - [x] 검증: `SurveyServiceTest` 11케이스 + `SurveyIntegrationTest` 2케이스 + `EndScreen.test.tsx` 9케이스
 
 **✅ 체크포인트 D 완료 조건:** 투표 → 종료 화면 풀 흐름 데모 + 동점·색출 실패 분기 verify + 강제 진행 fast-mode verify
 

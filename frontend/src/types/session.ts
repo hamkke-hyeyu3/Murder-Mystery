@@ -488,3 +488,15 @@ export type SessionEvent =
       occurredAt: string
       payload: Record<string, never>
     }
+  | {
+      type: 'SURVEY_RESPONSE_RECORDED'
+      sessionId: string
+      occurredAt: string
+      payload: { playerId: string; respondedCount: number; totalCount: number }
+    }
+  | {
+      type: 'SESSION_ENDED'
+      sessionId: string
+      occurredAt: string
+      payload: Record<string, never>
+    }

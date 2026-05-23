@@ -11,6 +11,8 @@ import com.murdermystery.session.PlayerNotInSessionException;
 import com.murdermystery.session.SessionNotFoundException;
 import com.murdermystery.session.PrivateTalkService;
 import com.murdermystery.session.RoundTurnService;
+import com.murdermystery.session.SurveyPhaseRequiredException;
+import com.murdermystery.session.SurveyService;
 import com.murdermystery.session.VoteService;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -32,11 +34,13 @@ public class SessionStompController {
     private final VoteService voteService;
     private final MissionService missionService;
     private final ForceProgressService forceProgressService;
+    private final SurveyService surveyService;
 
     public SessionStompController(LeaveService leaveService, RoundTurnService roundTurnService,
                                   ItemService itemService, PrivateTalkService privateTalkService,
                                   VoteService voteService, MissionService missionService,
-                                  ForceProgressService forceProgressService) {
+                                  ForceProgressService forceProgressService,
+                                  SurveyService surveyService) {
         this.leaveService = leaveService;
         this.roundTurnService = roundTurnService;
         this.itemService = itemService;
@@ -44,6 +48,7 @@ public class SessionStompController {
         this.voteService = voteService;
         this.missionService = missionService;
         this.forceProgressService = forceProgressService;
+        this.surveyService = surveyService;
     }
 
     @MessageMapping("/session/{sessionId}/leave")
@@ -238,6 +243,23 @@ public class SessionStompController {
                  | MissionPhaseRequiredException | SessionNotFoundException
                  | PlayerNotInSessionException e) {
             // wrong state / unauthorized / malformed UUID — silently ignore
+        }
+    }
+
+    @MessageMapping("/session/{sessionId}/survey/submit")
+    public void surveySubmit(@DestinationVariable String sessionId,
+                             @Payload SurveySubmitRequest request,
+                             Principal principal) {
+        if (!(principal instanceof StompPrincipal sp) || !sp.isAuthenticated()) return;
+        try {
+            surveyService.submit(
+                UUID.fromString(sessionId),
+                UUID.fromString(sp.playerId()),
+                request != null ? request : new SurveySubmitRequest(null, null, null)
+            );
+        } catch (IllegalArgumentException | SurveyPhaseRequiredException
+                 | SessionNotFoundException | PlayerNotInSessionException e) {
+            // wrong state, validation error, unknown session/player — silently ignore
         }
     }
 }

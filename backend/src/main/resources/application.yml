@@ -27,3 +27,5 @@ app:
     patterns: "classpath:scenarios/*.json"
   tutorial:
     enter-delay-ms: 5000
+  session:
+    survey-timeout-ms: 60000
