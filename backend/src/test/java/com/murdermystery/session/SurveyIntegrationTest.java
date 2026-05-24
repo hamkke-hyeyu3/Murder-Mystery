@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
     "app.reveal.duration-ms=200",
     "app.ending.debrief-delay-ms=200",
     "app.ending.survey-delay-ms=200",
-    "app.session.survey-timeout-ms=400"
+    "app.session.survey-timeout-ms=2000"
 })
 class SurveyIntegrationTest {
 
@@ -211,6 +211,7 @@ class SurveyIntegrationTest {
         postTutorialAck(host.sessionId(), host.deviceId());
         postTutorialAck(host.sessionId(), guest.deviceId());
         assertThat(turnLatch.await(5, TimeUnit.SECONDS)).isTrue();
+        topicFrames.clear(); // discard stale round-1 frames so awaitFrame("ROUND_STARTED") below matches round 2
 
         UUID sessId = UUID.fromString(host.sessionId());
         roundTurnService.autoSelectTurn(sessId, 1, 0, 2);
@@ -257,8 +258,8 @@ class SurveyIntegrationTest {
             surveyService.submit(sessId, hostId, req);
             surveyService.submit(sessId, guestId, req);
 
-            // SESSION_ENDED broadcast
-            awaitFrame(setup.topicFrames(), "SESSION_ENDED", 3000);
+            // SESSION_ENDED broadcast — must arrive before survey-timeout-ms(2000) fires
+            awaitFrame(setup.topicFrames(), "SESSION_ENDED", 1000);
 
             // DB: 2 survey_responses rows
             long count = surveyResponseRepository.countBySessionId(sessId);
@@ -291,8 +292,8 @@ class SurveyIntegrationTest {
             surveyService.submit(sessId, hostId,
                 new com.murdermystery.ws.SurveySubmitRequest(null, null, null));
 
-            // SESSION_ENDED via timeout (survey-timeout-ms=400ms)
-            awaitFrame(setup.topicFrames(), "SESSION_ENDED", 3000);
+            // SESSION_ENDED via timeout (survey-timeout-ms=2000ms)
+            awaitFrame(setup.topicFrames(), "SESSION_ENDED", 5000);
 
             Session session = sessionRepository.findById(sessId).orElseThrow();
             assertThat(session.getState()).isEqualTo("ended");

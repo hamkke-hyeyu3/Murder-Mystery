@@ -238,6 +238,8 @@
   - [x] BE: `/app/session/{id}/survey/submit` → `survey_responses` UPSERT + `SURVEY_RESPONSE_RECORDED` broadcast + 전원 submit OR 60s timeout → `SESSION_ENDED`
   - [x] FE: `EndScreen.tsx` (인라인 설문 카드 + 두 슬라이더(체크박스 활성) + 80자 textarea + "응답하기"/"건너뛰기" 동등 + 미션 한 줄 요약)
   - [x] DB: `V17__survey.sql` (`survey_responses` + `sessions.state` 'ended' 추가)
+  - [x] DB: `V18__fix_survey_score_types.sql` (platform_score/work_score smallint→integer + idx_players_mission_checked 재생성)
+  - [x] 인프라: `V14__mission_checks.sql` — `CREATE INDEX CONCURRENTLY` 제거 (Flyway Community 스키마 락 데드락)
   - [x] 검증: `SurveyServiceTest` 11케이스 + `SurveyIntegrationTest` 2케이스 + `EndScreen.test.tsx` 9케이스
 
 **✅ 체크포인트 D 완료 조건:** 투표 → 종료 화면 풀 흐름 데모 + 동점·색출 실패 분기 verify + 강제 진행 fast-mode verify
